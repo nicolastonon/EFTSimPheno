@@ -154,22 +154,19 @@ TString GetVariationLegendName(TString variationname)
 {
     TString result = variationname;
 
-    if(variationname == "sm") {return result;}
-    else
-    {
-        if(variationname.Contains("ctz", TString::kIgnoreCase)) {result = "c_{tZ}";}
-        else if(variationname.Contains("ctw", TString::kIgnoreCase)) {result = "c_{tW}";}
+    if(variationname == "sm") {result = "SM";}
+    else if(variationname.Contains("ctz", TString::kIgnoreCase)) {result = "c_{tZ}";}
+    else if(variationname.Contains("ctw", TString::kIgnoreCase)) {result = "c_{tW}";}
 
-        if(variationname.Contains("0p1", TString::kIgnoreCase)) {result+= " = 0.1";}
-        if(variationname.Contains("0p5", TString::kIgnoreCase)) {result+= " = 0.5";}
-        if(variationname.Contains("1p0", TString::kIgnoreCase)) {result+= " = 1";}
-        if(variationname.Contains("1p5", TString::kIgnoreCase)) {result+= " = 1.5";}
-        if(variationname.Contains("2p0", TString::kIgnoreCase)) {result+= " = 2";}
-        if(variationname.Contains("2p5", TString::kIgnoreCase)) {result+= " = 2.5";}
-        if(variationname.Contains("3p0", TString::kIgnoreCase)) {result+= " = 3";}
-        if(variationname.Contains("4p0", TString::kIgnoreCase)) {result+= " = 4";}
-        if(variationname.Contains("5p0", TString::kIgnoreCase)) {result+= " = 5";}
-    }
+    if(variationname.Contains("0p1", TString::kIgnoreCase)) {result+= " = 0.1";}
+    if(variationname.Contains("0p5", TString::kIgnoreCase)) {result+= " = 0.5";}
+    if(variationname.Contains("1p0", TString::kIgnoreCase)) {result+= " = 1";}
+    if(variationname.Contains("1p5", TString::kIgnoreCase)) {result+= " = 1.5";}
+    if(variationname.Contains("2p0", TString::kIgnoreCase)) {result+= " = 2";}
+    if(variationname.Contains("2p5", TString::kIgnoreCase)) {result+= " = 2.5";}
+    if(variationname.Contains("3p0", TString::kIgnoreCase)) {result+= " = 3";}
+    if(variationname.Contains("4p0", TString::kIgnoreCase)) {result+= " = 4";}
+    if(variationname.Contains("5p0", TString::kIgnoreCase)) {result+= " = 5";}
 
     // result+= " [TeV^{-2}]";
 
@@ -289,7 +286,7 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
                             v_histos_var_reweight[ivar][iweight]->Fill(v_var_floats[ivar], v_reweights_floats->at(iweight)/mc_weight_originalValue);
 
                             //FIXME
-                            // if(v_reweight_names[iweight] == "ctz_3p0" && v_var_floats[ivar]>200) 
+                            // if(v_reweight_names[iweight] == "ctz_3p0" && v_var_floats[ivar]>200)
                             // {
                             //     cout<<"reweight = "<<v_reweights_floats->at(iweight)/mc_weight_originalValue<<endl;
                             // }

@@ -1,8 +1,8 @@
 /*
 ## QUESTIONS ##
 
-- Why beginRun/endRun functions are never called ?
-- why so many events without Z/top ?
+-
+
  */
 
 /*
@@ -137,6 +137,8 @@ class GenAnalyzer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
         edm::EDGetTokenT<LHEEventProduct> srcToken_; //General characteristics of a generated event (only present if the event starts from LHE events)
         edm::EDGetTokenT<LHERunInfoProduct> LHERunInfoProductToken_;
 
+        string processName;
+
         float min_pt_jet;
         float min_pt_lep;
         float max_eta_jet;
@@ -187,6 +189,12 @@ class GenAnalyzer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
         float AntiTop_phi_;
         float AntiTop_m_;
 
+        //Leading top variables
+        float LeadingTop_pt_;
+        float LeadingTop_eta_;
+        float LeadingTop_phi_;
+        float LeadingTop_m_;
+
         //Full system variables (tZ for tZq process, ttZ for ttZ process)
         float TopZsystem_pt_;
         float TopZsystem_eta_;
@@ -222,8 +230,13 @@ class GenAnalyzer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
 GenAnalyzer::GenAnalyzer(const edm::ParameterSet& iConfig) :
     LHERunInfoProductToken_(consumes<LHERunInfoProduct,edm::InRun>({"externalLHEProducer"}))
 {
+    processName = iConfig.getParameter<std::string>("myProcessName");
+
+    cout<<endl<<FYEL("== PROCESS : "<<processName<<" ==")<<endl<<endl;
+
     //now do what ever initialization is needed
-    ofile_ = new TFile("test.root","RECREATE","GenAnalyzer output file");
+    TString outputname = "output_"+processName+".root";
+    ofile_ = new TFile(outputname, "RECREATE","GenAnalyzer output file");
     tree_ = new TTree("tree", "GenAnalyzer output tree");
 
     tree_->Branch("pt"   , &genParticlesPt_   ) ;
@@ -258,6 +271,11 @@ GenAnalyzer::GenAnalyzer(const edm::ParameterSet& iConfig) :
     tree_->Branch("AntiTop_eta" , &AntiTop_eta_) ;
     tree_->Branch("AntiTop_phi" , &AntiTop_phi_) ;
     tree_->Branch("AntiTop_m" , &AntiTop_m_) ;
+
+    tree_->Branch("LeadingTop_pt" , &LeadingTop_pt_) ;
+    tree_->Branch("LeadingTop_eta" , &LeadingTop_eta_) ;
+    tree_->Branch("LeadingTop_phi" , &LeadingTop_phi_) ;
+    tree_->Branch("LeadingTop_m" , &LeadingTop_m_) ;
 
     tree_->Branch("TopZsystem_pt" , &TopZsystem_pt_) ;
     tree_->Branch("TopZsystem_eta" , &TopZsystem_eta_) ;
@@ -374,6 +392,11 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
     AntiTop_phi_ = 0;
     AntiTop_m_ = 0;
 
+    LeadingTop_pt_ = 0;
+    LeadingTop_eta_ = 0;
+    LeadingTop_phi_ = 0;
+    LeadingTop_m_ = 0;
+
     TopZsystem_pt_ = 0;
     TopZsystem_eta_ = 0;
     TopZsystem_phi_ = 0;
@@ -462,7 +485,7 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
     if(genParticlesHandle.isValid() )
     {
         //Gen-level particles
-        TLorentzVector Zboson, top, antitop, TopZsystem;
+        TLorentzVector Zboson, top, antitop, TopZsystem, leadingTop;
 
         //Reco from decay products
         TLorentzVector lepZ1, lepZ2;
@@ -640,26 +663,39 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
                 // AntiTop_m_ = RecoAntiTop.M();
             }
 
-            if((index_top >= 0 || index_antitop >= 0) && index_Z >= 0) //Reconstructed top-Z system
+            if(index_top >= 0 || index_antitop >= 0)
             {
-                if(index_top >= 0)
+                //Top-Z system
+                if(index_Z >= 0)
                 {
-                    TopZsystem = Zboson+top;
-                    if(index_antitop >= 0) {TopZsystem+= antitop;}
+                    if(index_top >= 0)
+                    {
+                        TopZsystem = Zboson+top;
+                        if(index_antitop >= 0) {TopZsystem+= antitop;}
+                    }
+                    else if(index_antitop >= 0) {TopZsystem = Zboson+antitop;}
+
+                    TopZsystem_pt_ = TopZsystem.Pt();
+                    TopZsystem_eta_ = TopZsystem.Eta();
+                    TopZsystem_phi_ = TopZsystem.Phi();
+                    TopZsystem_m_ = TopZsystem.M();
                 }
-                else if(index_antitop >= 0) {TopZsystem = Zboson+antitop;}
 
-                // if(index_top >= 0)
-                // {
-                //     TopZsystem = RecoZ+RecoTop;
-                //     if(index_antitop >= 0) {TopZsystem+= RecoAntiTop;}
-                // }
-                // else if(index_antitop >= 0) {TopZsystem = RecoZ+RecoAntiTop;}
-
-                TopZsystem_pt_ = TopZsystem.Pt();
-                TopZsystem_eta_ = TopZsystem.Eta();
-                TopZsystem_phi_ = TopZsystem.Phi();
-                TopZsystem_m_ = TopZsystem.M();
+                //Leading top
+                if(top.Pt() > antitop.Pt())
+                {
+                    LeadingTop_pt_ = top.Pt();
+                    LeadingTop_eta_ = top.Eta();
+                    LeadingTop_phi_ = top.Phi();
+                    LeadingTop_m_ = top.E();
+                }
+                else
+                {
+                    LeadingTop_pt_ = antitop.Pt();
+                    LeadingTop_eta_ = antitop.Eta();
+                    LeadingTop_phi_ = antitop.Phi();
+                    LeadingTop_m_ = antitop.E();
+                }
             }
         } //end genParticle loop
 
