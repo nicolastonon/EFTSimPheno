@@ -227,10 +227,6 @@ GenAnalyzer::GenAnalyzer(const edm::ParameterSet& iConfig) :
     tree_->Branch("v_weights" , &v_weights_) ;
     tree_->Branch("v_weightIds" , &v_weightIds_) ;
 
-    tree_->Branch("mc_weight" , &mc_weight);
-    tree_->Branch("mc_weight_originalValue" , &mc_weight_originalValue);
-    tree_->Branch("originalXWGTUP" , &originalXWGTUP);
-
     // min_pt_jet  = iConfig.getParameter<double> ("min_pt_jet");
     // min_pt_lep  = iConfig.getParameter<double> ("min_pt_lep");
     // max_eta_jet = iConfig.getParameter<double> ("max_eta_jet");
@@ -334,10 +330,6 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
 
     v_weights_.clear();
     v_weightIds_.clear();
-
-    mc_weight = 0;
-    mc_weight_originalValue = 0;
-    originalXWGTUP = 0;
 //--------------------------------------------
 
 
@@ -587,7 +579,6 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
             }
         } //end genParticle loop
 
-        tree_->Fill();
 
        //--Printout daughter infos
        /*
@@ -654,6 +645,9 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
             genJetsMass_.push_back(genJet.energy());
         }
     }
+
+
+    tree_->Fill();
 
     return;
 }

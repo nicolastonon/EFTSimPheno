@@ -154,7 +154,7 @@ TString GetVariationLegendName(TString variationname)
 {
     TString result = variationname;
 
-    if(variationname == "SM") {return result;}
+    if(variationname == "sm") {return result;}
     else
     {
         if(variationname.Contains("ctz", TString::kIgnoreCase)) {result = "c_{tZ}";}
@@ -242,6 +242,9 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
         }
     }
 
+
+
+
  // ###### #    # ###### #    # #####  ####     #       ####   ####  #####
  // #      #    # #      ##   #   #   #         #      #    # #    # #    #
  // #####  #    # #####  # #  #   #    ####     #      #    # #    # #    #
@@ -253,6 +256,12 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
     for(int ientry=0; ientry<nentries; ientry++)
     {
         t->GetEntry(ientry);
+
+        // cout<<"//--------------------------------------------"<<endl;
+        // for(int iweight=0; iweight<v_reweights_ids->size(); iweight++)
+        // {
+        //     cout<<"v_reweights_ids[iweight] "<<v_reweights_ids->at(iweight)<<endl;
+        // }
 
         // cout<<"ientry "<<ientry<<endl;
         // cout<<"mc_weight_originalValue "<<mc_weight_originalValue<<endl;
@@ -266,14 +275,11 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
 
             for(int iweight=0; iweight<v_reweight_names.size(); iweight++)
             {
-                // cout<<"v_reweights_ids[iweight] "<<v_reweights_ids->at(iweight)<<endl;
-
-                if(v_reweight_names[iweight] == "SM") //Nominal weight
-                {
-                    // v_histos_var_reweight[ivar][iweight]->Fill(v_var_floats[ivar], mc_weight_originalValue);
-                    v_histos_var_reweight[ivar][iweight]->Fill(v_var_floats[ivar], 1.);
-                }
-                else //Reweights
+                // if(v_reweight_names[iweight] == "sm") //Nominal weight
+                // {
+                //     v_histos_var_reweight[ivar][iweight]->Fill(v_var_floats[ivar], 1.);
+                // }
+                // else
                 {
                     for(int iweightid=0; iweightid<v_reweights_ids->size(); iweightid++)
                     {
@@ -283,7 +289,10 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
                             v_histos_var_reweight[ivar][iweight]->Fill(v_var_floats[ivar], v_reweights_floats->at(iweight)/mc_weight_originalValue);
 
                             //FIXME
-                            // if(v_reweight_names[iweight] == "ctz_3p0" && v_var_floats[ivar]>200) {cout<<"reweight = "<<v_reweights_floats->at(iweight)/mc_weight_originalValue<<endl;}
+                            // if(v_reweight_names[iweight] == "ctz_3p0" && v_var_floats[ivar]>200) 
+                            // {
+                            //     cout<<"reweight = "<<v_reweights_floats->at(iweight)/mc_weight_originalValue<<endl;
+                            // }
                         }
                     }
                 }
@@ -299,7 +308,7 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
  // #      #      #    #   #
  // #      ######  ####    #
 
-    bool setlog = true;
+    bool setlog = false;
 
     for(int ivar=0; ivar<v_var.size(); ivar++)
     {
@@ -342,7 +351,7 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
                 else {v_histos_var_reweight[ivar][iweight]->SetMaximum(v_histos_var_reweight[ivar][iweight]->GetMaximum() * 1.3);}
             }
 
-            if(v_reweight_names[iweight] != "SM")
+            if(v_reweight_names[iweight] != "sm")
             {
                 v_histos_var_reweight[ivar][iweight]->SetLineWidth(2);
                 // v_histos_var_reweight[ivar][iweight]->SetLineStyle(2);
@@ -368,7 +377,7 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
 
         for(int iweight=0; iweight<v_reweight_names.size(); iweight++)
         {
-            if(v_reweight_names[iweight] != "SM")
+            if(v_reweight_names[iweight] != "sm")
             {
                 v_histos_var_reweight_subplot[ivar][iweight] = (TH1F*) v_histos_var_reweight[ivar][iweight]->Clone(); //Copy histo
                 v_histos_var_reweight_subplot[ivar][iweight]->Add(v_histos_var_reweight[ivar][0], -1); //Substract nominal
@@ -470,12 +479,12 @@ int main()
 
     vector<TString> v_var; vector<pair<float, float>> v_min_max;
     v_var.push_back("Z_pt"); v_min_max.push_back(std::make_pair(20, 400));
-    // v_var.push_back("Z_m"); v_min_max.push_back(std::make_pair(70, 100));
-    // v_var.push_back("Top_pt"); v_min_max.push_back(std::make_pair(20, 400));
-    // v_var.push_back("TopZsystem_m"); v_min_max.push_back(std::make_pair(250, 1000));
+    v_var.push_back("Z_m"); v_min_max.push_back(std::make_pair(70, 100));
+    v_var.push_back("Top_pt"); v_min_max.push_back(std::make_pair(20, 400));
+    v_var.push_back("TopZsystem_m"); v_min_max.push_back(std::make_pair(250, 1000));
 
     vector<TString> v_reweight_names; vector<int> v_colors;
-    v_reweight_names.push_back("SM"); //Nominal SM weight
+    v_reweight_names.push_back("sm"); //Nominal SM weight
     v_reweight_names.push_back("ctz_0p1"); v_colors.push_back(kBlue);
     v_reweight_names.push_back("ctz_0p5");
     v_reweight_names.push_back("ctz_1p0");

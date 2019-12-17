@@ -26,23 +26,39 @@ process.GenAnalyzer.max_eta_jet = cms.double(-1)
 process.GenAnalyzer.max_eta_lep = cms.double(-1)
 
 process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(-1))
+# process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(2))
 
 # -----------------------------
 #NB : 'file:' indicates a physical file path (i.e. no need to look in a catalog)
 process.source = cms.Source("PoolSource",
     # fileNames = cms.untracked.vstring("file:/afs/cern.ch/user/n/ntonon/tmp/test_GEN-SIM.root")
-    fileNames = cms.untracked.vstring("/store/user/ntonon/ttzdim6_v1/ttzdim6_v1/191211_151247/0000/test_GEN-SIM_1.root",
-        # "/store/user/ntonon/ttzdim6_v1/ttzdim6_v1/191211_151247/0000/test_GEN-SIM_2.root",
-        # "/store/user/ntonon/ttzdim6_v1/ttzdim6_v1/191211_151247/0000/test_GEN-SIM_3.root",
-        # "/store/user/ntonon/ttzdim6_v1/ttzdim6_v1/191211_151247/0000/test_GEN-SIM_4.root",
-        # "/store/user/ntonon/ttzdim6_v1/ttzdim6_v1/191211_151247/0000/test_GEN-SIM_5.root",
-        # "/store/user/ntonon/ttzdim6_v1/ttzdim6_v1/191211_151247/0000/test_GEN-SIM_6.root",
-        # "/store/user/ntonon/ttzdim6_v1/ttzdim6_v1/191211_151247/0000/test_GEN-SIM_7.root",
-        # "/store/user/ntonon/ttzdim6_v1/ttzdim6_v1/191211_151247/0000/test_GEN-SIM_8.root",
-        # "/store/user/ntonon/ttzdim6_v1/ttzdim6_v1/191211_151247/0000/test_GEN-SIM_9.root",
-        # "/store/user/ntonon/ttzdim6_v1/ttzdim6_v1/191211_151247/0000/test_GEN-SIM_10.root"
-    )
+	fileNames = cms.untracked.vstring("/store/user/ntonon/ttzdim6_v1/ttzdim6_v1/191213_192006/0000//test_GEN-SIM_1.root",
+		 "/store/user/ntonon/ttzdim6_v1/ttzdim6_v1/191213_192006/0000/test_GEN-SIM_2.root",
+		 "/store/user/ntonon/ttzdim6_v1/ttzdim6_v1/191213_192006/0000/test_GEN-SIM_3.root",
+		 "/store/user/ntonon/ttzdim6_v1/ttzdim6_v1/191213_192006/0000/test_GEN-SIM_4.root",
+		 "/store/user/ntonon/ttzdim6_v1/ttzdim6_v1/191213_192006/0000/test_GEN-SIM_5.root",
+		 "/store/user/ntonon/ttzdim6_v1/ttzdim6_v1/191213_192006/0000/test_GEN-SIM_6.root",
+		 "/store/user/ntonon/ttzdim6_v1/ttzdim6_v1/191213_192006/0000/test_GEN-SIM_7.root",
+		 "/store/user/ntonon/ttzdim6_v1/ttzdim6_v1/191213_192006/0000/test_GEN-SIM_8.root",
+		 "/store/user/ntonon/ttzdim6_v1/ttzdim6_v1/191213_192006/0000/test_GEN-SIM_9.root",
+		 "/store/user/ntonon/ttzdim6_v1/ttzdim6_v1/191213_192006/0000/test_GEN-SIM_10.root"
+	)
 )
+
+"""
+    fileNames = cms.untracked.vstring("/store/user/ntonon/tzqdim6_v1/tzqdim6_v1/191213_190234/0000//test_GEN-SIM_1.root",
+         "/store/user/ntonon/tzqdim6_v1/tzqdim6_v1/191213_190234/0000/test_GEN-SIM_2.root",
+         "/store/user/ntonon/tzqdim6_v1/tzqdim6_v1/191213_190234/0000/test_GEN-SIM_3.root",
+         "/store/user/ntonon/tzqdim6_v1/tzqdim6_v1/191213_190234/0000/test_GEN-SIM_4.root",
+         "/store/user/ntonon/tzqdim6_v1/tzqdim6_v1/191213_190234/0000/test_GEN-SIM_5.root",
+         "/store/user/ntonon/tzqdim6_v1/tzqdim6_v1/191213_190234/0000/test_GEN-SIM_6.root",
+         "/store/user/ntonon/tzqdim6_v1/tzqdim6_v1/191213_190234/0000/test_GEN-SIM_7.root",
+         "/store/user/ntonon/tzqdim6_v1/tzqdim6_v1/191213_190234/0000/test_GEN-SIM_8.root",
+         "/store/user/ntonon/tzqdim6_v1/tzqdim6_v1/191213_190234/0000/test_GEN-SIM_9.root",
+         "/store/user/ntonon/tzqdim6_v1/tzqdim6_v1/191213_190234/0000/test_GEN-SIM_10.root"
+    )
+"""
+
 
 # process.dump = cms.EDAnalyzer("EventContentAnalyzer")
 
