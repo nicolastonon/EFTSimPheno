@@ -17,6 +17,14 @@
 #define BOLD(x) "[1m" x RST
 #define UNDL(x) "[4m" x RST
 
+#include <sstream>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <vector>
+#include <sys/stat.h> // to be able to check file existence
+#include <dirent.h> //list dir content
+
 #include <TLatex.h>
 #include <TChain.h>
 #include <TFile.h>
@@ -173,6 +181,30 @@ TString GetVariationLegendName(TString variationname)
     return result;
 }
 
+//Round to upper 10
+int RoundUp(int toRound)
+{
+    if (toRound % 10 == 0) return toRound;
+    return (10 - toRound % 10) + toRound;
+}
+
+inline void Fill_TH1F_UnderOverflow(TH1F* h, double value, double weight)
+{
+    if(value >= h->GetXaxis()->GetXmax() ) {h->Fill(h->GetXaxis()->GetXmax() - (h->GetXaxis()->GetBinWidth(1) / 2), weight);} //overflow in last bin
+    else if(value <= h->GetXaxis()->GetXmin() ) {h->Fill(h->GetXaxis()->GetXmin() + (h->GetXaxis()->GetBinWidth(1) / 2), weight);} //underflow in first bin
+    else {h->Fill(value, weight);}
+
+    return;
+};
+
+
+
+
+
+
+
+
+
 
 
 
@@ -195,8 +227,13 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
 {
     cout<<endl<<FYEL("=== MakePlots ===")<<endl<<endl;
 
+//--------------------------------------------
+    bool normalize = true; //true <--> ...
+//--------------------------------------------
+
     TString dir = "./";
-    TString filepath = dir + "test_" + process + ".root";
+    TString filepath = dir + "output_" + process + ".root";
+    if(!Check_File_Existence(filepath)) {cout<<endl<<BOLD(FRED("--- File not found ! Exit !"))<<endl<<endl; return;}
 
     TFile* f = TFile::Open(filepath);
     if(f == 0) {cout<<endl<<BOLD(FRED("--- File not found ! Exit !"))<<endl<<endl; return;}
@@ -222,8 +259,9 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
     t->SetBranchAddress("index_top", &index_top);
     t->SetBranchAddress("index_antitop", &index_antitop);
 
-    float mc_weight_originalValue;
+    float mc_weight_originalValue, originalXWGTUP;
     t->SetBranchAddress("mc_weight_originalValue", &mc_weight_originalValue);
+    // t->SetBranchAddress("originalXWGTUP", &originalXWGTUP);
 
     for(int ivar=0; ivar<v_var.size(); ivar++)
     {
@@ -234,13 +272,33 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
 
         for(int iweight=0; iweight<v_reweight_names.size(); iweight++)
         {
-            v_histos_var_reweight[ivar][iweight] = new TH1F("", "", 15, v_min_max[ivar].first, v_min_max[ivar].second);
-            v_histos_var_reweight_subplot[ivar][iweight] = new TH1F("", "", 15, v_min_max[ivar].first, v_min_max[ivar].second);
+            v_histos_var_reweight[ivar][iweight] = new TH1F("", "", 10, v_min_max[ivar].first, v_min_max[ivar].second);
+            v_histos_var_reweight_subplot[ivar][iweight] = new TH1F("", "", 10, v_min_max[ivar].first, v_min_max[ivar].second);
         }
     }
 
+    //Protections
+    t->GetEntry(0);
+    for(int iweight=0; iweight<v_reweight_names.size(); iweight++)
+    {
+        bool weightFound = false;
+        for(int iweightid=0; iweightid<v_reweights_ids->size(); iweightid++)
+        {
+            if(v_reweight_names[iweight] == TString(v_reweights_ids->at(iweightid)) ) {weightFound = true;}
+        }
+        if(!weightFound) {cout<<"ERROR ! Weight "<<v_reweight_names[iweight]<<" not found ! Abort !"<<endl; return;}
+    }
 
 
+    //Read and store sums of weights (SWE)
+    TH1F* h_SWE = (TH1F*) f->Get("h_SWE");
+    vector<float> v_SWE;
+    for(int ibin=0; ibin<h_SWE->GetNbinsX(); ibin++)
+    {
+        // cout<<"bin "<<ibin+1<<" , Sum = "<<h_SWE->GetBinContent(ibin+1)<<endl;
+        v_SWE.push_back(h_SWE->GetBinContent(ibin+1)); //1 SWE stored for each stored weight
+        // cout<<"v_SWE[ibin] = "<<v_SWE[ibin]<<endl;
+    }
 
  // ###### #    # ###### #    # #####  ####     #       ####   ####  #####
  // #      #    # #      ##   #   #   #         #      #    # #    # #    #
@@ -262,6 +320,7 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
 
         // cout<<"ientry "<<ientry<<endl;
         // cout<<"mc_weight_originalValue "<<mc_weight_originalValue<<endl;
+        // cout<<"originalXWGTUP "<<originalXWGTUP<<endl;
 
         for(int ivar=0; ivar<v_var.size(); ivar++)
         {
@@ -272,31 +331,64 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
 
             for(int iweight=0; iweight<v_reweight_names.size(); iweight++)
             {
-                // if(v_reweight_names[iweight] == "sm") //Nominal weight
-                // {
-                //     v_histos_var_reweight[ivar][iweight]->Fill(v_var_floats[ivar], 1.);
-                // }
-                // else
-                {
-                    for(int iweightid=0; iweightid<v_reweights_ids->size(); iweightid++)
-                    {
-                        if(v_reweight_names[iweight] == TString(v_reweights_ids->at(iweightid)) )
-                        {
-                            // cout<<"v_reweights_floats->at(iweight) "<<v_reweights_floats->at(iweight)<<endl;
-                            v_histos_var_reweight[ivar][iweight]->Fill(v_var_floats[ivar], v_reweights_floats->at(iweight)/mc_weight_originalValue);
+                // cout<<"v_reweight_names[iweight] "<<v_reweight_names[iweight]<<endl;
 
-                            //FIXME
-                            // if(v_reweight_names[iweight] == "ctz_3p0" && v_var_floats[ivar]>200)
-                            // {
-                            //     cout<<"reweight = "<<v_reweights_floats->at(iweight)/mc_weight_originalValue<<endl;
-                            // }
-                        }
+                for(int iweightid=0; iweightid<v_reweights_ids->size(); iweightid++)
+                {
+                    // cout<<"TString(v_reweights_ids->at(iweightid)) "<<TString(v_reweights_ids->at(iweightid))<<endl;
+
+                    if(v_reweight_names[iweight] == TString(v_reweights_ids->at(iweightid)) )
+                    {
+                        // cout<<"v_reweights_floats->at(iweightid) "<<v_reweights_floats->at(iweightid)<<endl;
+                        // v_histos_var_reweight[ivar][iweight]->Fill(v_var_floats[ivar], v_reweights_floats->at(iweightid)/mc_weight_originalValue);
+
+                        // if(normalize) {Fill_TH1F_UnderOverflow(v_histos_var_reweight[ivar][iweight], v_var_floats[ivar], v_reweights_floats->at(iweightid)/(mc_weight_originalValue * v_SWE[iweightid]));}
+                        // else {Fill_TH1F_UnderOverflow(v_histos_var_reweight[ivar][iweight], v_var_floats[ivar], v_reweights_floats->at(iweightid)/mc_weight_originalValue);}
+                        Fill_TH1F_UnderOverflow(v_histos_var_reweight[ivar][iweight], v_var_floats[ivar], v_reweights_floats->at(iweightid)/mc_weight_originalValue);
+
+                        // if(v_reweight_names[iweight] == "ctz_3p0")
+                        // {
+                        //     cout<<"3p0 reweight = "<<v_reweights_floats->at(iweightid)/mc_weight_originalValue<<endl;
+                        // }
+                        // else if(v_reweight_names[iweight] == "sm")
+                        // {
+                        //     cout<<"sm reweight = "<<v_reweights_floats->at(iweightid)/mc_weight_originalValue<<endl;
+                        // }
                     }
                 }
             }
         }
     } //Loop on entries
 
+    if(normalize) //Normalize to 1
+    {
+        for(int ivar=0; ivar<v_var.size(); ivar++)
+        {
+            for(int iweight=0; iweight<v_reweight_names.size(); iweight++)
+            {
+                v_histos_var_reweight[ivar][iweight]->Scale(1./v_histos_var_reweight[ivar][iweight]->Integral());
+            }
+        }
+    }
+
+    bool printBinContent = false; //debug
+    if(printBinContent)
+    {
+        for(int ivar=0; ivar<1; ivar++)
+        {
+            cout<<"var "<<v_var[ivar]<<endl;
+
+            for(int iweight=0; iweight<v_reweight_names.size(); iweight++)
+            {
+                cout<<"//--------------------------------------------"<<endl;
+                cout<<"weight "<<v_reweight_names[iweight]<<endl;
+                for(int ibin=0; ibin<v_histos_var_reweight[ivar][iweight]->GetNbinsX(); ibin++)
+                {
+                    cout<<"bin "<<ibin<<" : "<<v_histos_var_reweight[ivar][iweight]->GetBinContent(ibin)<<" +- "<<v_histos_var_reweight[ivar][iweight]->GetBinError(ibin)<<endl;
+                }
+            }
+        }
+    }
 
  // #####  #       ####  #####
  // #    # #      #    #   #
@@ -309,6 +401,35 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
 
     for(int ivar=0; ivar<v_var.size(); ivar++)
     {
+        //Compute max Y value (to adapt Y range) and min/max 'BSM/SM' scale factor (to adapt ratio plot range)
+        float ymax = -1;
+        float SFmax = -1;
+        float SFmin = 1.;
+        for(int iweight=0; iweight<v_reweight_names.size(); iweight++)
+        {
+            if(v_histos_var_reweight[ivar][iweight]->GetMaximum() > ymax)
+            {
+                ymax = v_histos_var_reweight[ivar][iweight]->GetMaximum();
+                // cout<<"ymax = "<<ymax<<endl;
+            }
+
+            for(int ibin=1; ibin<v_histos_var_reweight[ivar][iweight]->GetNbinsX()+1; ibin++)
+            {
+                if(v_histos_var_reweight[ivar][iweight]->GetBinContent(ibin)/v_histos_var_reweight[ivar][0]->GetBinContent(ibin) > SFmax)
+                {
+                    SFmax = v_histos_var_reweight[ivar][iweight]->GetBinContent(ibin)/v_histos_var_reweight[ivar][0]->GetBinContent(ibin);
+                    // cout<<"SFmax = "<<SFmax<<endl;
+                }
+                if(v_histos_var_reweight[ivar][iweight]->GetBinContent(ibin)/v_histos_var_reweight[ivar][0]->GetBinContent(ibin) < SFmin)
+                {
+                    SFmin = v_histos_var_reweight[ivar][iweight]->GetBinContent(ibin)/v_histos_var_reweight[ivar][0]->GetBinContent(ibin);
+                    // cout<<"SFmin = "<<SFmin<<endl;
+                }
+            }
+
+        }
+        // double SFmax = RoundUp(ymax / v_histos_var_reweight[ivar][0]->GetMaximum()) + 0.99; //in %
+
         //Canvas definition
         // Load_Canvas_Style();
         TCanvas* c1 = new TCanvas("c1","c1", 1000, 800);
@@ -323,12 +444,12 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
         c1->cd();
         for(int iweight=0; iweight<v_reweight_names.size(); iweight++)
         {
-
             v_histos_var_reweight[ivar][iweight]->SetLineColor(iweight+1);
 
             if(!iweight) //only needed for first histo
             {
-                v_histos_var_reweight[ivar][iweight]->GetYaxis()->SetTitle("Events");
+                // v_histos_var_reweight[ivar][iweight]->GetYaxis()->SetTitle("Events");
+                v_histos_var_reweight[ivar][iweight]->GetYaxis()->SetTitle("a.u.");
                 v_histos_var_reweight[ivar][iweight]->SetLineStyle(1);
                 v_histos_var_reweight[ivar][iweight]->SetLineWidth(3);
 
@@ -344,8 +465,8 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
                 v_histos_var_reweight[ivar][iweight]->GetYaxis()->SetTitleOffset(1.2);
                 v_histos_var_reweight[ivar][iweight]->GetXaxis()->SetLabelSize(0.0); //subplot axis instead
 
-                if(setlog) {v_histos_var_reweight[ivar][iweight]->SetMaximum(v_histos_var_reweight[ivar][iweight]->GetMaximum() * 5.);}
-                else {v_histos_var_reweight[ivar][iweight]->SetMaximum(v_histos_var_reweight[ivar][iweight]->GetMaximum() * 1.3);}
+                if(setlog) {v_histos_var_reweight[ivar][iweight]->SetMaximum(ymax * 5.);}
+                else {v_histos_var_reweight[ivar][iweight]->SetMaximum(ymax * 1.2);}
             }
 
             if(v_reweight_names[iweight] != "sm")
@@ -354,7 +475,7 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
                 // v_histos_var_reweight[ivar][iweight]->SetLineStyle(2);
             }
 
-            v_histos_var_reweight[ivar][iweight]->Draw("hist same");
+            v_histos_var_reweight[ivar][iweight]->Draw("hist E same");
 
             // qw->AddEntry(v_histos_var_reweight[ivar][iweight], v_reweight_names[iweight], "L");
             qw->AddEntry(v_histos_var_reweight[ivar][iweight], GetVariationLegendName(v_reweight_names[iweight]), "L");
@@ -377,7 +498,7 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
             if(v_reweight_names[iweight] != "sm")
             {
                 v_histos_var_reweight_subplot[ivar][iweight] = (TH1F*) v_histos_var_reweight[ivar][iweight]->Clone(); //Copy histo
-                v_histos_var_reweight_subplot[ivar][iweight]->Add(v_histos_var_reweight[ivar][0], -1); //Substract nominal
+                // v_histos_var_reweight_subplot[ivar][iweight]->Add(v_histos_var_reweight[ivar][0], -1); //Substract nominal
                 v_histos_var_reweight_subplot[ivar][iweight]->Divide(v_histos_var_reweight[ivar][0]); //Divide by nominal
 
                 // for(int i=0; i<10; i++)
@@ -387,7 +508,8 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
 
                 v_histos_var_reweight_subplot[ivar][iweight]->GetXaxis()->SetTitle(v_var[ivar]);
                 v_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->CenterTitle();
-                v_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetTitle("BSM/SM [%]");
+                v_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetTitle("BSM/SM");
+                // v_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetTitle("BSM/SM [%]");
                 // v_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetTitle("#frac{(X-#mu)}{#mu} [%]");
                 v_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetTitleOffset(1.4);
                 v_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetTickLength(0.);
@@ -397,20 +519,22 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
                 // v_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetLabelFont(42);
                 // v_histos_var_reweight_subplot[ivar][iweight]->GetXaxis()->SetTitleFont(42);
                 // v_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetTitleFont(42);
-                v_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetNdivisions(503); //grid draw on primary tick marks only
-                // v_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetNdivisions(507); //grid draw on primary tick marks only
-                v_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetTitleSize(0.04);
+                // v_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetNdivisions(503); //grid draw on primary tick marks only
+                v_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetNdivisions(507); //grid draw on primary tick marks only
+                v_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetTitleSize(0.05);
                 v_histos_var_reweight_subplot[ivar][iweight]->GetXaxis()->SetTickLength(0.04);
 
-                v_histos_var_reweight_subplot[ivar][iweight]->Scale(100.); //express in %
-                v_histos_var_reweight_subplot[ivar][iweight]->SetMinimum(-1.99); //%
-                v_histos_var_reweight_subplot[ivar][iweight]->SetMaximum(+50.99); //%
+                // v_histos_var_reweight_subplot[ivar][iweight]->Scale(100.); //express in %
+                // v_histos_var_reweight_subplot[ivar][iweight]->SetMinimum(0.80);
+                // v_histos_var_reweight_subplot[ivar][iweight]->SetMaximum(+3.);
+                v_histos_var_reweight_subplot[ivar][iweight]->SetMinimum(SFmin*0.8);
+                v_histos_var_reweight_subplot[ivar][iweight]->SetMaximum(SFmax*1.2);
 
                 v_histos_var_reweight_subplot[ivar][iweight]->SetLineColor(iweight+1);
                 v_histos_var_reweight_subplot[ivar][iweight]->SetLineWidth(2);
                 // v_histos_var_reweight_subplot[ivar][iweight]->SetLineStyle(2);
 
-                v_histos_var_reweight_subplot[ivar][iweight]->Draw("same");
+                v_histos_var_reweight_subplot[ivar][iweight]->Draw("hist E same");
             }
         }
 
@@ -422,7 +546,7 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
 		latex.SetTextSize(0.03);
 		latex.DrawLatex(0.61, 0.95, text);
 
-        TString outputname = "./plot_" + v_var[ivar] + ".png";
+        TString outputname = "./" + v_var[ivar] + "_" + process + ".png";
         c1->SaveAs(outputname);
 
         delete pad_ratio;
@@ -439,6 +563,7 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
         }
     }
 
+    delete h_SWE;
     f->Close();
 
     delete v_reweights_floats; delete v_reweights_ids;
@@ -471,30 +596,37 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
 
 int main()
 {
-    // TString process = "ttZ";
-    TString process = "tZq";
+    // TString process = "ttz";
+    // TString process = "tzq";
+    // TString process = "ttll";
+    TString process = "tllq";
 
     vector<TString> v_var; vector<pair<float, float>> v_min_max;
-    v_var.push_back("Z_pt"); v_min_max.push_back(std::make_pair(20, 400));
+    v_var.push_back("Z_pt"); v_min_max.push_back(std::make_pair(0, 500));
     v_var.push_back("Z_m"); v_min_max.push_back(std::make_pair(70, 100));
-    v_var.push_back("Top_pt"); v_min_max.push_back(std::make_pair(20, 400));
+    v_var.push_back("Top_pt"); v_min_max.push_back(std::make_pair(0, 500));
     v_var.push_back("TopZsystem_m"); v_min_max.push_back(std::make_pair(250, 1000));
+    v_var.push_back("LeadingTop_pt"); v_min_max.push_back(std::make_pair(0, 500));
 
     vector<TString> v_reweight_names; vector<int> v_colors;
     v_reweight_names.push_back("sm"); //Nominal SM weight
-    v_reweight_names.push_back("ctz_0p1"); v_colors.push_back(kBlue);
-    v_reweight_names.push_back("ctz_0p5");
+    // v_reweight_names.push_back("ctz_0p1");
+    // v_reweight_names.push_back("ctz_0p5");
     v_reweight_names.push_back("ctz_1p0");
-    v_reweight_names.push_back("ctz_1p5");
-    v_reweight_names.push_back("ctz_2p0");
+    // v_reweight_names.push_back("ctz_1p5");
+    // v_reweight_names.push_back("ctz_2p0");
     // v_reweight_names.push_back("ctz_2p5");
     v_reweight_names.push_back("ctz_3p0");
     // v_reweight_names.push_back("ctz_4p0");
-    // v_reweight_names.push_back("ctz_5p0");
+    v_reweight_names.push_back("ctz_5p0");
+    // v_reweight_names.push_back("ctz_8p0");
+    // v_reweight_names.push_back("ctz_10p0");
 
     // v_reweight_names.push_back("ctw_0p5");
     // v_reweight_names.push_back("ctw_1p0");
+    // v_reweight_names.push_back("ctw_3p0");
     // v_reweight_names.push_back("ctw_5p0");
+    // v_reweight_names.push_back("ctw_8p0");
 
     Load_Canvas_Style();
 

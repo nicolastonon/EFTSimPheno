@@ -67,7 +67,7 @@ _____________________________________________________________________________
 
 ## Gridpack generation
 
-- [Instructions](https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookCMSConnect) to use the CMSConnect service.
+- [General instructions](https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookCMSConnect) to create an account and use the CMSConnect service.
 
 - Launch the gridpack production :
 
@@ -82,7 +82,7 @@ cd /local-scratch/$USER/genproductions/bin/MadGraph5_aMCatNLO/
 nohup ./submit_cmsconnect_gridpack_generation.sh [name of process card without '_proc_card.dat'] [folder containing cards relative to current location] > debugfile 2>&1 &
 ```
 
-*NB : gridpack generation for the ttZ and tZq processes (including dim6top operators) takes ~30 min.*
+<!-- *NB : gridpack generation for the ttZ and tZq processes (including dim6top operators) takes ~30 min.* -->
 
 :arrow_right: This outputs a gridpack with a name of the form 'PROCNAME_$SCRAM_ARCH_CMSSW_X_Y_Z_tarball.tar.xz'.
 
@@ -106,7 +106,7 @@ NCPU=1
 ./runcmsgrid.sh $NEVENTS $RANDOMSEED $NCPU
 ```
 
-*NB : generation of 10K events for the ttZ and tZq processes (including dim6top operators) takes ~30 min.*
+<!-- *NB : generation of 10K events for the ttZ and tZq processes (including dim6top operators) takes ~30 min.* -->
 
 :arrow_right: This outputs a file in the LHE format named 'cmsgrid_final.lhe'.
 
@@ -147,6 +147,6 @@ cmsRun Pheno/Analyzer/test/GenAnalyzer/ConfFile_cfg.py
 
 ## GenPlotter
 
-- Running the code 'GenPlotter.cc' will produce plots for pheno studies.
+- Compiling and running the code 'GenPlotter.cc' will produce plots for pheno studies.
 
 _____________________________________________________________________________

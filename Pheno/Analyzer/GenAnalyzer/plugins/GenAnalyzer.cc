@@ -84,6 +84,7 @@
 #include "TFile.h"
 #include "TTree.h"
 #include "TString.h"
+#include "TH1F.h"
 
 //
 // class declaration
@@ -204,6 +205,9 @@ class GenAnalyzer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
         //Reweights
         std::vector<std::string> v_weightIds_;
         std::vector<float> v_weights_;
+
+        //Also store the total sums of weights (SWE), in histogram
+        TH1F* h_SWE;
 };
 
 //
@@ -238,6 +242,7 @@ GenAnalyzer::GenAnalyzer(const edm::ParameterSet& iConfig) :
     TString outputname = "output_"+processName+".root";
     ofile_ = new TFile(outputname, "RECREATE","GenAnalyzer output file");
     tree_ = new TTree("tree", "GenAnalyzer output tree");
+    h_SWE = new TH1F("h_SWE", "h_SWE", 50, 0, 50); //NB : arbitrary indexing, depends on nof reweights considered !
 
     tree_->Branch("pt"   , &genParticlesPt_   ) ;
     tree_->Branch("eta"  , &genParticlesEta_  ) ;
@@ -307,7 +312,9 @@ GenAnalyzer::~GenAnalyzer()
    // do anything here that needs to be done at desctruction time
    // (e.g. close files, deallocate resources etc.)
 
+    h_SWE->Write();
     ofile_->Write();
+    delete h_SWE;
     delete ofile_;
 }
 
@@ -453,6 +460,7 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
 
         int nPdfAll = lheEventProductHandle->weights().size();
 
+        float binX = 0.5; //Fill weight in correct histo bin
         for(int w=0; w<nPdfAll; w++)
         {
             const LHEEventProduct::WGT& wgt = lheEventProductHandle->weights().at(w);
@@ -461,14 +469,16 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
             // cout<<"id = "<<wgt.id<<endl;
 
             TString ts_id = wgt.id;
-
-            if(ts_id.Contains("ctz") || ts_id.Contains("ctw") || ts_id.Contains("sm"))
+            if(ts_id.Contains("ctz", TString::kIgnoreCase) || ts_id.Contains("ctw", TString::kIgnoreCase) || ts_id.Contains("sm", TString::kIgnoreCase) )
             {
                 // cout<<endl<<"-- wgt = "<<wgt.wgt<<endl;
                 // cout<<"id = "<<wgt.id<<endl;
 
                 v_weightIds_.push_back(wgt.id);
                 v_weights_.push_back(wgt.wgt);
+
+                h_SWE->Fill(binX, wgt.wgt);
+                binX+= 1.;
             }
         }
     } //end lheEventProductHandle.isValid
@@ -772,6 +782,8 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
         }
     }
 
+    //FIXME -- enforce presence of real Z
+    if(index_Z < 0) {return;}
 
     tree_->Fill();
 
