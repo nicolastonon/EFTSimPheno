@@ -1,10 +1,30 @@
-<!-- ```
-mkdir MyAnalysis
-cd MyAnalysis
+<!--
 ```
-:information_source: xxx
-:arrow_right: xxx
-:heavy_exclamation_mark: xxx -->
+CODE EXAMPLE
+```
+
+=== Emoji list (see https://gist.github.com/rxaviers/7360908)
+:arrow_right:
+:heavy_exclamation_mark:
+:heavy_check_mark:
+:link:
+:white_check_mark:
+:heavy_multiplication_x:
+:x:
+:negative_squared_cross_mark:
+:bangbang:
+:white_check_mark:
+:copyright:
+:clock430:
+:no_entry:
+:ok:
+:arrow_right_hook:
+:paperclip:
+:open_file_folder:
+:chart_with_upwards_trend:
+:lock:
+:hourglass:
+-------------------------------------------->
 
 :telephone: Contact : nicolas.tonon@cern.ch
 _____________________________________________________________________________
@@ -14,14 +34,13 @@ Datacards, codes and instructions for private simulation of Top EFT samples, and
 
 #### Table Of Contents
 
-* [Useful links](https://github.com/nicolastonon/EFT-Simu-Pheno#Useful-links)
-
 * [Setup](https://github.com/nicolastonon/EFT-Simu-Pheno#Setup)
 
 * [MC simulation](https://github.com/nicolastonon/EFT-Simu-Pheno#MC-simulation)
     * [Cards](https://github.com/nicolastonon/EFT-Simu-Pheno#Cards)
     * [Gridpack generation](https://github.com/nicolastonon/EFT-Simu-Pheno#Gridpack-generation)
     * [Generate LHE events](https://github.com/nicolastonon/EFT-Simu-Pheno#Generate-LHE-events)
+    * [Convert LHE file to ROOT format](https://github.com/nicolastonon/EFT-Simu-Pheno#Convert-LHE-file-to-ROOT-format)
     * [Shower & FastSim](https://github.com/nicolastonon/EFT-Simu-Pheno#shower--fastsim)
 
 * [Pheno studies](https://github.com/nicolastonon/EFT-Simu-Pheno#Pheno-studies)
@@ -30,15 +49,15 @@ Datacards, codes and instructions for private simulation of Top EFT samples, and
 
 _____________________________________________________________________________
 
-# Useful links
+#### Useful links
 
-- [SMEFT@NLO model](http://feynrules.irmp.ucl.ac.be/wiki/SMEFTatNLO)
+:link: [SMEFT@NLO model](http://feynrules.irmp.ucl.ac.be/wiki/SMEFTatNLO)
 
-- [dim6top model](https://feynrules.irmp.ucl.ac.be/wiki/dim6top)
+:link: [dim6top model](https://feynrules.irmp.ucl.ac.be/wiki/dim6top)
 
-- [Instructions for private production](https://docs.google.com/document/d/1YghFcqPGS8lx4OIpHWtpNHD8keQQf1vL5XtAP4TJBuo) *(by Seth Moortgat)*
+:link: [Instructions for private production](https://docs.google.com/document/d/1YghFcqPGS8lx4OIpHWtpNHD8keQQf1vL5XtAP4TJBuo) *(by Seth Moortgat)*
 
-- [SMEFT@NLO model](http://feynrules.irmp.ucl.ac.be/wiki/SMEFTatNLO)
+:link: [SMEFT@NLO model](http://feynrules.irmp.ucl.ac.be/wiki/SMEFTatNLO)
 
 _____________________________________________________________________________
 
@@ -110,8 +129,19 @@ NCPU=1
 
 :arrow_right: This outputs a file in the LHE format named 'cmsgrid_final.lhe'.
 
+## Convert LHE file to ROOT format
+
+Once the events have been generated in the LHE format, we can convert them to the more convenient ROOT format using the code '[ConvertLHEtoROOT_cfg.py](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/ConvertLHEtoX/ConvertLHEtoROOT_cfg.py)' :
+```
+cmsRun ConvertLHEtoROOT_cfg.py
+```
+
+:information_source: Update the input file path, and make sure it is stored in the same local directory.
+
 
 ## Shower + FastSim
+
+*Note : this step is not required for simple pheno studies.*
 
 ### Generate config file
 

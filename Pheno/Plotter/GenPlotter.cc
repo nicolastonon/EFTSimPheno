@@ -42,7 +42,6 @@
 #include "TString.h"
 #include "TObject.h"
 
-
 #include <iostream>
 #include <cstdlib>
 #include <iostream>
@@ -76,7 +75,7 @@ using namespace std;
 //--------------------------------------------
 
 
-//Use stat function (from library sys/stat) to check if a file exists
+//Use stat function (from library sys/stat) to check whether a file exists
 bool Check_File_Existence(const TString& name)
 {
   struct stat buffer;
@@ -289,16 +288,15 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
         if(!weightFound) {cout<<"ERROR ! Weight "<<v_reweight_names[iweight]<<" not found ! Abort !"<<endl; return;}
     }
 
-
     //Read and store sums of weights (SWE)
-    TH1F* h_SWE = (TH1F*) f->Get("h_SWE");
-    vector<float> v_SWE;
-    for(int ibin=0; ibin<h_SWE->GetNbinsX(); ibin++)
-    {
-        // cout<<"bin "<<ibin+1<<" , Sum = "<<h_SWE->GetBinContent(ibin+1)<<endl;
-        v_SWE.push_back(h_SWE->GetBinContent(ibin+1)); //1 SWE stored for each stored weight
-        // cout<<"v_SWE[ibin] = "<<v_SWE[ibin]<<endl;
-    }
+    // TH1F* h_SWE = (TH1F*) f->Get("h_SWE");
+    // vector<float> v_SWE;
+    // for(int ibin=0; ibin<h_SWE->GetNbinsX(); ibin++)
+    // {
+    //     v_SWE.push_back(h_SWE->GetBinContent(ibin+1)); //1 SWE stored for each stored weight
+    //     cout<<"v_SWE[ibin] = "<<v_SWE[ibin]<<endl;
+    // }
+
 
  // ###### #    # ###### #    # #####  ####     #       ####   ####  #####
  // #      #    # #      ##   #   #   #         #      #    # #    # #    #
@@ -371,7 +369,7 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
         }
     }
 
-    bool printBinContent = false; //debug
+    bool printBinContent = true; //debug
     if(printBinContent)
     {
         for(int ivar=0; ivar<1; ivar++)
@@ -382,7 +380,7 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
             {
                 cout<<"//--------------------------------------------"<<endl;
                 cout<<"weight "<<v_reweight_names[iweight]<<endl;
-                for(int ibin=0; ibin<v_histos_var_reweight[ivar][iweight]->GetNbinsX(); ibin++)
+                for(int ibin=1; ibin<v_histos_var_reweight[ivar][iweight]->GetNbinsX()+1; ibin++)
                 {
                     cout<<"bin "<<ibin<<" : "<<v_histos_var_reweight[ivar][iweight]->GetBinContent(ibin)<<" +- "<<v_histos_var_reweight[ivar][iweight]->GetBinError(ibin)<<endl;
                 }
@@ -451,7 +449,8 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
                 // v_histos_var_reweight[ivar][iweight]->GetYaxis()->SetTitle("Events");
                 v_histos_var_reweight[ivar][iweight]->GetYaxis()->SetTitle("a.u.");
                 v_histos_var_reweight[ivar][iweight]->SetLineStyle(1);
-                v_histos_var_reweight[ivar][iweight]->SetLineWidth(3);
+                // v_histos_var_reweight[ivar][iweight]->SetLineWidth(3);
+                v_histos_var_reweight[ivar][iweight]->SetLineWidth(2);
 
                 v_histos_var_reweight[ivar][iweight]->GetXaxis()->SetLabelFont(42);
                 v_histos_var_reweight[ivar][iweight]->GetYaxis()->SetLabelFont(42);
@@ -563,7 +562,7 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
         }
     }
 
-    delete h_SWE;
+    // delete h_SWE;
     f->Close();
 
     delete v_reweights_floats; delete v_reweights_ids;
@@ -603,22 +602,27 @@ int main()
 
     vector<TString> v_var; vector<pair<float, float>> v_min_max;
     v_var.push_back("Z_pt"); v_min_max.push_back(std::make_pair(0, 500));
-    v_var.push_back("Z_m"); v_min_max.push_back(std::make_pair(70, 100));
-    v_var.push_back("Top_pt"); v_min_max.push_back(std::make_pair(0, 500));
-    v_var.push_back("TopZsystem_m"); v_min_max.push_back(std::make_pair(250, 1000));
-    v_var.push_back("LeadingTop_pt"); v_min_max.push_back(std::make_pair(0, 500));
+    // v_var.push_back("Z_eta"); v_min_max.push_back(std::make_pair(-5, 5));
+    // v_var.push_back("Z_m"); v_min_max.push_back(std::make_pair(70, 100));
+    // v_var.push_back("Top_pt"); v_min_max.push_back(std::make_pair(0, 500));
+    // v_var.push_back("Top_eta"); v_min_max.push_back(std::make_pair(-5, 5));
+    // v_var.push_back("TopZsystem_m"); v_min_max.push_back(std::make_pair(250, 1000));
+    // v_var.push_back("LeadingTop_pt"); v_min_max.push_back(std::make_pair(0, 500));
+    // v_var.push_back("LeadingTop_eta"); v_min_max.push_back(std::make_pair(-5, 5));
+    // v_var.push_back("Zreco_dPhill"); v_min_max.push_back(std::make_pair(0, 6));
 
     vector<TString> v_reweight_names; vector<int> v_colors;
-    v_reweight_names.push_back("sm"); //Nominal SM weight
+    v_reweight_names.push_back("sm"); //Nominal SM weight -- keep
+
     // v_reweight_names.push_back("ctz_0p1");
     // v_reweight_names.push_back("ctz_0p5");
-    v_reweight_names.push_back("ctz_1p0");
+    // v_reweight_names.push_back("ctz_1p0");
     // v_reweight_names.push_back("ctz_1p5");
     // v_reweight_names.push_back("ctz_2p0");
     // v_reweight_names.push_back("ctz_2p5");
     v_reweight_names.push_back("ctz_3p0");
     // v_reweight_names.push_back("ctz_4p0");
-    v_reweight_names.push_back("ctz_5p0");
+    // v_reweight_names.push_back("ctz_5p0");
     // v_reweight_names.push_back("ctz_8p0");
     // v_reweight_names.push_back("ctz_10p0");
 
