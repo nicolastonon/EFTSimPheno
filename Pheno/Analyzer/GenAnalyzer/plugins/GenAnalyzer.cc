@@ -3,14 +3,13 @@
 
 -
 
- */
+*/
 
 /*
 ## NOTES ##
 
 - Considering at most 1 top + 1 antitop per event
-
- */
+*/
 
 // -*- C++ -*-
 //

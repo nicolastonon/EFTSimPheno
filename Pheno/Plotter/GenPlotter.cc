@@ -85,6 +85,8 @@ bool Check_File_Existence(const TString& name)
 
 void Load_Canvas_Style()
 {
+    TH1::SetDefaultSumw2();
+
 	// For the canvas:
 	gStyle->SetCanvasBorderMode(0);
 	gStyle->SetCanvasColor(0); // must be kWhite but I dunno how to do that in PyROOT
@@ -344,6 +346,7 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
                         // else {Fill_TH1F_UnderOverflow(v_histos_var_reweight[ivar][iweight], v_var_floats[ivar], v_reweights_floats->at(iweightid)/mc_weight_originalValue);}
                         Fill_TH1F_UnderOverflow(v_histos_var_reweight[ivar][iweight], v_var_floats[ivar], v_reweights_floats->at(iweightid)/mc_weight_originalValue);
 
+                        //-- DEBUG
                         // if(v_reweight_names[iweight] == "ctz_3p0")
                         // {
                         //     cout<<"3p0 reweight = "<<v_reweights_floats->at(iweightid)/mc_weight_originalValue<<endl;
@@ -597,15 +600,16 @@ int main()
 {
     // TString process = "ttz";
     // TString process = "tzq";
-    // TString process = "ttll";
-    TString process = "tllq";
+    TString process = "ttll";
+    // TString process = "tllq";
 
     vector<TString> v_var; vector<pair<float, float>> v_min_max;
     v_var.push_back("Z_pt"); v_min_max.push_back(std::make_pair(0, 500));
     // v_var.push_back("Z_eta"); v_min_max.push_back(std::make_pair(-5, 5));
     // v_var.push_back("Z_m"); v_min_max.push_back(std::make_pair(70, 100));
-    // v_var.push_back("Top_pt"); v_min_max.push_back(std::make_pair(0, 500));
+    v_var.push_back("Top_pt"); v_min_max.push_back(std::make_pair(0, 500));
     // v_var.push_back("Top_eta"); v_min_max.push_back(std::make_pair(-5, 5));
+    v_var.push_back("Top_m"); v_min_max.push_back(std::make_pair(0, 300));
     // v_var.push_back("TopZsystem_m"); v_min_max.push_back(std::make_pair(250, 1000));
     // v_var.push_back("LeadingTop_pt"); v_min_max.push_back(std::make_pair(0, 500));
     // v_var.push_back("LeadingTop_eta"); v_min_max.push_back(std::make_pair(-5, 5));

@@ -39,9 +39,10 @@ Datacards, codes and instructions for private simulation of Top EFT samples, and
 * [MC simulation](https://github.com/nicolastonon/EFT-Simu-Pheno#MC-simulation)
     * [Cards](https://github.com/nicolastonon/EFT-Simu-Pheno#Cards)
     * [Gridpack generation](https://github.com/nicolastonon/EFT-Simu-Pheno#Gridpack-generation)
-    * [Generate LHE events](https://github.com/nicolastonon/EFT-Simu-Pheno#Generate-LHE-events)
-    * [Convert LHE file to ROOT format](https://github.com/nicolastonon/EFT-Simu-Pheno#Convert-LHE-file-to-ROOT-format)
-    * [Shower & FastSim](https://github.com/nicolastonon/EFT-Simu-Pheno#shower--fastsim)
+    * [Generate parton-level events](https://github.com/nicolastonon/EFT-Simu-Pheno#Generate-parton-level-events)
+    * [Generate particle-level events](https://github.com/nicolastonon/EFT-Simu-Pheno#Generate-parton-level-events)
+      * [GEN-only](https://github.com/nicolastonon/EFT-Simu-Pheno#GEN-only)
+      * [Shower + FastSim + RECO](https://github.com/nicolastonon/EFT-Simu-Pheno#Shower--FastSim--RECO)
 
 * [Pheno studies](https://github.com/nicolastonon/EFT-Simu-Pheno#Pheno-studies)
     * [GenAnalyzer](https://github.com/nicolastonon/EFT-Simu-Pheno#GenAnalyzer)
@@ -106,7 +107,7 @@ nohup ./submit_cmsconnect_gridpack_generation.sh [name of process card without '
 :arrow_right: This outputs a gridpack with a name of the form 'PROCNAME_$SCRAM_ARCH_CMSSW_X_Y_Z_tarball.tar.xz'.
 
 
-## Generate LHE events
+## Generate parton-level events
 
 - Produce events interactively from the gridpack :
 
@@ -129,33 +130,44 @@ NCPU=1
 
 :arrow_right: This outputs a file in the LHE format named 'cmsgrid_final.lhe'.
 
-## Convert LHE file to ROOT format
+## Generate particle-level events
 
-Once the events have been generated in the LHE format, we can convert them to the more convenient ROOT format using the code '[ConvertLHEtoROOT_cfg.py](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/ConvertLHEtoX/ConvertLHEtoROOT_cfg.py)' :
+To generate physical collision events, the LHE files we have created need to be showered.
+Parton showering accounts for non-perturbative QCD  effects with phenomenological models.
+The most used tool for parton showering in CMS is Pythia 8.
+
+### GEN-only
+
+:information_source: Type 'cmsDriver --help' to get infos on arguments.
+
+- Example : produce the config file 'GEN_cfg.py' using a custom fragment and run:
 ```
-cmsRun ConvertLHEtoROOT_cfg.py
+cmsDriver.py Configuration/GenProduction/python/PrivProd.py --mc --conditions auto:run2_mc -n 100 --era Run2_25ns --eventcontent RAWSIM --step GEN --datatier GEN-SIM --beamspot Realistic25ns13TeVEarly2017Collision --filein file:cmsgrid_final_tzq.lhe --fileout file:GEN.root --python_filename GEN_cfg.py --no_exec
+cmsRun GEN_cfg.py
 ```
 
-:information_source: Update the input file path, and make sure it is stored in the same local directory.
+:arrow_right_hook: The output file can be passed to the GenAnalyzer code for generator-level studies.
 
+### Shower + FastSim + RECO
 
-## Shower + FastSim
+CMSSW can act as a wrapper around various generators and chain their outputs together.
+This makes it quite  easy to run large-scale production from a gridpack to the finished (Mini/Nano)AOD file.
 
-*Note : this step is not required for simple pheno studies.*
+Here's an example how to chain Shower + FastSim + RECO steps.
 
-### Generate config file
-
-- Example *cmsDriver* command to produce the config file 'FASTSIM_cfg.py' using a custom fragment :
+- Example : produce the config file 'FASTSIM_cfg.py' using a custom fragment and run:
 ```
-cmsDriver.py Configuration/GenProduction/python/PrivProd.py --conditions auto:run2_mc --fast -n 100 --era Run2_25ns --eventcontent AODSIM -s GEN,SIM,RECOBEFMIX,DIGI:pdigi_valid,RECO --datatier GEN-SIM-DIGI-RECO --beamspot Realistic25ns13TeVEarly2017Collision --filein file:cmsgrid_final_tzq.lhe --fileout file:test_FASTSIM.root --python_filename python_FASTSIM_cfg.py --no-exec
+cmsDriver.py Configuration/GenProduction/python/PrivProd.py --conditions auto:run2_mc --fast -n 100 --era Run2_25ns --eventcontent AODSIM -s GEN,SIM,RECOBEFMIX,DIGI:pdigi_valid,RECO --datatier GEN-SIM-DIGI-RECO --beamspot Realistic25ns13TeVEarly2017Collision --filein file:cmsgrid_final_tzq.lhe --fileout file:test_FASTSIM.root --python_filename python_FASTSIM_cfg.py --no_exec
+cmsRun python_FASTSIM_cfg.py
 ```
-:information_source: Remove '--no-exec' to run interactively.
 
 ### Run with CRAB
 
-- The directory [ConvertLHEtoX](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/ConvertLHEtoX) contains examples of config files necessary to perform showering/fastSim via CRAB.
+If you are processing >10K events, or are chaining several processing steps, you may need to run on CRAB.
 
-- The outputs stored to T2_DE_DESY can then be found e.g. with the command :
+- The directory [ConvertLHEtoX](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/ConvertLHEtoX) contains examples of config files necessary to perform showering/fastSim via CRAB *(to adapt to your needs)*.
+
+- Once finished, the outputs stored to T2_DE_DESY can then be found e.g. with the command :
 
 ```
 gfal-ls -l srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/$USER/
@@ -179,4 +191,22 @@ cmsRun Pheno/Analyzer/test/GenAnalyzer/ConfFile_cfg.py
 
 - Compiling and running the code 'GenPlotter.cc' will produce plots for pheno studies.
 
+```
+g++ GenPlotter.cc -o GenPlotter.exe `root-config --cflags --glibs`
+./GenPlotter.exe
+```
 _____________________________________________________________________________
+
+
+<!-- OBSOLETE, TO VERIFY, ...
+* [Convert LHE file to ROOT format](https://github.com/nicolastonon/EFT-Simu-Pheno#Convert-LHE-file-to-ROOT-format)
+
+## Convert LHE file to ROOT format
+
+Once the events have been generated in the LHE format, we can convert them to the more convenient ROOT format using the code '[ConvertLHEtoROOT_cfg.py](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/ConvertLHEtoX/ConvertLHEtoROOT_cfg.py)' :
+```
+cmsRun ConvertLHEtoROOT_cfg.py
+```
+
+:information_source: Update the input file path, and make sure it is stored in the same local directory.
+-->
