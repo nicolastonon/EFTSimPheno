@@ -40,7 +40,7 @@ Datacards, codes and instructions for private simulation of Top EFT samples, and
     * [Cards](https://github.com/nicolastonon/EFT-Simu-Pheno#Cards)
     * [Gridpack generation](https://github.com/nicolastonon/EFT-Simu-Pheno#Gridpack-generation)
     * [Generate parton-level events](https://github.com/nicolastonon/EFT-Simu-Pheno#Generate-parton-level-events)
-    * [Generate particle-level events](https://github.com/nicolastonon/EFT-Simu-Pheno#Generate-parton-level-events)
+    * [Generate particle-level events](https://github.com/nicolastonon/EFT-Simu-Pheno#Generate-particle-level-events)
       * [GEN-only](https://github.com/nicolastonon/EFT-Simu-Pheno#GEN-only)
       * [Shower + FastSim + RECO](https://github.com/nicolastonon/EFT-Simu-Pheno#Shower--FastSim--RECO)
 
@@ -87,16 +87,21 @@ _____________________________________________________________________________
 
 ## Gridpack generation
 
-- [General instructions](https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookCMSConnect) to create an account and use the CMSConnect service.
+- First time : [General instructions](https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookCMSConnect) to create an account and use the CMSConnect service.
 
-- Launch the gridpack production :
+- Log in to the service, setup the datacards properly, and launch the gridpack production :
 
 ```
+#Log in
+ssh -X USER@login.uscms.org
+
 #Renew proxy
 voms-proxy-init -voms cms -valid 192:00
 
 #Go to working area, e.g. :
 cd /local-scratch/$USER/genproductions/bin/MadGraph5_aMCatNLO/
+
+#Place all your datacards in a directory, with the same prefix
 
 #Generate your gridpacks, using the cmsConnect script:
 nohup ./submit_cmsconnect_gridpack_generation.sh [name of process card without '_proc_card.dat'] [folder containing cards relative to current location] > debugfile 2>&1 &
@@ -118,7 +123,7 @@ cd workdir
 
 cp <path to gridpack creation>/gridpackXXX_tarball.tar.xz .
 
-tar -xavf gridpackXXX_tarball.tar.xz
+tar xavf gridpackXXX_tarball.tar.xz
 
 NEVENTS=10000
 RANDOMSEED=12345
@@ -143,6 +148,7 @@ The most used tool for parton showering in CMS is Pythia 8.
 - Example : produce the config file 'GEN_cfg.py' using a custom fragment and run:
 ```
 cmsDriver.py Configuration/GenProduction/python/PrivProd.py --mc --conditions auto:run2_mc -n 100 --era Run2_25ns --eventcontent RAWSIM --step GEN --datatier GEN-SIM --beamspot Realistic25ns13TeVEarly2017Collision --filein file:cmsgrid_final_tzq.lhe --fileout file:GEN.root --python_filename GEN_cfg.py --no_exec
+
 cmsRun GEN_cfg.py
 ```
 
@@ -158,6 +164,7 @@ Here's an example how to chain Shower + FastSim + RECO steps.
 - Example : produce the config file 'FASTSIM_cfg.py' using a custom fragment and run:
 ```
 cmsDriver.py Configuration/GenProduction/python/PrivProd.py --conditions auto:run2_mc --fast -n 100 --era Run2_25ns --eventcontent AODSIM -s GEN,SIM,RECOBEFMIX,DIGI:pdigi_valid,RECO --datatier GEN-SIM-DIGI-RECO --beamspot Realistic25ns13TeVEarly2017Collision --filein file:cmsgrid_final_tzq.lhe --fileout file:test_FASTSIM.root --python_filename python_FASTSIM_cfg.py --no_exec
+
 cmsRun python_FASTSIM_cfg.py
 ```
 
