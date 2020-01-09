@@ -1,7 +1,11 @@
+# '**' can be used to match any number of directories.
+
 ############
 # Backup copies #
 ############
 *~
+**/old/
+**/backup/
 
 ############
 # Specific #

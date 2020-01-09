@@ -107,14 +107,12 @@ cd /local-scratch/$USER/genproductions/bin/MadGraph5_aMCatNLO/
 nohup ./submit_cmsconnect_gridpack_generation.sh [name of process card without '_proc_card.dat'] [folder containing cards relative to current location] > debugfile 2>&1 &
 ```
 
-<!-- *NB : gridpack generation for the ttZ and tZq processes (including dim6top operators) takes ~30 min.* -->
-
 :arrow_right: This outputs a gridpack with a name of the form 'PROCNAME_$SCRAM_ARCH_CMSSW_X_Y_Z_tarball.tar.xz'.
 
 
 ## Generate parton-level events
 
-- Produce events interactively from the gridpack :
+- You can run Madgraph directly, or generate events from the gridpack :
 
 ```
 mkdir workdir
@@ -131,7 +129,7 @@ NCPU=1
 ./runcmsgrid.sh $NEVENTS $RANDOMSEED $NCPU
 ```
 
-<!-- *NB : generation of 10K events for the ttZ and tZq processes (including dim6top operators) takes ~30 min.* -->
+:clock430: *NB : generation of 10K events for the ttZ and tZq processes (including dim6top operators) takes ~30 min. Similar times both running Madgraph directly or from the gridpack.*
 
 :arrow_right: This outputs a file in the LHE format named 'cmsgrid_final.lhe'.
 
@@ -153,6 +151,8 @@ cmsRun GEN_cfg.py
 ```
 
 :arrow_right_hook: The output file can be passed to the GenAnalyzer code for generator-level studies.
+
+:clock430: *NB : for 10K events interactively, this step takes ~1h.*
 
 ### Shower + FastSim + RECO
 

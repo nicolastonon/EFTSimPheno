@@ -164,18 +164,31 @@ TString GetVariationLegendName(TString variationname)
     TString result = variationname;
 
     if(variationname == "sm") {result = "SM";}
-    else if(variationname.Contains("ctz", TString::kIgnoreCase)) {result = "c_{tZ}";}
-    else if(variationname.Contains("ctw", TString::kIgnoreCase)) {result = "c_{tW}";}
+    else if(variationname.Contains("_"))
+    {
+        TString tmp = variationname;
+        int i = tmp.Index("_"); //Find index of character
 
-    if(variationname.Contains("0p1", TString::kIgnoreCase)) {result+= " = 0.1";}
-    if(variationname.Contains("0p5", TString::kIgnoreCase)) {result+= " = 0.5";}
-    if(variationname.Contains("1p0", TString::kIgnoreCase)) {result+= " = 1";}
-    if(variationname.Contains("1p5", TString::kIgnoreCase)) {result+= " = 1.5";}
-    if(variationname.Contains("2p0", TString::kIgnoreCase)) {result+= " = 2";}
-    if(variationname.Contains("2p5", TString::kIgnoreCase)) {result+= " = 2.5";}
-    if(variationname.Contains("3p0", TString::kIgnoreCase)) {result+= " = 3";}
-    if(variationname.Contains("4p0", TString::kIgnoreCase)) {result+= " = 4";}
-    if(variationname.Contains("5p0", TString::kIgnoreCase)) {result+= " = 5";}
+        if(variationname.Contains("ctz", TString::kIgnoreCase)) {result = "c_{tZ} = ";}
+        else if(variationname.Contains("ctw", TString::kIgnoreCase)) {result = "c_{tW} = ";}
+        else
+        {
+            tmp.Remove(i); //Remove subsequent characters
+            result = tmp + " = ";
+        }
+
+        tmp = variationname;
+        tmp.Remove(0, i+1); //Remove previous characters
+        cout<<tmp<<endl;
+
+        TString first_digit = tmp;
+        first_digit.Remove(tmp.Index("p"));
+        result+= first_digit;
+
+        TString second_digit = tmp;
+        second_digit.Remove(0,tmp.Index("p")+1);
+        if(second_digit != '0') {result+= "." + second_digit;}
+    }
 
     // result+= " [TeV^{-2}]";
 
@@ -194,6 +207,13 @@ inline void Fill_TH1F_UnderOverflow(TH1F* h, double value, double weight)
     if(value >= h->GetXaxis()->GetXmax() ) {h->Fill(h->GetXaxis()->GetXmax() - (h->GetXaxis()->GetBinWidth(1) / 2), weight);} //overflow in last bin
     else if(value <= h->GetXaxis()->GetXmin() ) {h->Fill(h->GetXaxis()->GetXmin() + (h->GetXaxis()->GetBinWidth(1) / 2), weight);} //underflow in first bin
     else {h->Fill(value, weight);}
+
+    return;
+};
+
+inline void Fill_TH1F_NoUnderOverflow(TH1F* h, double value, double weight)
+{
+    if(value < h->GetXaxis()->GetXmax() && value > h->GetXaxis()->GetXmin() ) {h->Fill(value, weight);}
 
     return;
 };
@@ -243,8 +263,10 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
     TTree* t = (TTree*) f->Get(treename);
     if(t == 0) {cout<<endl<<BOLD(FRED("--- Tree not found ! Exit !"))<<endl<<endl; return;}
 
-    vector<vector<TH1F*>> v_histos_var_reweight(v_var.size());
-    vector<vector<TH1F*>> v_histos_var_reweight_subplot(v_var.size());
+    vector<vector<TH1F*>> v2_histos_var_reweight(v_var.size());
+    vector<vector<TH1F*>> v2_histos_var_reweight_subplot(v_var.size());
+
+    vector<vector<int>> v2_nentries(v_var.size()); //for each bin of each var, count nof entries -- for debug, understand uncerts.
 
     vector<float>* v_reweights_floats = new vector<float>(v_reweight_names.size());
     vector<string>* v_reweights_ids = new vector<string>(v_reweight_names.size());
@@ -264,17 +286,21 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
     t->SetBranchAddress("mc_weight_originalValue", &mc_weight_originalValue);
     // t->SetBranchAddress("originalXWGTUP", &originalXWGTUP);
 
+    const int nbins_histos = 10;
     for(int ivar=0; ivar<v_var.size(); ivar++)
     {
         t->SetBranchAddress(v_var[ivar], &v_var_floats[ivar]);
 
-        v_histos_var_reweight[ivar].resize(v_reweight_names.size());
-        v_histos_var_reweight_subplot[ivar].resize(v_reweight_names.size());
+        v2_histos_var_reweight[ivar].resize(v_reweight_names.size());
+        v2_histos_var_reweight_subplot[ivar].resize(v_reweight_names.size());
+
+        v2_nentries[ivar].resize(nbins_histos+2); //Also under/over flow bins
 
         for(int iweight=0; iweight<v_reweight_names.size(); iweight++)
         {
-            v_histos_var_reweight[ivar][iweight] = new TH1F("", "", 10, v_min_max[ivar].first, v_min_max[ivar].second);
-            v_histos_var_reweight_subplot[ivar][iweight] = new TH1F("", "", 10, v_min_max[ivar].first, v_min_max[ivar].second);
+            v2_histos_var_reweight[ivar][iweight] = new TH1F("", "", nbins_histos, v_min_max[ivar].first, v_min_max[ivar].second);
+            v2_histos_var_reweight_subplot[ivar][iweight] = new TH1F("", "", nbins_histos, v_min_max[ivar].first, v_min_max[ivar].second);
+
         }
     }
 
@@ -329,6 +355,9 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
             if(v_var[ivar].Contains("antitop", TString::kIgnoreCase) && index_antitop == -1) {continue;} //if antitop not found
             else if(v_var[ivar].Contains("top", TString::kIgnoreCase) && index_top == -1) {continue;} //if top not found
 
+            //-- DEBUG --
+            v2_nentries[ivar][v2_histos_var_reweight[ivar][0]->GetXaxis()->FindBin(v_var_floats[ivar])]++; //count +1 entry to relevant bin
+
             for(int iweight=0; iweight<v_reweight_names.size(); iweight++)
             {
                 // cout<<"v_reweight_names[iweight] "<<v_reweight_names[iweight]<<endl;
@@ -340,13 +369,26 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
                     if(v_reweight_names[iweight] == TString(v_reweights_ids->at(iweightid)) )
                     {
                         // cout<<"v_reweights_floats->at(iweightid) "<<v_reweights_floats->at(iweightid)<<endl;
-                        // v_histos_var_reweight[ivar][iweight]->Fill(v_var_floats[ivar], v_reweights_floats->at(iweightid)/mc_weight_originalValue);
 
-                        // if(normalize) {Fill_TH1F_UnderOverflow(v_histos_var_reweight[ivar][iweight], v_var_floats[ivar], v_reweights_floats->at(iweightid)/(mc_weight_originalValue * v_SWE[iweightid]));}
-                        // else {Fill_TH1F_UnderOverflow(v_histos_var_reweight[ivar][iweight], v_var_floats[ivar], v_reweights_floats->at(iweightid)/mc_weight_originalValue);}
-                        Fill_TH1F_UnderOverflow(v_histos_var_reweight[ivar][iweight], v_var_floats[ivar], v_reweights_floats->at(iweightid)/mc_weight_originalValue);
+                        // if(normalize) {Fill_TH1F_UnderOverflow(v2_histos_var_reweight[ivar][iweight], v_var_floats[ivar], v_reweights_floats->at(iweightid)/(mc_weight_originalValue * v_SWE[iweightid]));}
+                        // else {Fill_TH1F_UnderOverflow(v2_histos_var_reweight[ivar][iweight], v_var_floats[ivar], v_reweights_floats->at(iweightid)/mc_weight_originalValue);}
 
-                        //-- DEBUG
+                        if(isnan(v_var_floats[ivar]) || isinf(v_var_floats[ivar]))
+                        {
+                            cout<<FRED("Warning ! "<<v_var[ivar]<<" = "<<v_var_floats[ivar]<<" // SKIP !")<<endl;
+                            continue;
+                        }
+
+                        Fill_TH1F_UnderOverflow(v2_histos_var_reweight[ivar][iweight], v_var_floats[ivar], v_reweights_floats->at(iweightid)/mc_weight_originalValue);
+                        // Fill_TH1F_NoUnderOverflow(v2_histos_var_reweight[ivar][iweight], v_var_floats[ivar], v_reweights_floats->at(iweightid)/mc_weight_originalValue);
+
+                        // if(v_reweight_names[iweight] == "ctz_4p0")
+                        // if(v_reweight_names[iweight] == "sm")
+                        // if(v_reweights_floats->at(iweightid)/mc_weight_originalValue > 100)
+                        // {
+                        //     cout<<"v_var_floats[ivar] = "<<v_var_floats[ivar]<<" / SF = "<<v_reweights_floats->at(iweightid)/mc_weight_originalValue<<endl;
+                        // }
+
                         // if(v_reweight_names[iweight] == "ctz_3p0")
                         // {
                         //     cout<<"3p0 reweight = "<<v_reweights_floats->at(iweightid)/mc_weight_originalValue<<endl;
@@ -367,12 +409,12 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
         {
             for(int iweight=0; iweight<v_reweight_names.size(); iweight++)
             {
-                v_histos_var_reweight[ivar][iweight]->Scale(1./v_histos_var_reweight[ivar][iweight]->Integral());
+                v2_histos_var_reweight[ivar][iweight]->Scale(1./v2_histos_var_reweight[ivar][iweight]->Integral());
             }
         }
     }
 
-    bool printBinContent = true; //debug
+    bool printBinContent = false; //debug
     if(printBinContent)
     {
         for(int ivar=0; ivar<1; ivar++)
@@ -383,9 +425,9 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
             {
                 cout<<"//--------------------------------------------"<<endl;
                 cout<<"weight "<<v_reweight_names[iweight]<<endl;
-                for(int ibin=1; ibin<v_histos_var_reweight[ivar][iweight]->GetNbinsX()+1; ibin++)
+                for(int ibin=1; ibin<v2_histos_var_reweight[ivar][iweight]->GetNbinsX()+1; ibin++)
                 {
-                    cout<<"bin "<<ibin<<" : "<<v_histos_var_reweight[ivar][iweight]->GetBinContent(ibin)<<" +- "<<v_histos_var_reweight[ivar][iweight]->GetBinError(ibin)<<endl;
+                    cout<<"bin "<<ibin<<" : "<<v2_histos_var_reweight[ivar][iweight]->GetBinContent(ibin)<<" +- "<<v2_histos_var_reweight[ivar][iweight]->GetBinError(ibin)<<" ("<<v2_nentries[ivar][ibin+1]<<" entries)"<<endl; //NB : first v2_nentries element is underflow
                 }
             }
         }
@@ -408,28 +450,28 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
         float SFmin = 1.;
         for(int iweight=0; iweight<v_reweight_names.size(); iweight++)
         {
-            if(v_histos_var_reweight[ivar][iweight]->GetMaximum() > ymax)
+            if(v2_histos_var_reweight[ivar][iweight]->GetMaximum() > ymax)
             {
-                ymax = v_histos_var_reweight[ivar][iweight]->GetMaximum();
+                ymax = v2_histos_var_reweight[ivar][iweight]->GetMaximum();
                 // cout<<"ymax = "<<ymax<<endl;
             }
 
-            for(int ibin=1; ibin<v_histos_var_reweight[ivar][iweight]->GetNbinsX()+1; ibin++)
+            for(int ibin=1; ibin<v2_histos_var_reweight[ivar][iweight]->GetNbinsX()+1; ibin++)
             {
-                if(v_histos_var_reweight[ivar][iweight]->GetBinContent(ibin)/v_histos_var_reweight[ivar][0]->GetBinContent(ibin) > SFmax)
+                if(v2_histos_var_reweight[ivar][iweight]->GetBinContent(ibin)/v2_histos_var_reweight[ivar][0]->GetBinContent(ibin) > SFmax)
                 {
-                    SFmax = v_histos_var_reweight[ivar][iweight]->GetBinContent(ibin)/v_histos_var_reweight[ivar][0]->GetBinContent(ibin);
+                    SFmax = v2_histos_var_reweight[ivar][iweight]->GetBinContent(ibin)/v2_histos_var_reweight[ivar][0]->GetBinContent(ibin);
                     // cout<<"SFmax = "<<SFmax<<endl;
                 }
-                if(v_histos_var_reweight[ivar][iweight]->GetBinContent(ibin)/v_histos_var_reweight[ivar][0]->GetBinContent(ibin) < SFmin)
+                if(v2_histos_var_reweight[ivar][iweight]->GetBinContent(ibin)/v2_histos_var_reweight[ivar][0]->GetBinContent(ibin) < SFmin)
                 {
-                    SFmin = v_histos_var_reweight[ivar][iweight]->GetBinContent(ibin)/v_histos_var_reweight[ivar][0]->GetBinContent(ibin);
+                    SFmin = v2_histos_var_reweight[ivar][iweight]->GetBinContent(ibin)/v2_histos_var_reweight[ivar][0]->GetBinContent(ibin);
                     // cout<<"SFmin = "<<SFmin<<endl;
                 }
             }
 
         }
-        // double SFmax = RoundUp(ymax / v_histos_var_reweight[ivar][0]->GetMaximum()) + 0.99; //in %
+        // double SFmax = RoundUp(ymax / v2_histos_var_reweight[ivar][0]->GetMaximum()) + 0.99; //in %
 
         //Canvas definition
         // Load_Canvas_Style();
@@ -440,47 +482,57 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
         // c1->SetGridy(1);
         // c1->SetGridx(1);
 
-        TLegend* qw = new TLegend(0.82,0.77,0.99,0.99);
+        TLegend* qw = 0;
+
+        // qw = new TLegend(0.82,0.77,0.99,0.99); //single-column top-right legend
+
+        //1 column for each 2 entries (round up with ceil)
+        //each column takes 0.14 x-space
+        qw = new TLegend(0.99-ceil(v_reweight_names.size()/2.)*0.14,0.88,0.99,0.99);
+        qw->SetNColumns(ceil(v_reweight_names.size()/2.));
+        qw->SetLineColor(1);
+		qw->SetTextSize(0.04);
+
 
         c1->cd();
         for(int iweight=0; iweight<v_reweight_names.size(); iweight++)
         {
-            v_histos_var_reweight[ivar][iweight]->SetLineColor(iweight+1);
+            v2_histos_var_reweight[ivar][iweight]->SetLineColor(iweight+1);
 
             if(!iweight) //only needed for first histo
             {
-                // v_histos_var_reweight[ivar][iweight]->GetYaxis()->SetTitle("Events");
-                v_histos_var_reweight[ivar][iweight]->GetYaxis()->SetTitle("a.u.");
-                v_histos_var_reweight[ivar][iweight]->SetLineStyle(1);
-                // v_histos_var_reweight[ivar][iweight]->SetLineWidth(3);
-                v_histos_var_reweight[ivar][iweight]->SetLineWidth(2);
+                // v2_histos_var_reweight[ivar][iweight]->GetYaxis()->SetTitle("Events");
+                v2_histos_var_reweight[ivar][iweight]->GetYaxis()->SetTitle("a.u.");
+                v2_histos_var_reweight[ivar][iweight]->SetLineStyle(1);
+                // v2_histos_var_reweight[ivar][iweight]->SetLineWidth(3);
+                v2_histos_var_reweight[ivar][iweight]->SetLineWidth(2);
 
-                v_histos_var_reweight[ivar][iweight]->GetXaxis()->SetLabelFont(42);
-                v_histos_var_reweight[ivar][iweight]->GetYaxis()->SetLabelFont(42);
-                v_histos_var_reweight[ivar][iweight]->GetYaxis()->SetTitleFont(42);
-                v_histos_var_reweight[ivar][iweight]->GetYaxis()->SetTitleSize(0.06);
-                v_histos_var_reweight[ivar][iweight]->GetXaxis()->SetTitleSize(0.06);
-                v_histos_var_reweight[ivar][iweight]->GetYaxis()->SetTickLength(0.04);
-                v_histos_var_reweight[ivar][iweight]->GetYaxis()->SetLabelSize(0.048);
-                v_histos_var_reweight[ivar][iweight]->GetXaxis()->SetNdivisions(505);
-                v_histos_var_reweight[ivar][iweight]->GetYaxis()->SetNdivisions(506);
-                v_histos_var_reweight[ivar][iweight]->GetYaxis()->SetTitleOffset(1.2);
-                v_histos_var_reweight[ivar][iweight]->GetXaxis()->SetLabelSize(0.0); //subplot axis instead
+                v2_histos_var_reweight[ivar][iweight]->GetXaxis()->SetLabelFont(42);
+                v2_histos_var_reweight[ivar][iweight]->GetYaxis()->SetLabelFont(42);
+                v2_histos_var_reweight[ivar][iweight]->GetYaxis()->SetTitleFont(42);
+                v2_histos_var_reweight[ivar][iweight]->GetYaxis()->SetTitleSize(0.06);
+                v2_histos_var_reweight[ivar][iweight]->GetXaxis()->SetTitleSize(0.06);
+                v2_histos_var_reweight[ivar][iweight]->GetYaxis()->SetTickLength(0.04);
+                v2_histos_var_reweight[ivar][iweight]->GetYaxis()->SetLabelSize(0.048);
+                v2_histos_var_reweight[ivar][iweight]->GetXaxis()->SetNdivisions(505);
+                v2_histos_var_reweight[ivar][iweight]->GetYaxis()->SetNdivisions(506);
+                v2_histos_var_reweight[ivar][iweight]->GetYaxis()->SetTitleOffset(1.2);
+                v2_histos_var_reweight[ivar][iweight]->GetXaxis()->SetLabelSize(0.0); //subplot axis instead
 
-                if(setlog) {v_histos_var_reweight[ivar][iweight]->SetMaximum(ymax * 5.);}
-                else {v_histos_var_reweight[ivar][iweight]->SetMaximum(ymax * 1.2);}
+                if(setlog) {v2_histos_var_reweight[ivar][iweight]->SetMaximum(ymax * 5.);}
+                else {v2_histos_var_reweight[ivar][iweight]->SetMaximum(ymax * 1.2);}
             }
 
             if(v_reweight_names[iweight] != "sm")
             {
-                v_histos_var_reweight[ivar][iweight]->SetLineWidth(2);
-                // v_histos_var_reweight[ivar][iweight]->SetLineStyle(2);
+                v2_histos_var_reweight[ivar][iweight]->SetLineWidth(2);
+                // v2_histos_var_reweight[ivar][iweight]->SetLineStyle(2);
             }
 
-            v_histos_var_reweight[ivar][iweight]->Draw("hist E same");
+            v2_histos_var_reweight[ivar][iweight]->Draw("hist E same");
 
-            // qw->AddEntry(v_histos_var_reweight[ivar][iweight], v_reweight_names[iweight], "L");
-            qw->AddEntry(v_histos_var_reweight[ivar][iweight], GetVariationLegendName(v_reweight_names[iweight]), "L");
+            // qw->AddEntry(v2_histos_var_reweight[ivar][iweight], v_reweight_names[iweight], "L");
+            qw->AddEntry(v2_histos_var_reweight[ivar][iweight], GetVariationLegendName(v_reweight_names[iweight]), "L");
         }
 
         qw->Draw("same");
@@ -499,44 +551,44 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
         {
             if(v_reweight_names[iweight] != "sm")
             {
-                v_histos_var_reweight_subplot[ivar][iweight] = (TH1F*) v_histos_var_reweight[ivar][iweight]->Clone(); //Copy histo
-                // v_histos_var_reweight_subplot[ivar][iweight]->Add(v_histos_var_reweight[ivar][0], -1); //Substract nominal
-                v_histos_var_reweight_subplot[ivar][iweight]->Divide(v_histos_var_reweight[ivar][0]); //Divide by nominal
+                v2_histos_var_reweight_subplot[ivar][iweight] = (TH1F*) v2_histos_var_reweight[ivar][iweight]->Clone(); //Copy histo
+                // v2_histos_var_reweight_subplot[ivar][iweight]->Add(v2_histos_var_reweight[ivar][0], -1); //Substract nominal
+                v2_histos_var_reweight_subplot[ivar][iweight]->Divide(v2_histos_var_reweight[ivar][0]); //Divide by nominal
 
                 // for(int i=0; i<10; i++)
                 // {
-                //     cout<<"v_histos_var_reweight_subplot[ivar][iweight]->GetBinContent(i+1)"<<v_histos_var_reweight_subplot[ivar][iweight]->GetBinContent(i+1)<<endl;
+                //     cout<<"v2_histos_var_reweight_subplot[ivar][iweight]->GetBinContent(i+1)"<<v2_histos_var_reweight_subplot[ivar][iweight]->GetBinContent(i+1)<<endl;
                 // }
 
-                v_histos_var_reweight_subplot[ivar][iweight]->GetXaxis()->SetTitle(v_var[ivar]);
-                v_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->CenterTitle();
-                v_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetTitle("BSM/SM");
-                // v_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetTitle("BSM/SM [%]");
-                // v_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetTitle("#frac{(X-#mu)}{#mu} [%]");
-                v_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetTitleOffset(1.4);
-                v_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetTickLength(0.);
-                v_histos_var_reweight_subplot[ivar][iweight]->GetXaxis()->SetTitleOffset(1.);
-                v_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetLabelSize(0.048);
-                // v_histos_var_reweight_subplot[ivar][iweight]->GetXaxis()->SetLabelFont(42);
-                // v_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetLabelFont(42);
-                // v_histos_var_reweight_subplot[ivar][iweight]->GetXaxis()->SetTitleFont(42);
-                // v_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetTitleFont(42);
-                // v_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetNdivisions(503); //grid draw on primary tick marks only
-                v_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetNdivisions(507); //grid draw on primary tick marks only
-                v_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetTitleSize(0.05);
-                v_histos_var_reweight_subplot[ivar][iweight]->GetXaxis()->SetTickLength(0.04);
+                v2_histos_var_reweight_subplot[ivar][iweight]->GetXaxis()->SetTitle(v_var[ivar]);
+                v2_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->CenterTitle();
+                v2_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetTitle("BSM/SM");
+                // v2_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetTitle("BSM/SM [%]");
+                // v2_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetTitle("#frac{(X-#mu)}{#mu} [%]");
+                v2_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetTitleOffset(1.4);
+                v2_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetTickLength(0.);
+                v2_histos_var_reweight_subplot[ivar][iweight]->GetXaxis()->SetTitleOffset(1.);
+                v2_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetLabelSize(0.048);
+                // v2_histos_var_reweight_subplot[ivar][iweight]->GetXaxis()->SetLabelFont(42);
+                // v2_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetLabelFont(42);
+                // v2_histos_var_reweight_subplot[ivar][iweight]->GetXaxis()->SetTitleFont(42);
+                // v2_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetTitleFont(42);
+                // v2_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetNdivisions(503); //grid draw on primary tick marks only
+                v2_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetNdivisions(507); //grid draw on primary tick marks only
+                v2_histos_var_reweight_subplot[ivar][iweight]->GetYaxis()->SetTitleSize(0.05);
+                v2_histos_var_reweight_subplot[ivar][iweight]->GetXaxis()->SetTickLength(0.04);
 
-                // v_histos_var_reweight_subplot[ivar][iweight]->Scale(100.); //express in %
-                // v_histos_var_reweight_subplot[ivar][iweight]->SetMinimum(0.80);
-                // v_histos_var_reweight_subplot[ivar][iweight]->SetMaximum(+3.);
-                v_histos_var_reweight_subplot[ivar][iweight]->SetMinimum(SFmin*0.8);
-                v_histos_var_reweight_subplot[ivar][iweight]->SetMaximum(SFmax*1.2);
+                // v2_histos_var_reweight_subplot[ivar][iweight]->Scale(100.); //express in %
+                // v2_histos_var_reweight_subplot[ivar][iweight]->SetMinimum(0.80);
+                // v2_histos_var_reweight_subplot[ivar][iweight]->SetMaximum(+3.);
+                v2_histos_var_reweight_subplot[ivar][iweight]->SetMinimum(SFmin*0.8);
+                v2_histos_var_reweight_subplot[ivar][iweight]->SetMaximum(SFmax*1.2);
 
-                v_histos_var_reweight_subplot[ivar][iweight]->SetLineColor(iweight+1);
-                v_histos_var_reweight_subplot[ivar][iweight]->SetLineWidth(2);
-                // v_histos_var_reweight_subplot[ivar][iweight]->SetLineStyle(2);
+                v2_histos_var_reweight_subplot[ivar][iweight]->SetLineColor(iweight+1);
+                v2_histos_var_reweight_subplot[ivar][iweight]->SetLineWidth(2);
+                // v2_histos_var_reweight_subplot[ivar][iweight]->SetLineStyle(2);
 
-                v_histos_var_reweight_subplot[ivar][iweight]->Draw("hist E same");
+                v2_histos_var_reweight_subplot[ivar][iweight]->Draw("hist E same");
             }
         }
 
@@ -546,7 +598,8 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
 		latex.SetTextAlign(11);
         latex.SetTextFont(52);
 		latex.SetTextSize(0.03);
-		latex.DrawLatex(0.61, 0.95, text);
+		//latex.DrawLatex(0.61, 0.95, text);
+        latex.DrawLatex(0.17, 0.95, text);
 
         TString outputname = "./" + v_var[ivar] + "_" + process + ".png";
         c1->SaveAs(outputname);
@@ -560,8 +613,8 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
     {
         for(int iweight=0; iweight<v_reweight_names.size(); iweight++)
         {
-            delete v_histos_var_reweight[ivar][iweight];
-            delete v_histos_var_reweight_subplot[ivar][iweight];
+            delete v2_histos_var_reweight[ivar][iweight];
+            delete v2_histos_var_reweight_subplot[ivar][iweight];
         }
     }
 
@@ -598,37 +651,39 @@ void MakePlots(TString process, vector<TString> v_var, vector<TString> v_reweigh
 
 int main()
 {
-    // TString process = "ttz";
+    TString process = "ttz";
     // TString process = "tzq";
-    TString process = "ttll";
+    // TString process = "ttll";
     // TString process = "tllq";
 
     vector<TString> v_var; vector<pair<float, float>> v_min_max;
     v_var.push_back("Z_pt"); v_min_max.push_back(std::make_pair(0, 500));
-    // v_var.push_back("Z_eta"); v_min_max.push_back(std::make_pair(-5, 5));
+    v_var.push_back("Z_eta"); v_min_max.push_back(std::make_pair(-5, 5));
     // v_var.push_back("Z_m"); v_min_max.push_back(std::make_pair(70, 100));
-    v_var.push_back("Top_pt"); v_min_max.push_back(std::make_pair(0, 500));
+    // v_var.push_back("Top_pt"); v_min_max.push_back(std::make_pair(0, 500));
     // v_var.push_back("Top_eta"); v_min_max.push_back(std::make_pair(-5, 5));
-    v_var.push_back("Top_m"); v_min_max.push_back(std::make_pair(0, 300));
+    // v_var.push_back("Top_m"); v_min_max.push_back(std::make_pair(0, 300));
     // v_var.push_back("TopZsystem_m"); v_min_max.push_back(std::make_pair(250, 1000));
     // v_var.push_back("LeadingTop_pt"); v_min_max.push_back(std::make_pair(0, 500));
     // v_var.push_back("LeadingTop_eta"); v_min_max.push_back(std::make_pair(-5, 5));
     // v_var.push_back("Zreco_dPhill"); v_min_max.push_back(std::make_pair(0, 6));
+    // v_var.push_back("cosThetaStarPol_Z"); v_min_max.push_back(std::make_pair(-1, 1));
+    // v_var.push_back("cosThetaStarPol_Top"); v_min_max.push_back(std::make_pair(-1, 1));
 
     vector<TString> v_reweight_names; vector<int> v_colors;
     v_reweight_names.push_back("sm"); //Nominal SM weight -- keep
 
     // v_reweight_names.push_back("ctz_0p1");
     // v_reweight_names.push_back("ctz_0p5");
-    // v_reweight_names.push_back("ctz_1p0");
+    v_reweight_names.push_back("ctz_1p0");
     // v_reweight_names.push_back("ctz_1p5");
     // v_reweight_names.push_back("ctz_2p0");
     // v_reweight_names.push_back("ctz_2p5");
-    v_reweight_names.push_back("ctz_3p0");
-    // v_reweight_names.push_back("ctz_4p0");
+    // v_reweight_names.push_back("ctz_3p0");
+    v_reweight_names.push_back("ctz_4p0");
     // v_reweight_names.push_back("ctz_5p0");
     // v_reweight_names.push_back("ctz_8p0");
-    // v_reweight_names.push_back("ctz_10p0");
+    v_reweight_names.push_back("ctz_10p0");
 
     // v_reweight_names.push_back("ctw_0p5");
     // v_reweight_names.push_back("ctw_1p0");
