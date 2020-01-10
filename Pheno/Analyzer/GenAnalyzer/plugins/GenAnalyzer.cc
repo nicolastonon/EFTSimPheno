@@ -113,6 +113,8 @@ class GenAnalyzer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
 
         float GetDeltaR(float, float, float, float);
         bool isZDecayProduct(Handle<reco::GenParticleCollection>, const reco::GenParticle, int&);
+        bool isNonResonant_ll(Handle<reco::GenParticleCollection>, const reco::GenParticle);
+
         int isTopDecayProduct(Handle<reco::GenParticleCollection>, const reco::GenParticle, int&, int&);
         bool isEleMu(int);
         const GenParticle& GetGenParticle(Handle<reco::GenParticleCollection>, int);
@@ -560,8 +562,8 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
 
             if(debug)
             {
-                if(abs(idGen) != 11 && abs(idGen) != 13 && abs(idGen) != 23 && abs(idGen) != 24 && abs(idGen) != 6) {continue;}
-                //
+                //if(abs(idGen) != 11 && abs(idGen) != 13 && abs(idGen) != 23 && abs(idGen) != 24 && abs(idGen) != 6) {continue;}
+
                 cout<<endl<<"* ID "<<idGen<<endl;
                 cout<<"* mother ID "<<getMotherId(genParticlesHandle, p)<<endl;
                 cout<<"* statusGen "<<statusGen<<endl;
@@ -608,10 +610,10 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
            //-- Particle reco
            // if(isPromptFinalStateGen) //not true for b from top
            {
-               //Z BOSON decay products
-               if(isEleMu(idGen) && isPromptFinalStateGen) //only care about Z -> ee/uu
+               //Z BOSON decay products ; consider e,mu ; also consider non-resonant prod
+               if(isEleMu(idGen) && isPromptFinalStateGen)
                {
-                   if(isZDecayProduct(genParticlesHandle, p, index_Z) ) //Z daughter found
+                   if(isZDecayProduct(genParticlesHandle, p, index_Z) || isNonResonant_ll(genParticlesHandle, p)) //Z daughter or ll pair found
                    {
                        if(debug)  cout<<"Found Z decay product (ID="<<idGen<<") / Z index = "<<index_Z<<endl;
 
@@ -666,9 +668,9 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
                        }
                    }
                }
-
            }
 
+       } //end GenParticles coll. loop
 
  // #    # #  ####  #    #       #      ###### #    # ###### #         #    #   ##   #####   ####
  // #    # # #    # #    #       #      #      #    # #      #         #    #  #  #  #    # #
@@ -677,99 +679,102 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
  // #    # # #    # #    #       #      #       #  #  #      #          #  #  #    # #   #  #    #
  // #    # #  ####  #    #       ###### ######   ##   ###### ######      ##   #    # #    #  ####
 
-            //-- Z boson variables
+        //-- True Z boson variables
+        if(index_Z >= 0)
+        {
+            //True Z boson
+            Zboson = GetPtEtaPhiE_fromPartIndex(genParticlesHandle, index_Z);
+            Z_pt_ = Zboson.Pt();
+            Z_eta_ = Zboson.Eta();
+            Z_phi_ = Zboson.Phi();
+            Z_m_ = Zboson.M();
+        }
+
+        //RECO Z boson variables (also non-resonant ll prod)
+        if(lepZ1.Pt() > 0 && lepZ2.Pt() > 0)
+        {
+            RecoZ = lepZ1+lepZ2;
+            Zreco_pt_ = RecoZ.Pt();
+            Zreco_eta_ = RecoZ.Eta();
+            Zreco_phi_ = RecoZ.Phi();
+            Zreco_m_ = RecoZ.M();
+            Zreco_dPhill_ = TMath::Abs(lepZ2.Phi() - lepZ1.Phi());
+
+            // if(index_Z < 0) {cout<<"Non-resonant lepton pair found ! Mll = "<<Zreco_m_<<endl;}
+
+            if(lepZ1_charge == -1)
+            {
+                cosThetaStarPol_Z_ = Compute_cosThetaStarPol_Z(Zreco_pt_, Zreco_eta_, Zreco_phi_, Zreco_m_, lepZ1.Pt(), lepZ1.Eta(), lepZ1.Phi());
+            }
+            else if(lepZ2_charge == -1)
+            {
+                cosThetaStarPol_Z_ = Compute_cosThetaStarPol_Z(Zreco_pt_, Zreco_eta_, Zreco_phi_, Zreco_m_, lepZ2.Pt(), lepZ2.Eta(), lepZ2.Phi());
+            }
+        }
+
+        if(index_top >= 0) //Found top
+        {
+            top = GetPtEtaPhiE_fromPartIndex(genParticlesHandle, index_top);
+            Top_pt_ = top.Pt();
+            Top_eta_ = top.Eta();
+            Top_phi_ = top.Phi();
+            Top_m_ = top.M();
+
+            // RecoTop = lepTop+bTop+neuTop;
+            // Top_pt_ = RecoTop.Pt();
+            // Top_eta_ = RecoTop.Eta();
+            // Top_phi_ = RecoTop.Phi();
+            // Top_m_ = RecoTop.M();
+        }
+
+        if(index_antitop >= 0) //Found antitop
+        {
+            antitop = GetPtEtaPhiE_fromPartIndex(genParticlesHandle, index_antitop);
+            AntiTop_pt_ = antitop.Pt();
+            AntiTop_eta_ = antitop.Eta();
+            AntiTop_phi_ = antitop.Phi();
+            AntiTop_m_ = antitop.M();
+
+            // RecoAntiTop = lepAntiTop+bAntiTop+neuAntiTop;
+            // AntiTop_pt_ = RecoAntiTop.Pt();
+            // AntiTop_eta_ = RecoAntiTop.Eta();
+            // AntiTop_phi_ = RecoAntiTop.Phi();
+            // AntiTop_m_ = RecoAntiTop.M();
+        }
+
+        if(index_top >= 0 || index_antitop >= 0)
+        {
+            //Top-Z system
             if(index_Z >= 0)
             {
-                //True Z boson
-                Zboson = GetPtEtaPhiE_fromPartIndex(genParticlesHandle, index_Z);
-                Z_pt_ = Zboson.Pt();
-                Z_eta_ = Zboson.Eta();
-                Z_phi_ = Zboson.Phi();
-                Z_m_ = Zboson.M();
-
-                //Reco Z boson also includes non-resonnant contribution...?
-                RecoZ = lepZ1+lepZ2;
-                Zreco_pt_ = RecoZ.Pt();
-                Zreco_eta_ = RecoZ.Eta();
-                Zreco_phi_ = RecoZ.Phi();
-                Zreco_m_ = RecoZ.M();
-                Zreco_dPhill_ = TMath::Abs(lepZ2.Phi() - lepZ1.Phi());
-
-                if(lepZ1_charge == -1)
+                if(index_top >= 0)
                 {
-                    cosThetaStarPol_Z_ = Compute_cosThetaStarPol_Z(Zreco_pt_, Zreco_eta_, Zreco_phi_, Zreco_m_, lepZ1.Pt(), lepZ1.Eta(), lepZ1.Phi());
+                    TopZsystem = Zboson+top;
+                    if(index_antitop >= 0) {TopZsystem+= antitop;}
                 }
-                else if(lepZ2_charge == -1)
-                {
-                    cosThetaStarPol_Z_ = Compute_cosThetaStarPol_Z(Zreco_pt_, Zreco_eta_, Zreco_phi_, Zreco_m_, lepZ2.Pt(), lepZ2.Eta(), lepZ2.Phi());
-                }
+                else if(index_antitop >= 0) {TopZsystem = Zboson+antitop;}
+
+                TopZsystem_pt_ = TopZsystem.Pt();
+                TopZsystem_eta_ = TopZsystem.Eta();
+                TopZsystem_phi_ = TopZsystem.Phi();
+                TopZsystem_m_ = TopZsystem.M();
             }
 
-            if(index_top >= 0) //Found top
-            {
-                top = GetPtEtaPhiE_fromPartIndex(genParticlesHandle, index_top);
-                Top_pt_ = top.Pt();
-                Top_eta_ = top.Eta();
-                Top_phi_ = top.Phi();
-                Top_m_ = top.M();
+            //Leading top
+            if(top.Pt() > antitop.Pt()) {leadingTop = top; cosThetaStarPol_Top_ = Compute_cosThetaStarPol_Top(leadingTop, lepTop, recoilJet);}
+            else {leadingTop = antitop; cosThetaStarPol_Top_ = Compute_cosThetaStarPol_Top(leadingTop, lepAntiTop, recoilJet);}
+            LeadingTop_pt_ = leadingTop.Pt();
+            LeadingTop_eta_ = leadingTop.Eta();
+            LeadingTop_phi_ = leadingTop.Phi();
+            LeadingTop_m_ = leadingTop.M();
+        } //at least 1 top found
 
-                // RecoTop = lepTop+bTop+neuTop;
-                // Top_pt_ = RecoTop.Pt();
-                // Top_eta_ = RecoTop.Eta();
-                // Top_phi_ = RecoTop.Phi();
-                // Top_m_ = RecoTop.M();
-            }
-
-            if(index_antitop >= 0) //Found antitop
-            {
-                antitop = GetPtEtaPhiE_fromPartIndex(genParticlesHandle, index_antitop);
-                AntiTop_pt_ = antitop.Pt();
-                AntiTop_eta_ = antitop.Eta();
-                AntiTop_phi_ = antitop.Phi();
-                AntiTop_m_ = antitop.M();
-
-                // RecoAntiTop = lepAntiTop+bAntiTop+neuAntiTop;
-                // AntiTop_pt_ = RecoAntiTop.Pt();
-                // AntiTop_eta_ = RecoAntiTop.Eta();
-                // AntiTop_phi_ = RecoAntiTop.Phi();
-                // AntiTop_m_ = RecoAntiTop.M();
-            }
-
-            if(index_top >= 0 || index_antitop >= 0)
-            {
-                //Top-Z system
-                if(index_Z >= 0)
-                {
-                    if(index_top >= 0)
-                    {
-                        TopZsystem = Zboson+top;
-                        if(index_antitop >= 0) {TopZsystem+= antitop;}
-                    }
-                    else if(index_antitop >= 0) {TopZsystem = Zboson+antitop;}
-
-                    TopZsystem_pt_ = TopZsystem.Pt();
-                    TopZsystem_eta_ = TopZsystem.Eta();
-                    TopZsystem_phi_ = TopZsystem.Phi();
-                    TopZsystem_m_ = TopZsystem.M();
-                }
-
-                //Leading top
-                if(top.Pt() > antitop.Pt()) {leadingTop = top; cosThetaStarPol_Top_ = Compute_cosThetaStarPol_Top(leadingTop, lepTop, recoilJet);}
-                else {leadingTop = antitop; cosThetaStarPol_Top_ = Compute_cosThetaStarPol_Top(leadingTop, lepAntiTop, recoilJet);}
-                LeadingTop_pt_ = leadingTop.Pt();
-                LeadingTop_eta_ = leadingTop.Eta();
-                LeadingTop_phi_ = leadingTop.Phi();
-                LeadingTop_m_ = leadingTop.M();
-            } //at least 1 top found
-
-            if(recoilJet.Pt() > 0)
-            {
-                recoilJet_pt_ = recoilJet.Pt();
-                recoilJet_eta_ = recoilJet.Eta();
-                recoilJet_phi_ = recoilJet.Phi();
-            }
-
-        } //end genParticle loop
+        if(recoilJet.Pt() > 0)
+        {
+            recoilJet_pt_ = recoilJet.Pt();
+            recoilJet_eta_ = recoilJet.Eta();
+            recoilJet_phi_ = recoilJet.Phi();
+        }
 
         if(debug)
         {
@@ -1028,6 +1033,20 @@ int GenAnalyzer::getMotherId(Handle<reco::GenParticleCollection> genParticlesHan
 bool GenAnalyzer::isZDecayProduct(Handle<reco::GenParticleCollection> genParticlesHandle, const reco::GenParticle p, int& index_Z)
 {
     if(abs(getMotherId(genParticlesHandle, p)) == 23) {index_Z = getMotherIndex(genParticlesHandle, p); return true;} //Z daughter found
+
+    return false;
+}
+
+//If final-state ele/mu is not from W/Z decay, must be part of the non-resonant pair production
+bool GenAnalyzer::isNonResonant_ll(Handle<reco::GenParticleCollection> genParticlesHandle, const reco::GenParticle p)
+{
+    if(p.isPromptFinalState()==1 && isEleMu(p.pdgId()) && abs(getMotherId(genParticlesHandle, p)) !=  24 && abs(getMotherId(genParticlesHandle, p)) !=  23)
+    {
+        // cout<<"NON RESONANT LEPTON FOUND !"<<endl;
+        // cout<<"Mother ==== "<<getMotherId(genParticlesHandle, p)<<endl;
+
+        return true;
+    }
 
     return false;
 }

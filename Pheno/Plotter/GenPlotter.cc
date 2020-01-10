@@ -260,7 +260,8 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
     cout<<endl<<UNDL(FYEL("=== Compare Distributions (different processes, EFT points, ...) ==="))<<endl<<endl;
 
 //--------------------------------------------
-    bool normalize = true; //true <--> ...
+    bool normalize = true; //true <--> scale all histos to 1
+    bool show_overflow = false; //true <--> include under- and over-flow in bins 0 and nbins+1
 //--------------------------------------------
 
     //For each var, each process and each reweight, fill/store an histo
@@ -268,6 +269,8 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
     vector<vector<vector<TH1F*>>> v3_histos_var_proc_reweight_subplot(v_var.size());
 
     vector<vector<vector<int>>> v3_nentries_var_proc_bin(v_var.size()); //For each bin of each var of each process, count nof entries -- for debug, understand uncerts.
+
+    double debug_uncert;
 
     //Allocate memory to histos
     const int nbins_histos = 10;
@@ -307,7 +310,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
         TTree* t = (TTree*) f->Get(treename);
         if(t == 0) {cout<<endl<<BOLD(FRED("--- Tree not found ! Exit !"))<<endl<<endl; return;}
 
-        cout<<FBLU("Process "<<v_process[iproc]<<" // Reading file : ")<<filepath<<endl;
+        cout<<endl<<FBLU("Process "<<v_process[iproc]<<" // Reading file : ")<<filepath<<endl<<endl;
 
         //Read branches
         vector<float>* v_reweights_floats = new vector<float>(v_reweight_names.size());
@@ -342,13 +345,13 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
         }
 
         //Read and store sums of weights (SWE)
-        // TH1F* h_SWE = (TH1F*) f->Get("h_SWE");
-        // vector<float> v_SWE;
-        // for(int ibin=0; ibin<h_SWE->GetNbinsX(); ibin++)
-        // {
-        //     v_SWE.push_back(h_SWE->GetBinContent(ibin+1)); //1 SWE stored for each stored weight
-        //     cout<<"v_SWE[ibin] = "<<v_SWE[ibin]<<endl;
-        // }
+        TH1F* h_SWE = (TH1F*) f->Get("h_SWE");
+        vector<float> v_SWE;
+        for(int ibin=0; ibin<h_SWE->GetNbinsX(); ibin++)
+        {
+            v_SWE.push_back(h_SWE->GetBinContent(ibin+1)); //1 SWE stored for each stored weight
+            // cout<<"v_SWE[ibin] = "<<v_SWE[ibin]<<endl;
+        }
 
      // ###### #    # ###### #    # #####  ####     #       ####   ####  #####
      // #      #    # #      ##   #   #   #         #      #    # #    # #    #
@@ -394,17 +397,20 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
                         {
                             // cout<<"v_reweights_floats->at(iweightid) "<<v_reweights_floats->at(iweightid)<<endl;
 
-                            // if(normalize) {Fill_TH1F_UnderOverflow(v3_histos_var_proc_reweight[ivar][iproc][iweight], v_var_floats[ivar], v_reweights_floats->at(iweightid)/(mc_weight_originalValue * v_SWE[iweightid]));}
-                            // else {Fill_TH1F_UnderOverflow(v3_histos_var_proc_reweight[ivar][iproc][iweight], v_var_floats[ivar], v_reweights_floats->at(iweightid)/mc_weight_originalValue);}
-
                             if(isnan(v_var_floats[ivar]) || isinf(v_var_floats[ivar]))
                             {
                                 cout<<FRED("Warning ! "<<v_var[ivar]<<" = "<<v_var_floats[ivar]<<" // SKIP !")<<endl;
                                 continue;
                             }
 
-                            Fill_TH1F_UnderOverflow(v3_histos_var_proc_reweight[ivar][iproc][iweight], v_var_floats[ivar], v_reweights_floats->at(iweightid)/mc_weight_originalValue);
-                            // Fill_TH1F_NoUnderOverflow(v3_histos_var_proc_reweight[ivar][iproc][iweight], v_var_floats[ivar], v_reweights_floats->at(iweightid)/mc_weight_originalValue);
+                            if(show_overflow) {Fill_TH1F_UnderOverflow(v3_histos_var_proc_reweight[ivar][iproc][iweight], v_var_floats[ivar], v_reweights_floats->at(iweightid)/(mc_weight_originalValue * v_SWE[iweightid]));}
+                            else {Fill_TH1F_NoUnderOverflow(v3_histos_var_proc_reweight[ivar][iproc][iweight], v_var_floats[ivar], v_reweights_floats->at(iweightid)/(mc_weight_originalValue * v_SWE[iweightid]));}
+
+                            // Fill_TH1F_UnderOverflow(v3_histos_var_proc_reweight[ivar][iproc][iweight], v_var_floats[ivar], v_reweights_floats->at(iweightid)/mc_weight_originalValue);
+                            // cout<<"+ "<<v_reweights_floats->at(iweightid)/mc_weight_originalValue<<endl;
+
+                            //DEBUG uncert : compute error of 1 bin myself to make sure it's OK
+                            if(!ivar && !iproc && !iweight && v3_histos_var_proc_reweight[0][0][0]->GetXaxis()->FindBin(v_var_floats[ivar]) == 1) {debug_uncert+= pow(v_reweights_floats->at(iweightid)/mc_weight_originalValue, 2);}
 
                             // if(v_reweight_names[iweight] == "ctz_4p0")
                             // if(v_reweight_names[iweight] == "sm")
@@ -428,7 +434,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
             } //Loop on vars
         } //Loop on entries
 
-        // delete h_SWE;
+        delete h_SWE;
         f->Close();
 
         delete v_reweights_floats; delete v_reweights_ids;
@@ -470,7 +476,11 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
                 }
             }
         }
+
+        cout<<"sqrt(debug_uncert) = "<<sqrt(debug_uncert)<<endl;
     }
+
+
 
  // #####  #       ####  #####
  // #    # #      #    #   #
@@ -497,22 +507,26 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
                     // cout<<"ymax = "<<ymax<<endl;
                 }
 
+                //Reference for ratio is either the SM histo, or the histo of the first process
+                TH1F* h_compare_tmp = v3_histos_var_proc_reweight[ivar][iproc][0];
+                if(v_reweight_names.size() == 1 && v_process.size() > 1) {h_compare_tmp = v3_histos_var_proc_reweight[ivar][0][iweight];}
+
                 for(int ibin=1; ibin<v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetNbinsX()+1; ibin++)
                 {
-                    if(v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetBinContent(ibin)/v3_histos_var_proc_reweight[ivar][iproc][0]->GetBinContent(ibin) > SFmax)
+                    if(v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetBinContent(ibin)/h_compare_tmp->GetBinContent(ibin) > SFmax)
                     {
-                        SFmax = v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetBinContent(ibin)/v3_histos_var_proc_reweight[ivar][iproc][0]->GetBinContent(ibin);
+                        SFmax = v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetBinContent(ibin)/h_compare_tmp->GetBinContent(ibin);
                         // cout<<"SFmax = "<<SFmax<<endl;
                     }
-                    if(v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetBinContent(ibin)/v3_histos_var_proc_reweight[ivar][iproc][0]->GetBinContent(ibin) < SFmin)
+                    if(v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetBinContent(ibin)/h_compare_tmp->GetBinContent(ibin) < SFmin)
                     {
-                        SFmin = v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetBinContent(ibin)/v3_histos_var_proc_reweight[ivar][iproc][0]->GetBinContent(ibin);
+                        SFmin = v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetBinContent(ibin)/h_compare_tmp->GetBinContent(ibin);
                         // cout<<"SFmin = "<<SFmin<<endl;
                     }
                 }
             }
         }
-        // double SFmax = RoundUp(ymax / v3_histos_var_proc_reweight[ivar][iproc][0]->GetMaximum()) + 0.99; //in %
+        // double SFmax = RoundUp(ymax / h_compare_tmp->GetMaximum()) + 0.99; //in %
 
         //Canvas definition
         // Load_Canvas_Style();
@@ -554,6 +568,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
                 {
                     // v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetYaxis()->SetTitle("Events");
                     v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetYaxis()->SetTitle("a.u.");
+                    // v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetYaxis()->SetTitle("#frac{d#sigma}{dX} (a.u.)");
                     // v3_histos_var_proc_reweight[ivar][iproc][iweight]->SetLineStyle(1);
                     v3_histos_var_proc_reweight[ivar][iproc][iweight]->SetLineWidth(2);
 
@@ -605,47 +620,60 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
         {
             for(int iweight=0; iweight<v_reweight_names.size(); iweight++)
             {
-                if(v_reweight_names[iweight] != "sm")
+                TString subplot_y_title = "";
+                //Compare ratio EFT/SM
+                if(v_reweight_names.size() > 1)
                 {
-                    v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight] = (TH1F*) v3_histos_var_proc_reweight[ivar][iproc][iweight]->Clone(); //Copy histo
-                    // v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->Add(v3_histos_var_proc_reweight[ivar][iproc][0], -1); //Substract nominal
-                    v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->Divide(v3_histos_var_proc_reweight[ivar][iproc][0]); //Divide by nominal
-
-                    // for(int i=0; i<10; i++)
-                    // {
-                    //     cout<<"v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetBinContent(i+1)"<<v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetBinContent(i+1)<<endl;
-                    // }
-
-                    v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetXaxis()->SetTitle(v_var[ivar]);
-                    v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetYaxis()->CenterTitle();
-                    v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetYaxis()->SetTitle("BSM/SM");
-                    // v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetYaxis()->SetTitle("BSM/SM [%]");
-                    // v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetYaxis()->SetTitle("#frac{(X-#mu)}{#mu} [%]");
-                    v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetYaxis()->SetTitleOffset(1.4);
-                    v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetYaxis()->SetTickLength(0.);
-                    v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetXaxis()->SetTitleOffset(1.);
-                    v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetYaxis()->SetLabelSize(0.048);
-                    // v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetXaxis()->SetLabelFont(42);
-                    // v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetYaxis()->SetLabelFont(42);
-                    // v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetXaxis()->SetTitleFont(42);
-                    // v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetYaxis()->SetTitleFont(42);
-                    // v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetYaxis()->SetNdivisions(503); //grid draw on primary tick marks only
-                    v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetYaxis()->SetNdivisions(507); //grid draw on primary tick marks only
-                    v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetYaxis()->SetTitleSize(0.05);
-                    v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetXaxis()->SetTickLength(0.04);
-
-                    // v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->Scale(100.); //express in %
-                    // v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->SetMinimum(0.80);
-                    // v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->SetMaximum(+3.);
-                    v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->SetMinimum(SFmin*0.8);
-                    v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->SetMaximum(SFmax*1.2);
-
-                    v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->SetLineColor(iweight+1);
-                    v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->SetLineWidth(2);
-                    // v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->SetLineStyle(2);
-
-                    v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->Draw("hist E same");
+                    subplot_y_title = "BSM/SM [%]";
+                    if(v_reweight_names[iweight] != "sm")
+                    {
+                        v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight] = (TH1F*) v3_histos_var_proc_reweight[ivar][iproc][iweight]->Clone(); //Copy histo
+                        // v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->Add(v3_histos_var_proc_reweight[ivar][iproc][0], -1); //Substract nominal
+                        v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->Divide(v3_histos_var_proc_reweight[ivar][iproc][0]); //Divide by nominal
+                    }
                 }
+                else if(v_reweight_names.size() == 1 && v_process.size() > 1) //Compare ratio of processes
+                {
+                    subplot_y_title = "Process ratio [%]";
+                    if(iproc > 0)
+                    {
+                        v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight] = (TH1F*) v3_histos_var_proc_reweight[ivar][iproc][iweight]->Clone(); //Copy histo
+                        v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->Divide(v3_histos_var_proc_reweight[ivar][0][iweight]); //Divide by nominal
+                    }
+                }
+
+                // for(int i=0; i<10; i++)
+                // {
+                //     cout<<"v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetBinContent(i+1)"<<v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetBinContent(i+1)<<endl;
+                // }
+
+                v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetXaxis()->SetTitle(v_var[ivar]);
+                v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetYaxis()->CenterTitle();
+                v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetYaxis()->SetTitle(subplot_y_title);
+                // v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetYaxis()->SetTitle("#frac{(X-#mu)}{#mu} [%]");
+                v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetYaxis()->SetTitleOffset(1.4);
+                v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetYaxis()->SetTickLength(0.);
+                v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetXaxis()->SetTitleOffset(1.);
+                v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetYaxis()->SetLabelSize(0.048);
+                // v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetXaxis()->SetLabelFont(42);
+                // v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetYaxis()->SetLabelFont(42);
+                // v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetXaxis()->SetTitleFont(42);
+                // v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetYaxis()->SetTitleFont(42);
+                // v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetYaxis()->SetNdivisions(503); //grid draw on primary tick marks only
+                v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetYaxis()->SetNdivisions(507); //grid draw on primary tick marks only
+                v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetYaxis()->SetTitleSize(0.05);
+                v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->GetXaxis()->SetTickLength(0.04);
+
+                // v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->Scale(100.); //express in %
+                v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->SetMinimum(0.);
+                // v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->SetMinimum(SFmin*0.8);
+                v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->SetMaximum(SFmax*1.2);
+
+                v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->SetLineColor(iweight+1);
+                v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->SetLineWidth(2);
+                // v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->SetLineStyle(2);
+
+                v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->Draw("hist E same");
             }
         }
 
@@ -713,15 +741,16 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
 int main()
 {
     vector<TString> v_process;
-    v_process.push_back("ttz");
+    // v_process.push_back("ttz");
     // v_process.push_back("tzq");
-    // v_process.push_back("tllq");
+    v_process.push_back("tllq");
     // v_process.push_back("ttll");
 
     vector<TString> v_var; vector<pair<float, float>> v_min_max;
-    v_var.push_back("Z_pt"); v_min_max.push_back(std::make_pair(0, 500));
+    v_var.push_back("Z_pt"); v_min_max.push_back(std::make_pair(0, 400));
     v_var.push_back("Z_eta"); v_min_max.push_back(std::make_pair(-5, 5));
-    // v_var.push_back("Z_m"); v_min_max.push_back(std::make_pair(70, 100));
+    v_var.push_back("Z_m"); v_min_max.push_back(std::make_pair(70, 110));
+    v_var.push_back("Zreco_m"); v_min_max.push_back(std::make_pair(50, 110));
     // v_var.push_back("Top_pt"); v_min_max.push_back(std::make_pair(0, 500));
     // v_var.push_back("Top_eta"); v_min_max.push_back(std::make_pair(-5, 5));
     // v_var.push_back("Top_m"); v_min_max.push_back(std::make_pair(0, 300));
@@ -729,8 +758,8 @@ int main()
     // v_var.push_back("LeadingTop_pt"); v_min_max.push_back(std::make_pair(0, 500));
     // v_var.push_back("LeadingTop_eta"); v_min_max.push_back(std::make_pair(-5, 5));
     // v_var.push_back("Zreco_dPhill"); v_min_max.push_back(std::make_pair(0, 6));
-    // v_var.push_back("cosThetaStarPol_Z"); v_min_max.push_back(std::make_pair(-1, 1));
-    // v_var.push_back("cosThetaStarPol_Top"); v_min_max.push_back(std::make_pair(-1, 1));
+    v_var.push_back("cosThetaStarPol_Z"); v_min_max.push_back(std::make_pair(-1, 1));
+    v_var.push_back("cosThetaStarPol_Top"); v_min_max.push_back(std::make_pair(-1, 1));
 
     vector<TString> v_reweight_names; vector<int> v_colors;
     v_reweight_names.push_back("sm"); //Nominal SM weight -- keep
@@ -739,19 +768,25 @@ int main()
     // v_reweight_names.push_back("ctz_0p5");
     // v_reweight_names.push_back("ctz_1p0");
     // v_reweight_names.push_back("ctz_1p5");
-    v_reweight_names.push_back("ctz_2p0");
+    // v_reweight_names.push_back("ctz_2p0");
     // v_reweight_names.push_back("ctz_2p5");
     // v_reweight_names.push_back("ctz_3p0");
     v_reweight_names.push_back("ctz_4p0");
-    v_reweight_names.push_back("ctz_5p0");
-    v_reweight_names.push_back("ctz_8p0");
+    // v_reweight_names.push_back("ctz_5p0");
+    // v_reweight_names.push_back("ctz_8p0");
     // v_reweight_names.push_back("ctz_10p0");
 
+    // v_reweight_names.push_back("ctw_0p1");
     // v_reweight_names.push_back("ctw_0p5");
     // v_reweight_names.push_back("ctw_1p0");
+    // v_reweight_names.push_back("ctw_1p5");
+    // v_reweight_names.push_back("ctw_2p0");
+    // v_reweight_names.push_back("ctw_2p5");
     // v_reweight_names.push_back("ctw_3p0");
+    v_reweight_names.push_back("ctw_4p0");
     // v_reweight_names.push_back("ctw_5p0");
     // v_reweight_names.push_back("ctw_8p0");
+    // v_reweight_names.push_back("ctw_10p0");
 
     Load_Canvas_Style();
 
