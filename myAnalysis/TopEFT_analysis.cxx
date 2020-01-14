@@ -8,8 +8,6 @@
 
 // Draw_Templates
 
-// Compare_TemplateShapes_Processes
-
 //--------------------------------------------
 
 #include "TopEFT_analysis.h"
@@ -121,14 +119,8 @@ TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> 
 	}
 	if(channel_list.size() == 0 || channel_list[0] != "") {cout<<"ERROR : first element of 'channel_list' is not empty (<-> no subcat.) or vector is empty ! If that's what you want, remove this protection !"<<endl; stop_program = true;}
 
-	int nof_categories_activated = 0; //Make sure only 1 orthogonal cat. is activated at once
 	for(int i=0; i<set_v_cut_name.size(); i++) //Region cuts vars (e.g. NJets)
 	{
-		if(set_v_cut_name[i].Contains("is_") && set_v_cut_def[i] == "==1") //Consider that this variable is an event category, encoded as Char_t
-		{
-			nof_categories_activated++;
-		}
-
 		v_cut_name.push_back(set_v_cut_name[i]);
 		v_cut_def.push_back(set_v_cut_def[i]);
 		v_cut_IsUsedForBDT.push_back(set_v_cut_IsUsedForBDT[i]);
@@ -139,7 +131,7 @@ TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> 
 		//---> If a variable is present in 2 lists, erase it from other lists !
 		for(int ivar=0; ivar<thevarlist.size(); ivar++)
 		{
-			if(thevarlist[ivar].Contains("is_") )
+			if(thevarlist[ivar].BeginsWith("is_") || thevarlist[ivar].BeginsWith("passed") )
 			{
 				cout<<BOLD(FRED("## Warning : categories should not been used as input/spectator variables ! Are you sure ? "))<<endl;
 			}
@@ -153,7 +145,7 @@ TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> 
 		}
 		for(int ivar=0; ivar<set_v_add_var_names.size(); ivar++)
 		{
-			if(set_v_add_var_names[ivar].Contains("is_") )
+			if(set_v_add_var_names[ivar].BeginsWith("is_") || set_v_add_var_names[ivar].BeginsWith("passed") )
 			{
 				cout<<BOLD(FRED("## Warning : categories should not been used as input/spectator variables ! Are you sure ? "))<<endl;
 			}
@@ -214,7 +206,7 @@ TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> 
 	TString tmp = "";
 	for(int ivar=0; ivar<v_cut_name.size(); ivar++)
 	{
-		if(v_cut_name[ivar].Contains("is_") ) {continue;} //No need to appear in filename
+		if(v_cut_name[ivar].BeginsWith("is_") || v_cut_name[ivar].BeginsWith("passed") ) {continue;} //No need to appear in filename
 		else if(v_cut_name[ivar] == "nLightJets_Fwd40") {this->filename_suffix+= "_fwdCut"; continue;} //No need to appear in filename
 
 		if(v_cut_def[ivar] != "")
@@ -842,7 +834,10 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 	{
 		total_var_list.push_back(template_name);
 	}
-	vector<float> total_var_floats(total_var_list.size()); //NB : can not read/cut on BDT... (would conflict with input var floats ! Can not set address twice)
+
+    //FIXME
+    // vector<float> total_var_floats(total_var_list.size()); //NB : can not read/cut on BDT... (would conflict with input var floats ! Can not set address twice)
+    vector<double> total_var_floats(total_var_list.size()); //NB : can not read/cut on BDT... (would conflict with input var floats ! Can not set address twice)
 
  // #    #      ##      #    #    #
  // ##  ##     #  #     #    ##   #
@@ -923,8 +918,10 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
 			for(int i=0; i<v_cut_name.size(); i++)
 			{
+                // cout<<"v_cut_name[i] "<<v_cut_name[i]<<endl;
+
 				tree->SetBranchStatus(v_cut_name[i], 1);
-				if(v_cut_name[i].Contains("is_") ) //Categories are encoded into Char_t, not float
+                if(v_cut_name[i].BeginsWith("is_") || v_cut_name[i].BeginsWith("passed") ) //Categories are encoded into Char_t, not float
 				{
 					tree->SetBranchAddress(v_cut_name[i], &v_cut_char[i]);
 				}
@@ -950,9 +947,10 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 			// tree->SetBranchStatus("lepCharge", 1);
 			// tree->SetBranchAddress("lepCharge", &lepCharge);
 	//--- Event weights
-			float weight; float weight_SF; //Stored separately
-			float SMcoupling_SF, SMcoupling_weight, mc_weight_originalValue;
-            float chargeLeadingLep;
+            double weight; //FIXME
+            // float weight;
+            float weight_SF; //Stored separately
+			float mc_weight_originalValue;
 			tree->SetBranchStatus("eventWeight", 1);
 			tree->SetBranchAddress("eventWeight", &weight);
 			// tree->SetBranchStatus("mc_weight_originalValue", 1);
@@ -963,11 +961,11 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 			for(int isyst=0; isyst<syst_list.size(); isyst++)
 			{
 				//-- Protections : not all syst weights apply to all samples, etc.
-				if(sample_list[isample] == "DATA" || sample_list[isample] == "QFlip") {break;}
-				else if(systTree_list[itree] != "") {break;} //Syst event weights only stored in nominal TTree
-				else if((syst_list[isyst].Contains("FR_") ) && !sample_list[isample].Contains("Fake") ) {continue;}
-				else if(sample_list[isample].Contains("Fake") && !syst_list[isyst].Contains("FR_") && syst_list[isyst] != "") {continue;}
-                else if(syst_list[isyst].Contains("thu_shape") || syst_list[isyst].Contains("Clos") ) {continue;} //these weights are computed within this func
+				// if(sample_list[isample] == "DATA" || sample_list[isample] == "QFlip") {break;}
+				// else if(systTree_list[itree] != "") {break;} //Syst event weights only stored in nominal TTree
+				// else if((syst_list[isyst].Contains("FR_") ) && !sample_list[isample].Contains("Fake") ) {continue;}
+				// else if(sample_list[isample].Contains("Fake") && !syst_list[isyst].Contains("FR_") && syst_list[isyst] != "") {continue;}
+                // else if(syst_list[isyst].Contains("thu_shape") || syst_list[isyst].Contains("Clos") ) {continue;} //these weights are computed within this func
 
 				if(syst_list[isyst] != "") {tree->SetBranchStatus(syst_list[isyst], 1); tree->SetBranchAddress(syst_list[isyst], &v_float_systWeights[isyst]);} //Nominal weight already set, don't redo it
 			}
@@ -1002,7 +1000,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
 					for(int ivar=0; ivar<total_var_list.size(); ivar++)
 					{
-						// if(makeHisto_inputVars && !Get_Variable_Range(total_var_list[ivar], nbins, xmin, xmax)) {cout<<FRED("Unknown variable name : "<<total_var_list[ivar]<<"! (add in function 'Get_Variable_Range()')")<<endl; continue;} //Get binning for this variable (if not template) //FIXME
+						if(makeHisto_inputVars && !Get_Variable_Range(total_var_list[ivar], nbins, xmin, xmax)) {cout<<FRED("Unknown variable name : "<<total_var_list[ivar]<<"! (add in function 'Get_Variable_Range()')")<<endl; continue;} //Get binning for this variable (if not template) //FIXME
 
 						v3_histo_chan_syst_var[ichan][isyst][ivar] = new TH1F("", "", nbins, xmin, xmax);
 						if(template_name == "2D") {v3_histo_chan_syst_var2D[ichan][isyst][0] = new TH2F("", "", 10, -1, 1, 10, -1, 1);}
@@ -1039,7 +1037,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 			{
 				// cout<<"ientry "<<ientry<<endl;
 
-				if(!makeHisto_inputVars && ientry%20000==0) {cout<<ITAL(""<<ientry<<" / "<<nentries<<"")<<endl;}
+				// if(!makeHisto_inputVars && ientry%20000==0) {cout<<ITAL(""<<ientry<<" / "<<nentries<<"")<<endl;}
 				// else if(makeHisto_inputVars)
 				// {
 				// 	ibar++;
@@ -1047,23 +1045,19 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 				// }
 
 				weight_SF = 1;
-				SMcoupling_SF = 1;
 
-				//Reset all vectors reading inputs to 0
-				// std::fill(var_list_floats.begin(), var_list_floats.end(), 0);
-				// std::fill(var_list_floats_ttbar.begin(), var_list_floats_ttbar.end(), 0);
-				// std::fill(var_list_floats_ttV.begin(), var_list_floats_ttV.end(), 0);
+				//Reset vectors reading inputs to 0
+				std::fill(var_list_floats.begin(), var_list_floats.end(), 0);
 
 				tree->GetEntry(ientry);
 
-				// if(sample_list[isample] == "tZq") {cout<<"weight "<<weight<<endl;}
 				if(isnan(weight) || isinf(weight))
 				{
 					cout<<BOLD(FRED("* Found event with weight = "<<weight<<" ; remove it..."))<<endl; continue;
 				}
 
 				//--- Cut on category value
-				if(!is_goodCategory) {continue;}
+				// if(!is_goodCategory) {continue;}
 
 //---- APPLY CUTS HERE (defined in main)  ----
 				bool pass_all_cuts = true;
@@ -1072,12 +1066,14 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 					if(v_cut_def[icut] == "") {continue;}
 
 					//Categories are encoded into Char_t. Convert them to float for code automation
-					if(v_cut_name[icut].Contains("is_") ) {v_cut_float[icut] = (float) v_cut_char[icut];}
+					if(v_cut_name[icut].BeginsWith("is_") || v_cut_name[icut].BeginsWith("passed") ) {v_cut_float[icut] = (float) v_cut_char[icut];}
 					// cout<<"Cut : name="<<v_cut_name[icut]<<" / def="<<v_cut_def[icut]<<" / value="<<v_cut_float[icut]<<" / pass ? "<<Is_Event_Passing_Cut(v_cut_def[icut], v_cut_float[icut])<<endl;
 					if(!Is_Event_Passing_Cut(v_cut_def[icut], v_cut_float[icut])) {pass_all_cuts = false; break;}
 				}
 				if(!pass_all_cuts) {continue;}
 	//--------------------------------------------
+
+                // cout<<"weight "<<weight<<endl;
 
 				//Get MVA value to make template
 				double mva_value1 = -9, mva_value2 = -9;
@@ -1085,10 +1081,6 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
                 if(!makeHisto_inputVars)
                 {
                     mva_value1 = reader->EvaluateMVA(MVA_method_name1);
-                }
-                else
-                {
-
                 }
 
 				//Get relevant binning
@@ -1131,10 +1123,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 						{
 							for(int ivar=0; ivar<total_var_list.size(); ivar++)
 							{
-								//Special variables, adress already used for other purpose
-								if(total_var_list[ivar] == "nMediumBJets") {total_var_floats[ivar] = nMediumBJets;}
-								else if(total_var_list[ivar] == "lepCharge") {total_var_floats[ivar] = lepCharge;}
-								else if(total_var_list[ivar] == "channel") {total_var_floats[ivar] = channel;}
+                                // cout<<"total_var_floats[ivar] "<<total_var_floats[ivar]<<endl;
 
 								Fill_TH1F_UnderOverflow(v3_histo_chan_syst_var[ichan][isyst][ivar], total_var_floats[ivar], weight_tmp);
 							}
@@ -1423,7 +1412,7 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 	{
 		// for(int i=0; i<v_cut_name.size(); i++)
 		// {
-		// 	if(v_cut_name[i].Contains("is_")) {continue;} //Don't care about plotting the categories
+		// 	if(v_cut_name[icut].BeginsWith("is_") || v_cut_name[icut].BeginsWith("passed")) {continue;} //Don't care about plotting the categories
 		//
 		// 	total_var_list.push_back(v_cut_name[i]);
 		// }
@@ -1787,8 +1776,6 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 		}
 
 		bool data_notEmpty = true;
-		// if(use_combine_file && !g_data) {cout<<endl<<BOLD(FRED("--- Empty data TGraph ! Exit !"))<<endl<<endl; return;}
-		// if(!use_combine_file && !h_sum_data) {cout<<endl<<BOLD(FRED("--- Empty data histogram ! Exit !"))<<endl<<endl; return;}
 		if(use_combine_file && !g_data) {cout<<endl<<BOLD(FRED("--- Empty data TGraph !"))<<endl<<endl; data_notEmpty = false;}
 		if(!use_combine_file && !h_sum_data) {cout<<endl<<BOLD(FRED("--- Empty data histogram "<<histo_name<<" !"))<<endl<<endl; data_notEmpty = false;}
 
@@ -1893,39 +1880,10 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 //    #    #       #      #    # #      #   ## #    #
 //    #    ####### ######  ####  ###### #    # #####
 
-		bool use_diff_legend_layout = false;
 		TLegend* qw = 0;
-		if(use_diff_legend_layout)
-		{
-			// if(doNot_stack_signal) {qw = new TLegend(0.50,.70,0.99,0.88);}
-			if(draw_logarithm)
-			{
-				qw = new TLegend(0.20,0.28,0.65,0.50);
-			}
-			else
-			{
-                if(doNot_stack_signal) {qw = new TLegend(0.53,.75,1.,0.90);}
-                else {qw = new TLegend(0.62,.72,1.,0.90);}
-			}
-			qw->SetNColumns(3);
-		}
-		else
-		{
-			if(doNot_stack_signal) {qw = new TLegend(0.79,.60,1.,1.);}
-			else
-			{
-				if(use_combine_file && data_notEmpty)
-				{
-					double x_tmp, y_tmp;
-					g_data->GetPoint(0, x_tmp, y_tmp);
-					g_data->GetPoint(g_data->GetN()-1, x, y);
-					if(y > y_tmp) {qw = new TLegend(0.20,0.48,0.20+0.16,0.48+0.39);}
-				}
-				else if(!use_combine_file && data_notEmpty && h_sum_data->GetBinContent(h_sum_data->GetNbinsX()) > h_sum_data->GetBinContent(1)) {qw = new TLegend(0.20,0.48,0.20+0.16,0.48+0.39);}
-				else {qw = new TLegend(.83,.60,0.99,0.99);}
-			}
-		}
-
+        float x_left = 0.99-ceil(sample_list.size()/2.)*0.13; //each column takes 0.13 x-space
+        qw = new TLegend(x_left,0.88,0.99,0.99);
+        qw->SetNColumns(ceil(sample_list.size()/2.));
 		qw->SetLineColor(1);
 		qw->SetTextSize(0.03);
 
@@ -2017,6 +1975,7 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 			if(h_sum_data->GetMaximum() > stack_MC->GetMaximum() ) {stack_MC->SetMaximum(h_sum_data->GetMaximum()+0.3*h_sum_data->GetMaximum());}
 			else {stack_MC->SetMaximum(stack_MC->GetMaximum()*1.5);}
 		}
+        else if(!data_notEmpty) {stack_MC->SetMaximum(stack_MC->GetMaximum()*1.5);}
 
 		stack_MC->SetMinimum(0.0001); //Remove '0' label
 
@@ -2375,7 +2334,7 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 	//----------------
 	// -- using https://twiki.cern.ch/twiki/pub/CMS/Internal/FigGuidelines
 
-        bool draw_cms_prelim_label = false;
+        bool draw_cms_prelim_label = true;
 
 		float l = c1->GetLeftMargin();
 		float t = c1->GetTopMargin();
@@ -2401,18 +2360,10 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 		float lumi = ref_luminosity * luminosity_rescale;
 		TString lumi_13TeV = Convert_Number_To_TString(lumi);
 		lumi_13TeV += " fb^{-1} (13 TeV)";
-
 		latex.SetTextFont(42);
 		latex.SetTextAlign(31);
 		latex.SetTextSize(0.04);
-
-		if(use_diff_legend_layout) {latex.DrawLatex(0.95, 0.92,lumi_13TeV);}
-		else
-		{
-			// if(h_sum_data->GetBinContent(h_sum_data->GetNbinsX() ) > h_sum_data->GetBinContent(1) ) {latex.DrawLatex(0.95, 0.92,lumi_13TeV);}
-			// else {latex.DrawLatex(0.78, 0.92,lumi_13TeV);}
-			latex.DrawLatex(0.78, 0.92,lumi_13TeV);
-		}
+        // latex.DrawLatex(0.78, 0.92,lumi_13TeV);
 
 		//------------------
 		//-- Channel info

@@ -761,10 +761,11 @@ void Set_Custom_ColorPalette(vector<TColor*> &v_custom_colors, vector<int> &v)
 bool Get_Variable_Range(TString var, int& nbins, double& xmin, double& xmax)
 {
     //Categories are either 0 or 1 (NB : encoded in Char_t!)
-    if(var.Contains("is_") ) {nbins = 2; xmin = 0; xmax = 2;}
+    if(var.BeginsWith("is_") || var.BeginsWith("passed") ) {nbins = 2; xmin = 0; xmax = 2;}
 
-	else if(var == "Lep3Pt") {nbins = 20; xmin = 0; xmax = 80;}
+    else if(var == "metEt") {nbins = 20; xmin = 0; xmax = 200;}
 
+    // else if(var == "Lep3Pt") {nbins = 20; xmin = 0; xmax = 80;}
 	else {return false;}
 
 	return true;
