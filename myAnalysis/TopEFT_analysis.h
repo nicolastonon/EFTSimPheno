@@ -73,6 +73,8 @@ class TopEFT_analysis
 //--- METHODS
 	void Train_BDT(TString, bool); //Train BDT
     void Produce_Templates(TString, bool); //Produce templates
+    void Draw_Templates(bool, TString, TString="", bool=true, bool=false); //Draw templates or input variables
+    void Compare_TemplateShapes_Processes(TString, TString);
 
 //--- MEMBERS
 	bool stop_program;

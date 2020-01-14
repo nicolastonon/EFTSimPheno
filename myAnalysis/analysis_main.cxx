@@ -173,10 +173,10 @@ int main(int argc, char **argv)
     bool train_BDT = false; //Train selected BDT in selected region (with events in training category)
 
 //-----------------    TEMPLATES CREATION
-    bool create_templates = true; //Create templates of selected BDT, in selected region
+    bool create_templates = false; //Create templates of selected BDT, in selected region
 
 //-----------------    CONTROL HISTOGRAMS
-    bool create_inputVar_histograms = true; //Create histograms of input variables, for plotting
+    bool create_inputVar_histograms = false; //Create histograms of input variables, for plotting
 
 //-----------------    PLOTS
     TString plotChannel = ""; //Can choose to plot particular subchannel //uu, ue, ee, ...
@@ -225,23 +225,66 @@ int main(int argc, char **argv)
     //#############################################
     //  CREATE INSTANCE OF CLASS & INITIALIZE
     //#############################################
+
     TopEFT_analysis* theAnalysis = new TopEFT_analysis(thesamplelist, thesamplegroups, theSystWeights, theSystTree, thechannellist, thevarlist, set_v_cut_name, set_v_cut_def, set_v_cut_IsUsedForBDT, set_v_add_var_names, plot_extension, set_luminosity, show_pulls_ratio, region_choice, signal_process, classifier_name, DNN_type);
     if(theAnalysis->stop_program) {return 1;}
 
     //#############################################
     // TRAINING
     //#############################################
+
     if(train_BDT)
     {
         theAnalysis->Train_BDT("", true);
     }
 
     //#############################################
-    //  PRODUCE TEMPLATES
+    //  TEMPLATES CREATION
     //#############################################
-    // if(create_templates) {theAnalysis->Produce_Templates(template_name, false);}
 
-    theAnalysis->Produce_Templates(template_name, true);
+    if(create_templates) {theAnalysis->Produce_Templates(template_name, false);}
+
+    //#############################################
+    //  CONTROL HISTOGRAMS
+    //#############################################
+
+    if(create_inputVar_histograms) {theAnalysis->Produce_Templates(template_name, true);}
+
+    //#############################################
+    //  DRAW PLOTS
+    //#############################################
+
+    //All channels
+    if(draw_templates)
+    {
+        theAnalysis->Draw_Templates(false, plotChannel, template_name, prefit, use_combine_file); //chosen channel
+
+        if(plotChannel == "") //By default, also want to plot templates in subchannels
+        {
+            for(int ichan=1; ichan<thechannellist.size(); ichan++)
+            {
+                theAnalysis->Draw_Templates(false, thechannellist[ichan], template_name, prefit, use_combine_file);
+            }
+        }
+    }
+
+    if(draw_input_vars)
+    {
+        theAnalysis->Draw_Templates(true, plotChannel);
+        if(draw_input_allChannels)
+        {
+            for(int ichan=1; ichan<thechannellist.size(); ichan++)
+            {
+                theAnalysis->Draw_Templates(true, thechannellist[ichan]);
+            }
+        }
+    }
+
+    //#############################################
+    //  OTHER FUNCTIONS
+    //#############################################
+
+    if(compare_template_shapes) {theAnalysis->Compare_TemplateShapes_Processes(template_name, plotChannel);}
 
 //--------------------------------------------
     delete theAnalysis;

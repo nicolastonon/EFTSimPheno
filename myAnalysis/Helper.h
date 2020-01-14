@@ -75,6 +75,7 @@
 	TString Combine_Naming_Convention(TString);
     void Extract_Ranking_Info(TString, TString);
     void Get_Ranking_Vectors(TString, std::vector<TString>&, std::vector<double>&);
+    void Compare_Histograms(TString, TString, TString, TString);
 
 //-- Analysis-specific helper functions
     bool Apply_CommandArgs_Choices(int, char **, TString&, TString&);

@@ -518,8 +518,36 @@ void Get_Ranking_Vectors(TString channel, vector<TString> &v_BDTvar_name, vector
 	return;
 }
 
+//Loof for differences between 2 different histos stored in 2 different TFiles
+void Compare_Histograms(TString filepath1, TString filepath2, TString histname1, TString histname2)
+{
+    TFile* f1 = TFile::Open(filepath1, "READ");
+    TFile* f2 = TFile::Open(filepath2, "READ");
 
+    if(!f1->GetListOfKeys()->Contains(histname1) ) {cout<<FRED("Error : "<<histname1<<" not found in file "<<filepath1<<"")<<endl; return;}
+    if(!f2->GetListOfKeys()->Contains(histname2) ) {cout<<FRED("Error : "<<histname2<<" not found in file "<<filepath2<<"")<<endl; return;}
 
+	TH1F* h1 = (TH1F*) f1->Get(histname1);
+	TH1F* h2 = (TH1F*) f2->Get(histname2);
+
+	for(int ibin=0; ibin<h1->GetNbinsX(); ibin++)
+	{
+		double diff = fabs((h1->GetBinContent(ibin+1) - h2->GetBinContent(ibin+1))) / h1->GetBinContent(ibin+1);
+
+		if(diff > 1./100)
+		{
+			cout<<"WARNING : bin "<<ibin+1<<" different ! ("<<h1->GetBinContent(ibin+1)<<" / "<<h2->GetBinContent(ibin+1)<<")"<<endl;
+		}
+	}
+
+	delete h1;
+	delete h2;
+
+	f1->Close();
+	f2->Close();
+
+	return;
+}
 
 
 
