@@ -748,9 +748,9 @@ int main()
 
     vector<TString> v_var; vector<pair<float, float>> v_min_max;
     v_var.push_back("Z_pt"); v_min_max.push_back(std::make_pair(0, 400));
-    v_var.push_back("Z_eta"); v_min_max.push_back(std::make_pair(-5, 5));
-    v_var.push_back("Z_m"); v_min_max.push_back(std::make_pair(70, 110));
-    v_var.push_back("Zreco_m"); v_min_max.push_back(std::make_pair(50, 110));
+    // v_var.push_back("Z_eta"); v_min_max.push_back(std::make_pair(-5, 5));
+    // v_var.push_back("Z_m"); v_min_max.push_back(std::make_pair(70, 110));
+    // v_var.push_back("Zreco_m"); v_min_max.push_back(std::make_pair(50, 110));
     // v_var.push_back("Top_pt"); v_min_max.push_back(std::make_pair(0, 500));
     // v_var.push_back("Top_eta"); v_min_max.push_back(std::make_pair(-5, 5));
     // v_var.push_back("Top_m"); v_min_max.push_back(std::make_pair(0, 300));
@@ -758,8 +758,8 @@ int main()
     // v_var.push_back("LeadingTop_pt"); v_min_max.push_back(std::make_pair(0, 500));
     // v_var.push_back("LeadingTop_eta"); v_min_max.push_back(std::make_pair(-5, 5));
     // v_var.push_back("Zreco_dPhill"); v_min_max.push_back(std::make_pair(0, 6));
-    v_var.push_back("cosThetaStarPol_Z"); v_min_max.push_back(std::make_pair(-1, 1));
-    v_var.push_back("cosThetaStarPol_Top"); v_min_max.push_back(std::make_pair(-1, 1));
+    // v_var.push_back("cosThetaStarPol_Z"); v_min_max.push_back(std::make_pair(-1, 1));
+    // v_var.push_back("cosThetaStarPol_Top"); v_min_max.push_back(std::make_pair(-1, 1));
 
     vector<TString> v_reweight_names; vector<int> v_colors;
     v_reweight_names.push_back("sm"); //Nominal SM weight -- keep
@@ -783,7 +783,7 @@ int main()
     // v_reweight_names.push_back("ctw_2p0");
     // v_reweight_names.push_back("ctw_2p5");
     // v_reweight_names.push_back("ctw_3p0");
-    v_reweight_names.push_back("ctw_4p0");
+    // v_reweight_names.push_back("ctw_4p0");
     // v_reweight_names.push_back("ctw_5p0");
     // v_reweight_names.push_back("ctw_8p0");
     // v_reweight_names.push_back("ctw_10p0");
