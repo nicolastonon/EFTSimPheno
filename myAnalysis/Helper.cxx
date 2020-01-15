@@ -763,7 +763,26 @@ bool Get_Variable_Range(TString var, int& nbins, double& xmin, double& xmax)
     //Categories are either 0 or 1 (NB : encoded in Char_t!)
     if(var.BeginsWith("is_") || var.BeginsWith("passed") ) {nbins = 2; xmin = 0; xmax = 2;}
 
-    else if(var == "metEt") {nbins = 20; xmin = 0; xmax = 200;}
+    else if(var == "metEt") {nbins = 20; xmin = 0; xmax = 300;}
+	else if(var == "dEtaFwdJetBJet") {nbins = 15; xmin = 0; xmax = 5;}
+	else if(var == "dEtaFwdJetClosestLep") {nbins = 15; xmin = 0; xmax = 5;}
+	else if(var == "minDRll") {nbins = 15; xmin = 0; xmax = 3.5;}
+    else if(var == "maxEtaJet") {nbins = 10; xmin = 0; xmax = 5;}
+	else if(var == "dPhiHighestPtSSPair") {nbins = 20; xmin = 0; xmax = 3.2;}
+	else if(var == "nJetEta1") {nbins = 7; xmin = 0.5; xmax = 7.5;}
+	else if(var == "lepCharge") {nbins = 3; xmin = -1.5; xmax = 1.5;}
+	else if(var == "hardestBjetPt") {nbins = 20; xmin = 20; xmax = 300;}
+	else if(var == "hardestBjetEta") {nbins = 40; xmin = 0; xmax = 0.5;}
+	else if(var == "FwdJetPt") {nbins = 20; xmin = 20; xmax = 200;}
+	else if(var == "inv_mll") {nbins = 20; xmin = 50; xmax = 130;}
+    else if(var == "mHT") {nbins = 10; xmin = 200; xmax = 1200;}
+    else if(var == "top_mass") {nbins = 15; xmin = 100; xmax = 300;}
+    else if(var == "dPhijj_max") {nbins = 10; xmin = 0; xmax = 3;}
+    else if(var == "m3l" || var == "Mass_3l") {nbins = 20; xmin = 100; xmax = 500;}
+    else if(var == "leptonCharge") {nbins = 3; xmin = -1.5; xmax = 1.5;}
+    else if(var.Contains("CSV")) {nbins = 20; xmin = 0.; xmax = 1.1;}
+
+    else if(var.Contains("dR") || var.Contains("DelR") ) {nbins = 20; xmin = 0; xmax = 7.;}
 
     // else if(var == "Lep3Pt") {nbins = 20; xmin = 0; xmax = 80;}
 	else {return false;}

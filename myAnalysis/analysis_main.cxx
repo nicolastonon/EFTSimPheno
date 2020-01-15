@@ -58,7 +58,6 @@ int main(int argc, char **argv)
 
     set_v_cut_name.push_back("passedBJets");  set_v_cut_def.push_back("==1"); set_v_cut_IsUsedForBDT.push_back(false);
 
-
 //---------------------------------------------------------------------------
 //  ######  ##     ##    ###    ##    ## ##    ## ######## ##        ######
 // ##    ## ##     ##   ## ##   ###   ## ###   ## ##       ##       ##    ##
@@ -111,10 +110,18 @@ int main(int argc, char **argv)
 // ##     ## ##     ##    ##            ## ##   ##     ## ##    ##  ##    ##
 // ########  ########     ##             ###    ##     ## ##     ##  ######
 //---------------------------------------------------------------------------
-//Variables used in BDT //NB : always pass floats to the TMVA Reader !
+//Variables used in BDT
 
     std::vector<TString > thevarlist;
     thevarlist.push_back("metEt");
+    thevarlist.push_back("maxEtaJet");
+    thevarlist.push_back("leptonCharge");
+    // thevarlist.push_back("Mass_3l");
+    thevarlist.push_back("maxDijetDelR");
+    thevarlist.push_back("deepCSV_2nd");
+    thevarlist.push_back("dEtaFwdJetBJet");
+    thevarlist.push_back("dEtaFwdJetClosestLep");
+    thevarlist.push_back("mHT");
 
 
 //---------------------------------------------------------------------------
@@ -178,13 +185,13 @@ int main(int argc, char **argv)
     bool create_templates = false; //Create templates of selected BDT, in selected region
 
 //-----------------    CONTROL HISTOGRAMS
-    bool create_inputVar_histograms = false; //Create histograms of input variables, for plotting
+    bool create_inputVar_histograms = true; //Create histograms of input variables, for plotting
 
 //-----------------    PLOTS
     TString plotChannel = ""; //Can choose to plot particular subchannel //uu, ue, ee, ...
 
     bool draw_templates = false; //Plot templates of selected BDT, in selected region
-        bool prefit = false; //true <-> plot prefit templates ; else postfit (requires combine output file)
+        bool prefit = true; //true <-> plot prefit templates ; else postfit (requires combine output file)
         bool use_combine_file = false; //true <-> use MLF output file from Combine (can get postfit plots, total error, etc.)
 
     bool draw_input_vars = true; //Plot input variables

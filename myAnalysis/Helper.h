@@ -32,6 +32,7 @@
 #define SALMON  "\e[38;2;240;143;104m"
 #define FTURQUOISE(x) TURQUOISE x RST
 #define FSALMON(x) SALMON x RST
+#define YELBKG(x) "\e[43m" x RST
 #define CYANBKG(x) "\e[46m" x RST
 
 #include <sstream>

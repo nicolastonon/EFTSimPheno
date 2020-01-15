@@ -1,8 +1,11 @@
 ---  : Variable Ranking ---
 
-1 : metEt     : 1.000e+00
-: ---------------------------------------
-: === Destroy and recreate all methods via weight files for testing ===
-: 
-0;36mweights/BDT/BDT_all_SR__tZq.weights.xml[0m
-
+1 : dEtaFwdJetBJet       : 1.763e-01
+2 : dEtaFwdJetClosestLep : 1.708e-01
+3 : deepCSV_2nd          : 1.250e-01
+4 : mHT                  : 1.226e-01
+5 : maxDijetDelR         : 1.034e-01
+6 : m3l                  : 8.666e-02
+7 : leptonCharge         : 8.157e-02
+8 : maxEtaJet            : 6.962e-02
+9 : metEt                : 6.415e-02
