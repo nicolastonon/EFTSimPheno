@@ -23,17 +23,35 @@ HDRS = $(wildcard *.h) #Header files are all files with .h extension
 OBJS = $(SRCS:.cxx=.o) #Object files are all files with .o extension, which have same names as source files
 
 MY_ANALYSIS = analysis_main.exe #Name of executable file
+ROCS = ROCS/Compare_ROC_curves.exe
+Produce_Cutflow = Produce_Cutflow.exe
 
 # .PHONY : $(wildcard *.o)  #Force to always recompile object
 
 #Instructions
-all: $(MY_ANALYSIS)
+all: $(MY_ANALYSIS) $(ROCS) $(Produce_Cutflow)
 
 #Obtain executables from object files
 $(MY_ANALYSIS): analysis_main.o Helper.o TopEFT_analysis.o
-	@echo "###################################""#"
+	@echo "###################################"
 	@echo "-- Creating executable ./$(MY_ANALYSIS) --"
 	@$(CC) analysis_main.o Helper.o TopEFT_analysis.o -o $@ $(ROOTFLAGS) $(LFLAGS) $(INCFLAGS)
+	@echo "-- Done --"
+	@echo "###################################""#"
+	@echo ""
+
+$(ROCS):	ROCS/Compare_ROC_curves.cxx Helper.o
+	@echo "###################################"
+	@echo "-- Creating executable $(ROCS) --"
+	@$(CC) ROCS/Compare_ROC_curves.o Helper.o -o $@ $(ROOTFLAGS) $(LFLAGS)
+	@echo "-- Done --"
+	@echo "###################################"
+	@echo ""
+
+$(Produce_Cutflow):	Produce_Cutflow.cxx Helper.o
+	@echo "###################################""#"
+	@echo "-- Creating executable ./$(Produce_Cutflow) --"
+	@$(CC) Produce_Cutflow.cxx Helper.o -o $@ $(ROOTFLAGS) $(LFLAGS) $(INCFLAGS)
 	@echo "-- Done --"
 	@echo "###################################""#"
 	@echo ""
@@ -42,6 +60,7 @@ $(MY_ANALYSIS): analysis_main.o Helper.o TopEFT_analysis.o
 %.o: %.cxx $(HDRS)
 	@echo "-- Compiling : "$@"--"
 	@$(CC) $(ROOTFLAGS) $(CFLAGS) $(LFLAGS) $(INCFLAGS) $< -o $@
+	@echo ""
 	@#Example :  g++ `root-config --glibs --cflags` -fPIC -c -g Helper.cxx -o Helper.o
 
 #Erase all objects and executable

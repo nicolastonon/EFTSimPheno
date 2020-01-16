@@ -91,8 +91,8 @@ TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> 
     // t_name = "Tree";
     t_name = "result";
 
+    //Lumi values : 2016=35.92 / 2.17=41.53/2018=59.74
 	Set_Luminosity(lumi, "2017");
-	// if(use_2016_ntuples) {Set_Luminosity(35.862, "2016");} //Use 2016 lumi instead
 
 	plot_extension = theplotextension;
 
@@ -254,18 +254,24 @@ TopEFT_analysis::~TopEFT_analysis()
  */
 void TopEFT_analysis::Set_Luminosity(double desired_luminosity, TString reference)
 {
-	if(reference == "2017") {ref_luminosity = 41.5;}
-	else if(reference == "2016") {ref_luminosity = 35.862;} //Moriond 2017 lumi ref.
-	assert(ref_luminosity > 0 && "Using wrong lumi reference -- FIX !"); //Make sure we use 2016 or 2017 as ref.
+	if(reference == "2017") {ref_luminosity = 41.53;}
+    else if(reference == "2016") {ref_luminosity = 35.92;}
+    else if(reference == "2018") {ref_luminosity = 59.74;}
+    else if(reference == "Run2") {ref_luminosity = 35.92+41.53+59.74;}
 
-	this->luminosity_rescale = desired_luminosity / ref_luminosity;
+	assert(ref_luminosity > 0 && "Using wrong lumi reference -- FIX IT !"); //Make sure we use a sensible lumi value
 
-	if(luminosity_rescale != 1)
+    luminosity_rescale = 1.;
+	// this->luminosity_rescale = desired_luminosity / ref_luminosity; //NB : not needed anymore to rescale here ; done at ntuple prod level
+
+    if(luminosity_rescale != 1)
 	{
 		cout<<endl<<BOLD(FBLU("##################################"))<<endl;
 		cout<<"--- Using luminosity scale factor : "<<desired_luminosity<<" / "<<ref_luminosity<<" = "<<luminosity_rescale<<" ! ---"<<endl;
 		cout<<BOLD(FBLU("##################################"))<<endl<<endl;
 	}
+
+    return;
 }
 
 
@@ -497,14 +503,14 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
 			if(use_relative_weights)
 			{
                 // TString weightExp = "weight";
-                TString weightExp = "eventWeight";
+                TString weightExp = "eventWeight*eventMCFactor";
 				dataloader->SetSignalWeightExpression(weightExp);
 				cout<<"Signal sample : "<<samplename_tmp<<" / Weight expression : "<<weightExp<<endl<<endl;
 			}
 			else
 			{
                 // TString weightExp = "fabs(weight)";
-                TString weightExp = "fabs(eventWeight)";
+                TString weightExp = "fabs(eventWeight*eventMCFactor)";
 				dataloader->SetSignalWeightExpression(weightExp);
 				cout<<"Signal sample : "<<samplename_tmp<<" / Weight expression : "<<weightExp<<endl<<endl;
 			}
@@ -516,14 +522,14 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
             if(use_relative_weights)
 			{
                 // TString weightExp = "weight";
-                TString weightExp = "eventWeight";
+                TString weightExp = "eventWeight*eventMCFactor";
 				dataloader->SetBackgroundWeightExpression(weightExp);
 				cout<<"Background sample : "<<samplename_tmp<<" / Weight expression : "<<weightExp<<endl;
 			}
 			else
 			{
                 // TString weightExp = "fabs(weight)";
-                TString weightExp = "fabs(eventWeight)";
+                TString weightExp = "fabs(eventWeight*eventMCFactor)";
 				dataloader->SetBackgroundWeightExpression(weightExp);
 				cout<<"Background sample : "<<samplename_tmp<<" / Weight expression : "<<weightExp<<endl;
 			}
@@ -946,12 +952,15 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 			tree->SetBranchAddress("channel", &channel);
 
             //--- Event weights
-            double weight;
             // float weight;
+            double weight;
+            float eventMCFactor;
             float weight_SF; //Stored separately
 			float mc_weight_originalValue;
-			tree->SetBranchStatus("eventWeight", 1);
+            tree->SetBranchStatus("eventWeight", 1);
 			tree->SetBranchAddress("eventWeight", &weight);
+            tree->SetBranchStatus("eventMCFactor", 1);
+			tree->SetBranchAddress("eventMCFactor", &eventMCFactor);
 			// tree->SetBranchStatus("mc_weight_originalValue", 1);
 			// tree->SetBranchAddress("mc_weight_originalValue", &mc_weight_originalValue);
 
@@ -1052,9 +1061,9 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
 				tree->GetEntry(ientry);
 
-				if(isnan(weight) || isinf(weight))
+				if(isnan(weight*eventMCFactor) || isinf(weight*eventMCFactor))
 				{
-					cout<<BOLD(FRED("* Found event with weight = "<<weight<<" ; remove it..."))<<endl; continue;
+					cout<<BOLD(FRED("* Found event with weight*eventMCFactor = "<<weight*eventMCFactor<<" ; remove it..."))<<endl; continue;
 				}
 
 				//--- Cut on category value
@@ -1075,6 +1084,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 //--------------------------------------------
 
                 // cout<<"weight "<<weight<<endl;
+                // cout<<"eventMCFactor "<<eventMCFactor<<endl;
 
 				//Get MVA value to make template
 				double mva_value1 = -9, mva_value2 = -9;
@@ -1111,7 +1121,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 						{
 							weight_tmp = v_float_systWeights[isyst];
 						}
-						else {weight_tmp = weight;} //Nominal (no syst)
+						else {weight_tmp = weight*eventMCFactor;} //Nominal (no syst)
 
 						// cout<<"v_float_systWeights[isyst] "<<v_float_systWeights[isyst]<<endl;
 
@@ -1150,32 +1160,6 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
 			} //end TTree entries loop
 //--------------------------------------------
-
-// #    # #  ####  #####  ####     #    #   ##   #    # # #####
-// #    # # #        #   #    #    ##  ##  #  #  ##   # # #    #
-// ###### #  ####    #   #    #    # ## # #    # # #  # # #    #
-// #    # #      #   #   #    #    #    # ###### #  # # # #####
-// #    # # #    #   #   #    #    #    # #    # #   ## # #
-// #    # #  ####    #    ####     #    # #    # #    # # #
-
-			for(int ichan=0; ichan<channel_list.size(); ichan++)
-			{
-				for(int isyst=0; isyst<syst_list.size(); isyst++)
-				{
-					for(int ivar=0; ivar<total_var_list.size(); ivar++)
-					{
-						// cout<<"chan "<<channel_list[ichan]<<"syst "<<syst_list[isyst]<<endl;
-
-						if(sample_list[isample] != "DATA" && sample_list[isample] != "Fakes" && sample_list[isample] != "QFlip")
-						{
-							//Luminosity rescaling
-							if(template_name == "2D") {v3_histo_chan_syst_var2D[ichan][isyst][ivar]->Scale(luminosity_rescale);}
-							else {v3_histo_chan_syst_var[ichan][isyst][ivar]->Scale(luminosity_rescale);}
-						} //MC
-					} //Var
-				} //syst
-			} //ichan
-
 
 // #    # #####  # ##### ######
 // #    # #    # #   #   #

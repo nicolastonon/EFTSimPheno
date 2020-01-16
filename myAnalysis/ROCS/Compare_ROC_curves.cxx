@@ -19,24 +19,7 @@
  *  -- If want to use just any histogram, should bypass this and hard-code the names of each histo to retrieve !
  */
 
-/* BASH COLORS */
-#define RST   "[0m"
-#define KRED  "[31m"
-#define KGRN  "[32m"
-#define KYEL  "[33m"
-#define KBLU  "[34m"
-#define KMAG  "[35m"
-#define KCYN  "[36m"
-#define KWHT  "[37m"
-#define FRED(x) KRED x RST
-#define FGRN(x) KGRN x RST
-#define FYEL(x) KYEL x RST
-#define FBLU(x) KBLU x RST
-#define FMAG(x) KMAG x RST
-#define FCYN(x) KCYN x RST
-#define FWHT(x) KWHT x RST
-#define BOLD(x) "[1m" x RST
-#define UNDL(x) "[4m" x RST
+#include "../Helper.h"
 
 #include <iostream>
 #include <cstdlib>
@@ -78,76 +61,6 @@ using namespace std;
 // ##     ## ##       ##       ##        ##       ##    ##     ##       ##     ## ##   ### ##    ## ##    ##
 // ##     ## ######## ######## ##        ######## ##     ##    ##        #######  ##    ##  ######   ######
 //--------------------------------------------
-
-
-//Use stat function (from library sys/stat) to check if a file exists
-bool Check_File_Existence(const TString& name)
-{
-  struct stat buffer;
-  return (stat (name.Data(), &buffer) == 0); //true if file exists
-}
-
-//Move file with bash command 'mv'
-void MoveFile(TString origin_path, TString dest_path)
-{
-	TString command = "mv "+origin_path + " " + dest_path;
-	system(command.Data() );
-
-	return;
-}
-
-//Copy file with bash command 'cp'
-void CopyFile(TString origin_path, TString dest_path)
-{
-	TString command = "cp "+origin_path + " " + dest_path;
-	system(command.Data() );
-
-	return;
-}
-
-
-//Convert a double into a TString
-// precision --> can choose if TString how many digits the TString should display
-TString Convert_Number_To_TString(double number, int precision=3)
-{
-	stringstream ss;
-	ss << std::setprecision(precision) << number;
-	TString ts = ss.str();
-	return ts;
-}
-
-//Convert a TString into a float
-double Convert_TString_To_Number(TString ts)
-{
-	double number = 0;
-	string s = ts.Data();
-	stringstream ss(s);
-	ss >> number;
-	return number;
-}
-
-//Find a number into a TString, and returns it as a float
-float Find_Number_In_TString(TString ts)
-{
-	TString tmp = ""; int number = 0;
-	string s = ts.Data(); int ts_size = s.size(); //Only to get TString size
-
-	for (int i=0; i < ts_size; i++)
-	{
-		if( isdigit(ts[i]) )
-		{
-			do
-			{
-				tmp += ts[i];
-				i++;
-			} while(isdigit(ts[i]) || ts[i] == '.'); //NB : Pay attention to quotes : "a" creates a 2-char array (letter+terminator) -> TString. 'a' identifies a single character !
-
-		  break;
-		}
-	}
-
-	return Convert_TString_To_Number(tmp);
-}
 
 /**
  * Sum all histograms from a vector into a single histogram, passed as pointer in argument
@@ -200,37 +113,14 @@ int Get_Color(int index)
 	else {return index;}
 }
 
-
-void Get_Signal_and_Backgrounds(TString filepath, TString signal, vector<TString>& v_sig, vector<TString>& v_bkg, TString bkg_type)
+void Get_Signal_and_Backgrounds(TString filepath, TString signal, vector<TString>& v_sig, vector<TString>& v_bkg)
 {
 	v_sig.push_back(signal); //Only 1 signal accounted for (modify if want THQ+THW, etc.)
 
-	if(filepath.Contains("ttV", TString::kIgnoreCase) ) //Try to infer from filename
-	{
-		v_bkg.push_back("ttZ");
-		v_bkg.push_back("ttW_PSweights");
-	}
-	else if(filepath.Contains("ttbar", TString::kIgnoreCase) )
-	{
-		v_bkg.push_back("TTbar_DiLep_PSweights");
-		v_bkg.push_back("TTbar_SemiLep_PSweights");
-	}
-	else if(bkg_type == "ttV") //If could not infer from filename, depends on arg
-	{
-		v_bkg.push_back("ttZ");
-		v_bkg.push_back("ttW_PSweights");
-	}
-	else if(bkg_type == "ttbar")
-	{
-		v_bkg.push_back("TTbar_DiLep_PSweights");
-		v_bkg.push_back("TTbar_SemiLep_PSweights");
-	}
-	else {cout<<BOLD(FRED("Error ! Wrong bkg_type !"))<<endl;}
+    v_bkg.push_back("ttZ");
 
 	return;
 }
-
-
 
 void Apply_Cosmetics(TCanvas* &c1)
 {
@@ -261,102 +151,15 @@ void Apply_Cosmetics(TCanvas* &c1)
 	c1->SetFrameLineWidth(2.);
 }
 
-void Load_Canvas_Style()
-{
-	// For the canvas:
-	gStyle->SetCanvasBorderMode(0);
-	gStyle->SetCanvasColor(0);
-	gStyle->SetCanvasDefH(600); //Height of canvas
-	gStyle->SetCanvasDefW(600); //Width of canvas
-	gStyle->SetCanvasDefX(0);   //POsition on screen
-	gStyle->SetCanvasDefY(0);
-	gStyle->SetPadBorderMode(0);
-	gStyle->SetPadColor(0); // kWhite
-	gStyle->SetPadGridX(0); //false
-	gStyle->SetPadGridY(0); //false
-	gStyle->SetGridColor(0);
-	gStyle->SetGridStyle(3);
-	gStyle->SetGridWidth(1);
-	gStyle->SetFrameBorderMode(0);
-	gStyle->SetFrameBorderSize(1);
-	gStyle->SetFrameFillColor(0);
-	gStyle->SetFrameFillStyle(0);
-	gStyle->SetFrameLineColor(1);
-	gStyle->SetFrameLineStyle(1);
-	gStyle->SetFrameLineWidth(1);
-	gStyle->SetHistLineColor(1);
-	gStyle->SetHistLineStyle(0);
-	gStyle->SetHistLineWidth(1);
-	gStyle->SetEndErrorSize(2);
-	gStyle->SetOptFit(1011);
-	gStyle->SetFitFormat("5.4g");
-	gStyle->SetFuncColor(2);
-	gStyle->SetFuncStyle(1);
-	gStyle->SetFuncWidth(1);
-	gStyle->SetOptDate(0);
-	gStyle->SetOptFile(0);
-	gStyle->SetOptStat(0); // To display the mean and RMS:   SetOptStat("mr");
-	gStyle->SetStatColor(0); // kWhite
-	gStyle->SetStatFont(42);
-	gStyle->SetStatFontSize(0.04);
-	gStyle->SetStatTextColor(1);
-	gStyle->SetStatFormat("6.4g");
-	gStyle->SetStatBorderSize(1);
-	gStyle->SetStatH(0.1);
-	gStyle->SetStatW(0.15);
-	gStyle->SetPadTopMargin(0.07);
-	gStyle->SetPadBottomMargin(0.13);
-	gStyle->SetPadLeftMargin(0.16);
-	gStyle->SetPadRightMargin(0.03);
-	gStyle->SetOptTitle(0);
-	gStyle->SetTitleFont(42);
-	gStyle->SetTitleColor(1);
-	gStyle->SetTitleTextColor(1);
-	gStyle->SetTitleFillColor(10);
-	gStyle->SetTitleFontSize(0.05);
-	gStyle->SetTitleColor(1, "XYZ");
-	gStyle->SetTitleFont(42, "XYZ");
-	gStyle->SetTitleSize(0.06, "XYZ");
-	gStyle->SetTitleXOffset(0.9);
-	gStyle->SetTitleYOffset(1.25);
-	gStyle->SetLabelColor(1, "XYZ");
-	gStyle->SetLabelFont(42, "XYZ");
-	gStyle->SetLabelOffset(0.007, "XYZ");
-	gStyle->SetLabelSize(0.05, "XYZ");
-	gStyle->SetAxisColor(1, "XYZ");
-	gStyle->SetStripDecimals(1); // kTRUE
-	gStyle->SetTickLength(0.03, "XYZ");
-	gStyle->SetNdivisions(510, "XYZ");
-	gStyle->SetPadTickX(1);  // To get tick marks on the opposite side of the frame
-	gStyle->SetPadTickY(1);
-	gStyle->SetOptLogx(0);
-	gStyle->SetOptLogy(0);
-	gStyle->SetOptLogz(0);
-	gStyle->SetPaperSize(20.,20.);
-}
-
-
 /**
- * Try to infer nLep_cat and bkg_type directly from filename, and return full variable name to plot
- * e.g. if filename = "BDtttV_2l.root" ==> return "ttV_2l_all"
+ * Try to infer varname directly from filename, and return full variable name to plot
  * If not found, return original string (<-> not modified)
  */
 TString Get_VarName_From_FileName(TString filename, TString variable, TString signal = "")
 {
 	TString tmp = variable;
 
-	TString nlep = "", bkg = "";
-
-	// if(filename.Contains("DNN", TString::kIgnoreCase)) {return "DNN";}
-
-	if(filename.Contains("ttbar", TString::kIgnoreCase) ) {bkg= "ttbar";}
-	else if(filename.Contains("ttV", TString::kIgnoreCase) ) {bkg= "ttV";}
-
-	if(filename.Contains("2l", TString::kIgnoreCase) ) {nlep= "2l";}
-	else if(filename.Contains("3l", TString::kIgnoreCase) ) {nlep= "3l";}
-
-	if(nlep != "" && bkg != "") {tmp =  bkg + "_" + nlep + "_all";}
-	if(signal != "") {tmp+= "__" + signal;}
+	// xxx
 
 	return tmp; //If substring not found, don't modify variable name
 }
@@ -401,7 +204,7 @@ double Get_AUC_From_TMVAfile(TString filename, TString variable, bool use_TrainS
 	//Command to interactively produce an histo from variable, with desired range
 	variable = Get_VarName_From_FileName(filename, variable, signal); //auto infer var name
 
-	TString dir_name = "weights/Method_" + variable + "/" + variable; //Path of subdir, hard-coded
+	TString dir_name = "weights/Method_BDT/" + variable; //Path of subdir, hard-coded
 	TString h_name = "MVA_" + variable + "_"; //Name of ROC histo, hard-coded
 
 	if(use_TrainSample) {h_name+= "trainingRejBvsS";} //Training ROC
@@ -737,11 +540,11 @@ bool Produce_Efficiency_TGraph(TGraph* &g, TH1F* h_sig, TH1F* h_bkg)
 /**
  * For each ROC, will : 1) get sig & bkg histos, 2) produce efficiency graph, 3) superimpose all graphs
  */
-void Superimpose_ROC_Curves(vector<TString> v_filepath, vector<TString> v_objName, vector<TString> v_label, vector<TString> v_isTMVA_file, vector<bool> v_isTrainSample, TString variable, TString nLep_cat, TString region, int nbins, double xmin, double xmax, TString signal, TString bkg_type, TString cuts="1")
+void Superimpose_ROC_Curves(vector<TString> v_filepath, vector<TString> v_objName, vector<TString> v_label, vector<TString> v_isTMVA_file, vector<bool> v_isTrainSample, TString variable, TString region, int nbins, double xmin, double xmax, TString signal, TString cuts="1")
 {
-	cout<<endl<<endl<<BOLD(FYEL("##################################"))<<endl;
+	cout<<endl<<YELBKG("                          ")<<endl<<endl;
 	cout<<FYEL("--- Will superimpose all ROC curves on plot ---")<<endl;
-	cout<<BOLD(FYEL("##################################"))<<endl<<endl;
+	cout<<endl<<YELBKG("                          ")<<endl<<endl;
 
 	if(!v_filepath.size() || !v_label.size() || !v_isTMVA_file.size() )
 	{
@@ -778,8 +581,6 @@ void Superimpose_ROC_Curves(vector<TString> v_filepath, vector<TString> v_objNam
 		// v_gridlines_X[i]->SetLineStyle(2);
 	}
 
-
-
 	//Need this to set the axis on plot
 	TH1F* h_axis = new TH1F("", "", 10, 0, 1);
 	h_axis->SetMinimum(0.0001); //Remove 0 from axis
@@ -797,9 +598,10 @@ void Superimpose_ROC_Curves(vector<TString> v_filepath, vector<TString> v_objNam
 	h_axis->GetYaxis()->SetTitleFont(42);
 	h_axis->GetYaxis()->SetTickLength(0.04);
 
-	TLegend* legend = new TLegend(0.20, 0.16, 0.67, 0.4);
-	legend->SetLineColor(kGray);
-	legend->SetTextSize(0.03);
+    float y_min_leg = 0.4 - v_filepath.size() * 0.08;
+	TLegend* legend = new TLegend(0.19, y_min_leg, 0.60, 0.4);
+    legend->SetTextSize(0.03);
+    legend->SetLineColor(kGray);
 
 	//1 TGraph per ROC
 	vector<TGraph*> v_graph(v_filepath.size() );
@@ -814,7 +616,7 @@ void Superimpose_ROC_Curves(vector<TString> v_filepath, vector<TString> v_objNam
 
 		//For each file, get list of signal and background processes involved
 		vector<TString> v_sig_names, v_bkg_names;
-		Get_Signal_and_Backgrounds(v_filepath[iroc], signal, v_sig_names, v_bkg_names, bkg_type);
+		Get_Signal_and_Backgrounds(v_filepath[iroc], signal, v_sig_names, v_bkg_names);
 
 
 		//1 histo per process
@@ -1024,15 +826,7 @@ int main(int argc, char **argv)
 
 //-- Select options, etc.
 //--------------------------------------------
-	// TString signal = "tHq";
-    // TString signal = "hut_FCNC";
-    TString signal = "hct_FCNC";
-	// TString signal = "ST_hut_FCNC";
-	// TString signal = "TT_hut_FCNC";
-
-	//NB : these 2 vars are used to get histo name. If filename contains "ttV", "ttbar", "2l" or "3l", will automatically choose these settings instead
-	TString bkg_type = "";
-	TString nLep_cat = "";
+	TString signal = "tZq";
 
 	TString region = "SR";
 
@@ -1048,7 +842,6 @@ int main(int argc, char **argv)
 //Push_back 1 element to each vector, for each ROC curve
 //NB : within tHq framework, objNames are expected to be the following :
 //-- for regular BDT : "weights/TestTree"
-//-- for pure Keras NN : "DNN"+bkg_type+"_"+nLep_cat+"_all" (((+ "__" +  process_name))) ==> E.g. : "DNNttV_2l_all"
 
 	vector<TString> v_filepath; //Path of TFile containing TMVA TTree or histograms
 	vector<TString> v_objName; //Complete path of TMVA TTree or histogram
@@ -1056,93 +849,12 @@ int main(int argc, char **argv)
     vector<TString> v_isTMVA_file; //'TMVA' <-> looking for TMVA TTree ; else (?) <-> looking for histograms
     vector<bool> v_isTrainSample; //True <-> looking for ROC from train sample ; else test sample
 //--------------------------------------------
-    // v_filepath.push_back("../outputs/bdt_default/BDTttV_3l__tHq.root");
-	// v_objName.push_back("");
-	// v_label.push_back("ttV 3l");
-	// v_isTMVA_file.push_back("TMVA"); v_isTrainSample.push_back(false);
-
-    // v_filepath.push_back("../outputs/bdt_alternative/withMEM/BDTttV_3l__tHq.root");
-	// v_objName.push_back("");
-	// v_label.push_back("ttV 3l +MEM");
-	// v_isTMVA_file.push_back("TMVA"); v_isTrainSample.push_back(false);
-
-    // v_filepath.push_back("../outputs/bdt_default/BDTttV_2l__tHq.root");
-	// v_objName.push_back("");
-	// v_label.push_back("ttV 2l");
-	// v_isTMVA_file.push_back("TMVA"); v_isTrainSample.push_back(false);
-
-    // v_filepath.push_back("../outputs/bdt_default/BDTttbar_3l__tHq.root");
-	// v_objName.push_back("");
-	// v_label.push_back("ttbar 3l");
-	// v_isTMVA_file.push_back("TMVA"); v_isTrainSample.push_back(false);
-
-    // v_filepath.push_back("../outputs/bdt_default/BDTttbar_2l__tHq.root");
-	// v_objName.push_back("");
-	// v_label.push_back("ttbar 2l");
-	// v_isTMVA_file.push_back("TMVA"); v_isTrainSample.push_back(false);
-
-    // v_filepath.push_back("../outputs/bdt_alternative/BDTttV_2l__tHq.root");
-	// v_objName.push_back("");
-	// v_label.push_back("ttV 2l +2 variables");
-	// v_isTMVA_file.push_back("TMVA"); v_isTrainSample.push_back(false);
-
-    // v_filepath.push_back("../outputs/bdt_alternative/BDTttbar_2l__tHq.root");
-	// v_objName.push_back("");
-	// v_label.push_back("ttbar 2l");
-	// v_isTMVA_file.push_back("TMVA"); v_isTrainSample.push_back(false);
-
 
 //--------------------------------------------
-    // v_filepath.push_back("../outputs/BDTttV_2l__hut_FCNC.root");
-    // v_filepath.push_back("../outputs/bdt_default/BDTttV_2l__tHq.root");
-    // v_filepath.push_back("../outputs/bdt_FCNC/hut/ST_TT/BDTttV_2l__hut_FCNC.root");
-	v_filepath.push_back("../outputs/bdt_FCNC/hct/ST_TT/BDTttV_2l__hct_FCNC.root");
-    // v_filepath.push_back("../outputs/bdt_FCNC/hut/ST/BDTttV_2l__ST_hut_FCNC.root");
-    // v_filepath.push_back("../outputs/bdt_FCNC/hut/TT/BDTttV_2l__TT_hut_FCNC.root");
+    v_filepath.push_back("../outputs/BDT__tZq.root");
     v_objName.push_back("");
-    v_label.push_back("ttV 2l");
+    v_label.push_back("tZq 3l");
     v_isTMVA_file.push_back("TMVA"); v_isTrainSample.push_back(false);
-
-    // v_filepath.push_back("../outputs/BDTttbar_2l__hut_FCNC.root");
-    // v_filepath.push_back("../outputs/bdt_default/BDTttbar_2l__tHq.root");
-    // v_filepath.push_back("../outputs/bdt_FCNC/hut/ST_TT/BDTttbar_2l__hut_FCNC.root");
-	v_filepath.push_back("../outputs/bdt_FCNC/hct/ST_TT/BDTttbar_2l__hct_FCNC.root");
-	// v_filepath.push_back("../outputs/bdt_FCNC/hut/ST/BDTttbar_2l__ST_hut_FCNC.root");
-    // v_filepath.push_back("../outputs/bdt_FCNC/hut/TT/BDTttbar_2l__TT_hut_FCNC.root");
-    v_objName.push_back("");
-    v_label.push_back("ttbar 2l");
-    v_isTMVA_file.push_back("TMVA"); v_isTrainSample.push_back(false);
-
-    // v_filepath.push_back("../outputs/BDTttV_3l__hut_FCNC.root");
-    // v_filepath.push_back("../outputs/bdt_default/BDTttV_3l__tHq.root");
-    // v_filepath.push_back("../outputs/bdt_FCNC/hut/ST_TT/BDTttV_3l__hut_FCNC.root");
-	v_filepath.push_back("../outputs/bdt_FCNC/hct/ST_TT/BDTttV_3l__hct_FCNC.root");
-	// v_filepath.push_back("../outputs/bdt_FCNC/hut/ST/BDTttV_3l__ST_hut_FCNC.root");
-    // v_filepath.push_back("../outputs/bdt_FCNC/hut/TT/BDTttV_3l__TT_hut_FCNC.root");
-    v_objName.push_back("");
-    v_label.push_back("ttV 3l");
-    v_isTMVA_file.push_back("TMVA"); v_isTrainSample.push_back(false);
-
-    // v_filepath.push_back("../outputs/BDTttbar_3l__hut_FCNC.root");
-    // v_filepath.push_back("../outputs/bdt_default/BDTttbar_3l__tHq.root");
-    // v_filepath.push_back("../outputs/bdt_FCNC/hut/ST_TT/BDTttbar_3l__hut_FCNC.root");
-	v_filepath.push_back("../outputs/bdt_FCNC/hct/ST_TT/BDTttbar_3l__hct_FCNC.root");
-	// v_filepath.push_back("../outputs/bdt_FCNC/hut/ST/BDTttbar_3l__ST_hut_FCNC.root");
-    // v_filepath.push_back("../outputs/bdt_FCNC/hut/TT/BDTttbar_3l__TT_hut_FCNC.root");
-    v_objName.push_back("");
-    v_label.push_back("ttbar 3l");
-    v_isTMVA_file.push_back("TMVA"); v_isTrainSample.push_back(false);
-
-    // v_filepath.push_back("../outputs/bdt_FCNC/hut/withMEM/BDTttbar_3l__hut_FCNC.root");
-    // v_objName.push_back("");
-    // v_label.push_back("ttbar 3l + MEM");
-    // v_isTMVA_file.push_back("TMVA"); v_isTrainSample.push_back(false);
-
-    // v_filepath.push_back("../outputs/bdt_FCNC/hut/withMEM/BDTttV_3l__hut_FCNC.root");
-    // v_objName.push_back("");
-    // v_label.push_back("ttV 3l + MEM");
-    // v_isTMVA_file.push_back("TMVA"); v_isTrainSample.push_back(false);
-
 
 //--------------------------------------------
 
@@ -1154,9 +866,9 @@ int main(int argc, char **argv)
 //--------------------------------------------
 
 	//Name of variable to plot from TMVA TTree. Auto-infered from my naming conventions. Can be bypassed via this hardcoding
-	TString variable = bkg_type + "_" + nLep_cat + "_all"; //+ "_" + region;
+	TString variable = "all_" + region + "__" + signal; //+ "_" + region;
 
-	Superimpose_ROC_Curves(v_filepath, v_objName, v_label, v_isTMVA_file, v_isTrainSample, variable, nLep_cat, region, nbins, xmin, xmax, signal, bkg_type, cuts);
+	Superimpose_ROC_Curves(v_filepath, v_objName, v_label, v_isTMVA_file, v_isTrainSample, variable, region, nbins, xmin, xmax, signal, cuts);
 //--------------------------------------------
 
 	return 0;
