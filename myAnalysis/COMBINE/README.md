@@ -33,19 +33,16 @@ CODE EXAMPLE
 :new:
 -------------------------------------------->
 
-README for the COMBINE part of the tHq analysis (by Nicolas Tonon, IPHC).
-Explains : basic install, datacard generation, limit/significance computation, control checks, ...
+#### Useful links
 
-Official pages *(parts quoted here)* :
+:link: Combine page (browse the *Running combine* tab): http://cms-analysis.github.io/HiggsAnalysis-CombinedLimit/
 
-:page_facing_up: Combine page (browse the *Running combine* tab): http://cms-analysis.github.io/HiggsAnalysis-CombinedLimit/
+:link: CMS Combine Hypernews : https://hypernews.cern.ch/HyperNews/CMS/get/higgs-combination.html
 
-:page_facing_up: CMS Combine Hypernews : https://hypernews.cern.ch/HyperNews/CMS/get/higgs-combination.html
-
-:page_facing_up: CombineHarvester page : http://cms-analysis.github.io/CombineHarvester/
+:link: CombineHarvester page (external lib) : http://cms-analysis.github.io/CombineHarvester/
 
 _____________________________________________________________________________
- Table Of Contents
+#### Table Of Contents
 
 * [Installation](https://github.com/nicolastonon/tHq-analysis/tree/master/COMBINE#installation)
 
@@ -60,7 +57,6 @@ _____________________________________________________________________________
   * [Asymptotic frequentist limits](https://github.com/nicolastonon/tHq-analysis/tree/master/COMBINE#asymptotic-frequentist-limits)
   * [Postfit templates, nuisances, etc.](https://github.com/nicolastonon/tHq-analysis/tree/master/COMBINE#postfit-templates-nuisances-etc-mlf)
   * [Nuisance parameters](https://github.com/nicolastonon/tHq-analysis/tree/master/COMBINE#nuisance-parameters)
-  * [Breakdown of systematics](https://github.com/nicolastonon/tHq-analysis/tree/master/COMBINE#breakdown-of-systematics)
 
 
 _____________________________________________________________________________
@@ -317,7 +313,13 @@ You might want to remove the `autoMCStats` lines from the datacard in order to i
   :arrow_right: This creates a pdf plot representing the pulls of the NPs.
 
 
+<!--
+# OBSOLETE (needs update)
+
+:heavy_exclamation_mark: **Here are outdated commands, for the record only**
+
 ### Breakdown of systematics
+
 - To do the break-down of systematics : [Instructions](https://indico.cern.ch/event/577649/contributions/2388797/attachments/1380376/2098158/HComb-Tutorial-Nov16-Impacts.pdf)
 
 - To estimate stat. uncertainty contribution : [Instructions](https://indico.cern.ch/event/577649/contributions/2388797/attachments/1380376/2098158/HComb-Tutorial-Nov16-Impacts.pdf)
@@ -332,9 +334,7 @@ You might want to remove the `autoMCStats` lines from the datacard in order to i
   ```
 
 
-# OBSOLETE (needs update)
-
-:heavy_exclamation_mark: **Here are all the commands which have not been tested since a long time, probably outdated...**
+### Multiple signals
 
 - To compute EXPECTED (cf. '-t -1' options) significance SIMULTANEOUSLY for ttZ & tZq :
 ```
@@ -344,3 +344,4 @@ combine toy-2d.root -M ProfileLikelihood --signif --redefineSignalPOIs r_tZqmcNL
 combine workspace.root -M HybridNew --onlyTestStat --testStat=PL --singlePoint r_tZq=1,r_ttZ=1
 combine workspace.root -M HybridNew --onlyTestStat --testStat=PL --singlePoint r_tZq=1,r_ttZ=1 --setPhysicsModelParameters r_rZqmcNLO=1,r_ttZ=1 --expectSignal=1 -t -1
 ```
+-------------------------------------------->
