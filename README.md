@@ -38,9 +38,9 @@ CODE EXAMPLE
 <!-- > The only real mistake is the one from which we learn nothing. *-- John Powell* -->
 _____________________________________________________________________________
 
-> Files and instructions to perform :
-> * private simulation of Top EFT samples ;
-> * basic phenomenology studies ;
+> Files and instructions to :
+> * generate private Top EFT samples ;
+> * perform basic phenomenology studies ;
 > * analyse DESY TopZ ntuples ;
 > * run COMBINE.
 

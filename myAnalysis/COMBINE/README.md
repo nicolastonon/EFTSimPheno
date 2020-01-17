@@ -33,11 +33,14 @@ CODE EXAMPLE
 :new:
 -------------------------------------------->
 
-README for the COMBINE part of the tHq analysis (by Nicolas Tonon, IPHC). Explains : basic install, datacard generation, limit/significance computation, control checks, ...
+README for the COMBINE part of the tHq analysis (by Nicolas Tonon, IPHC).
+Explains : basic install, datacard generation, limit/significance computation, control checks, ...
 
 Official pages *(parts quoted here)* :
 
 :page_facing_up: Combine page (browse the *Running combine* tab): http://cms-analysis.github.io/HiggsAnalysis-CombinedLimit/
+
+:page_facing_up: CMS Combine Hypernews : https://hypernews.cern.ch/HyperNews/CMS/get/higgs-combination.html
 
 :page_facing_up: CombineHarvester page : http://cms-analysis.github.io/CombineHarvester/
 
@@ -141,7 +144,7 @@ This functionnality was included in recent Combine versions. All you need to do 
 ```
 [channel] autoMCStats [threshold] [include-signal = 0] [hist-mode = 1]
 ```
-See the [doc](https://cms-hcomb.gitbooks.io/combine/content/part2/bin-wise-stats.html#automatic-statistical-uncertainties) for details.
+See the [doc](https://cms-analysis.github.io/HiggsAnalysis-CombinedLimit/part2/bin-wise-stats/#automatic-statistical-uncertainties) for details.
 
 
 
@@ -157,8 +160,8 @@ See the [doc](https://cms-hcomb.gitbooks.io/combine/content/part2/bin-wise-stats
   - `Significance`: simple profile likelihood approximation, for calculating significances.
 
 - To access postfit informations (shapes, uncertainties, etc.), we also use the **Fitting** methods :
-  - `FitDiagnostics` [[doc](https://cms-hcomb.gitbook.io/combine/running-combine/advanced-use-cases/fitting-diagnostics)] : performs maximum likelihood fits to extract the signal yield and provide diagnostic tools such as pre and post-fit models and correlations
-  - `MultiDimFit` [[doc](https://cms-hcomb.gitbook.io/combine/running-combine/common-statistical-methods#likelihood-fits-and-scans)] :  perform multi-dimensional fits and likelihood based scans/contours using models with several parameters of interest.
+  - `FitDiagnostics` [[doc](https://cms-analysis.github.io/HiggsAnalysis-CombinedLimit/part3/nonstandard/#fitting-diagnostics)] : performs maximum likelihood fits to extract the signal yield and provide diagnostic tools such as pre and post-fit models and correlations
+  - `MultiDimFit` [[doc](https://cms-analysis.github.io/HiggsAnalysis-CombinedLimit/part3/commonstatsmethods/#likelihood-fits-and-scans)] :  perform multi-dimensional fits and likelihood based scans/contours using models with several parameters of interest.
 
 
 
@@ -234,7 +237,7 @@ combine -M AsymptoticLimits --noFitAsimov --run blind COMBINED_datacard.txt
 
 :heavy_exclamation_mark: You need to create output dir. first, to avoid segfault.
 
-For details on recipes and outputs, it is advised to refer to the documentation page ([FitDiagnostics](https://cms-hcomb.gitbook.io/combine/running-combine/advanced-use-cases/fitting-diagnostics)), and in particular the section related to Plotting ([Plotting doc](https://cms-hcomb.gitbook.io/combine/running-combine/advanced-use-cases/fitting-diagnostics/pre-post-nuisance-pars-and-pulls#plotting)).
+For details on recipes and outputs, it is advised to refer to the documentation page ([FitDiagnostics](https://cms-analysis.github.io/HiggsAnalysis-CombinedLimit/part3/nonstandard/#plotting)).
 
 Run the following command :
 ```
@@ -268,7 +271,7 @@ This will produce plots and a `fitDiagnostics.root` file in the specified output
 
 ## Nuisance parameters
 
-### Pre/postfit NPs and pulls [doc](https://cms-hcomb.gitbook.io/combine/running-combine/advanced-use-cases/fitting-diagnostics/pre-post-nuisance-pars-and-pulls#pre-and-post-fit-nuisance-parameters-and-pulls)
+### Pre/postfit NPs and pulls [doc](https://cms-analysis.github.io/HiggsAnalysis-CombinedLimit/part3/nonstandard/#pre-and-post-fit-nuisance-parameters-and-pulls)
 *It is possible to compare pre-fit and post-fit nuisance parameters with the script `diffNuisances.py` (copied locally in the Plotting/ dir. for conveninence).
 Taking as input a `fitDiagnostics.root` file, the script will by default print out the parameters which have changed significantly w.r.t. their initial estimate. For each of those parameters, it will print out the shift in value and the post-fit uncertainty, both normalized to the input values, and the linear correlation between the parameter and the signal strength.
 The output by default will be the changes in the nuisance parameter values and uncertainties, relative to their initial (pre-fit) values (usually relative to initial values of 0 and 1 for most nuisance types).*
@@ -288,7 +291,7 @@ The output by default will be the changes in the nuisance parameter values and u
   :arrow_right: This creates 2 png plots.
 
 
-### Impact of NPs [[doc](https://cms-hcomb.gitbook.io/combine/running-combine/advanced-use-cases/fitting-diagnostics/pre-post-nuisance-pars-and-pulls#nuisance-parameter-impacts)]
+### Impact of NPs [[doc](https://cms-analysis.github.io/HiggsAnalysis-CombinedLimit/part3/nonstandard/#nuisance-parameter-impacts)]
 
 *It is possible to estimate the impact of the nuisance parameters.
 This is effectively a measure of the correlation between the NP and the POI, and is useful for determining which NPs have the largest effect on the POI uncertainty.*
