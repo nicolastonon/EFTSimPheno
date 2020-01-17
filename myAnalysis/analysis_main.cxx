@@ -14,25 +14,23 @@ int main(int argc, char **argv)
 //  #######  ##           ##    ####  #######  ##    ##  ######
 //---------------------------------------------------------------------------
 
-    //-- Analysis type
+    //-- MAIN OPTIONS --
     TString signal_process = "tZq";
-
-    //-- Analysis main settings
     TString luminosity = "2016"; //'2016','2017','2018', 'Run2' -- DECIDES WHICH NTUPLES ARE READ !
-    bool split_analysis_by_channel = false;
+    bool split_analysis_by_channel = true; //true <-> will *also* produce templates/histos/plots for each subchannel (defined below)
     bool use_systematics = false;
 
     //-- MVA
     TString classifier_name = "BDT";
     TString DNN_type = "";
 
-    //-- Other options
-    TString plot_extension = ".png"; //extension of plots
-
     //--- Templates options
     TString template_name = "";
     bool show_pulls_ratio = false;
     TString region_choice = "SR";
+
+    //-- Other options
+    TString plot_extension = ".png"; //extension of plots
 
 //------------------------------------
 //Apply choices given via command line, if any
@@ -213,10 +211,10 @@ int main(int argc, char **argv)
 //*** CHOOSE HERE FROM BOOLEANS WHAT YOU WANT TO DO !
 
 //-----------------    TRAINING
-    bool train_BDT = false; //Train selected BDT in selected region (with events in training category)
+    bool train_BDT = true; //Train selected BDT in selected region (with events in training category)
 
 //-----------------    TEMPLATES CREATION
-    bool create_templates = false; //Create MVA templates
+    bool create_templates = true; //Create MVA templates
 
 //-----------------    CONTROL HISTOGRAMS
     bool create_inputVar_histograms = false; //Create histograms of input variables, for plotting

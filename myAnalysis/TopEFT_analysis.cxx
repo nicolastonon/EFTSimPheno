@@ -2313,8 +2313,11 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 		text2.SetTextSize(0.045);
 		text2.SetTextFont(42);
 
-		TString info_data;
-        info_data = "l^{#pm}l^{#pm}l^{#pm}";
+		TString info_data = "l^{#pm}l^{#pm}l^{#pm}";
+        if (channel=="eee")    info_data = "eee";
+		else if (channel=="eeu")  info_data = "ee#mu";
+		else if (channel=="uue")  info_data = "#mu#mu e";
+		else if (channel=="uuu") info_data = "#mu#mu #mu";
 
 		// if(h_sum_data->GetBinContent(h_sum_data->GetNbinsX() ) > h_sum_data->GetBinContent(1) ) {text2.DrawLatex(0.55,0.87,info_data);}
 		// else {text2.DrawLatex(0.20,0.87,info_data);}
@@ -2697,8 +2700,11 @@ void TopEFT_analysis::Compare_TemplateShapes_Processes(TString template_name, TS
 	text2.SetTextSize(0.045);
 	text2.SetTextFont(42);
 
-	TString info_data;
-    info_data = "l^{#pm}l^{#pm}l^{#pm}";
+    TString info_data = "l^{#pm}l^{#pm}l^{#pm}";
+    if (channel=="eee")    info_data = "eee";
+    else if (channel=="eeu")  info_data = "ee#mu";
+    else if (channel=="uue")  info_data = "#mu#mu e";
+    else if (channel=="uuu") info_data = "#mu#mu #mu";
 
 	// if(h_sum_data->GetBinContent(h_sum_data->GetNbinsX() ) > h_sum_data->GetBinContent(1) ) {text2.DrawLatex(0.55,0.87,info_data);}
 	// else {text2.DrawLatex(0.20,0.87,info_data);}

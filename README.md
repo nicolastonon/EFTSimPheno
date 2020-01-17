@@ -24,19 +24,28 @@ CODE EXAMPLE
 :chart_with_upwards_trend:
 :lock:
 :hourglass:
+:warning:
+:construction:
+:fr:
+:one: :two: :hash:
+:underage:
+:put_litter_in_its_place:
+:new:
 -------------------------------------------->
 
 :telephone: Contact : nicolas.tonon@cern.ch
 _____________________________________________________________________________
 
-Datacards, codes and instructions for private simulation of Top EFT samples, and for basic pheno studies.
-
+Files and instructions to perform :
+    private simulation of Top EFT samples ;
+    basic phenomenology studies ;
+    analyse DESY TopZ ntuples ;
+    run COMBINE.
 
 #### Table Of Contents
 
-* [Setup](https://github.com/nicolastonon/EFT-Simu-Pheno#Setup)
-
 * [MC simulation](https://github.com/nicolastonon/EFT-Simu-Pheno#MC-simulation)
+    * [Setup](https://github.com/nicolastonon/EFT-Simu-Pheno#Setup)
     * [Cards](https://github.com/nicolastonon/EFT-Simu-Pheno#Cards)
     * [Gridpack generation](https://github.com/nicolastonon/EFT-Simu-Pheno#Gridpack-generation)
     * [Generate parton-level events](https://github.com/nicolastonon/EFT-Simu-Pheno#Generate-parton-level-events)
@@ -47,6 +56,10 @@ Datacards, codes and instructions for private simulation of Top EFT samples, and
 * [Pheno studies](https://github.com/nicolastonon/EFT-Simu-Pheno#Pheno-studies)
     * [GenAnalyzer](https://github.com/nicolastonon/EFT-Simu-Pheno#GenAnalyzer)
     * [GenPlotter](https://github.com/nicolastonon/EFT-Simu-Pheno#GenPlotter)
+
+* [Ntuple analysis](https://github.com/nicolastonon/EFT-Simu-Pheno#Ntuple-analysis)
+
+* [COMBINE](https://github.com/nicolastonon/EFT-Simu-Pheno#COMBINE)
 
 _____________________________________________________________________________
 
@@ -62,7 +75,10 @@ _____________________________________________________________________________
 
 _____________________________________________________________________________
 
-# Setup
+# MC simulation
+
+
+## Setup
 
 ```
 mkdir MyAnalysis
@@ -77,9 +93,6 @@ cd CMSSW_X_Y_Z/src
 cmsenv
 git cms-init
 ```
-_____________________________________________________________________________
-
-# MC simulation
 
 ## Cards
 
@@ -202,18 +215,18 @@ cmsRun Pheno/Analyzer/test/GenAnalyzer/ConfFile_cfg.py
 g++ GenPlotter.cc -o GenPlotter.exe `root-config --cflags --glibs`
 ./GenPlotter.exe
 ```
+
+
+# Ntuple analysis
+
+See the dedicated [README](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis/README.md).
+
+# COMBINE
+
+See the dedicated [README](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/COMBINE/README.md).
+
+
 _____________________________________________________________________________
 
 
 <!-- OBSOLETE, TO VERIFY, ...
-* [Convert LHE file to ROOT format](https://github.com/nicolastonon/EFT-Simu-Pheno#Convert-LHE-file-to-ROOT-format)
-
-## Convert LHE file to ROOT format
-
-Once the events have been generated in the LHE format, we can convert them to the more convenient ROOT format using the code '[ConvertLHEtoROOT_cfg.py](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/ConvertLHEtoX/ConvertLHEtoROOT_cfg.py)' :
-```
-cmsRun ConvertLHEtoROOT_cfg.py
-```
-
-:information_source: Update the input file path, and make sure it is stored in the same local directory.
--->

@@ -4,13 +4,20 @@
 outDir="Run2"
 mkdir $outDir
 
-#Get list of samples from 2018 repository
+# dirCheck="./2016"
+# sampleList2016=$(ls $dirCheck | cut -d"." -f1)
+# echo $sampleList2016
+# dirCheck="./2017"
+# sampleList2017=$(ls $dirCheck | cut -d"." -f1)
+# echo $sampleList2017
+
+#Get list of samples from 2018 repository (contains all samples, except SingleElectron, but included in 'DATA')
 dirCheck="./2018"
-sampleList=$(ls $dirCheck | cut -d"." -f1)
-echo $sampleList
+sampleList2018=$(ls $dirCheck | cut -d"." -f1)
+# echo $sampleList2018
 
 #For each sample, merge all 3 years
-for sample in $sampleList
+for sample in $sampleList2018
 do
     # echo $sample
     hadd -f $outDir/$sample.root 2016/$sample.root 2017/$sample.root 2018/$sample.root

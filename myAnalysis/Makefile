@@ -48,10 +48,10 @@ $(ROCS): ROCS/Compare_ROC_curves.o Helper.o
 	@echo "###################################"
 	@echo ""
 
-$(PRODUCE_CUTFLOW):	Produce_Cutflow.cxx Helper.o
+$(PRODUCE_CUTFLOW):	Produce_Cutflow.o Helper.o
 	@echo "###################################""#"
 	@echo "-- Creating executable ./$(PRODUCE_CUTFLOW) --"
-	@$(CC) Produce_Cutflow.cxx Helper.o -o $@ $(ROOTFLAGS) $(LFLAGS) $(INCFLAGS)
+	@$(CC) Produce_Cutflow.o Helper.o -o $@ $(ROOTFLAGS) $(LFLAGS) $(INCFLAGS)
 	@echo "-- Done --"
 	@echo "###################################""#"
 	@echo ""
@@ -65,4 +65,4 @@ $(PRODUCE_CUTFLOW):	Produce_Cutflow.cxx Helper.o
 
 #Erase all objects and executable
 clean:
-	@-rm -f *.o *.exe ROCS/*.exe MEM/*.o
+	@-rm -f *.o *.exe ROCS/*.o ROCS/*.exe
