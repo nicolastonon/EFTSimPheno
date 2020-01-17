@@ -35,14 +35,14 @@ CODE EXAMPLE
 
 :telephone: Contact : nicolas.tonon@cern.ch
 
-> The only real mistake is the one from which we learn nothing. *-- John Powell*
+<!-- > The only real mistake is the one from which we learn nothing. *-- John Powell* -->
 _____________________________________________________________________________
 
-Files and instructions to perform :
-* private simulation of Top EFT samples ;
-* basic phenomenology studies ;
-* analyse DESY TopZ ntuples ;
-* run COMBINE.
+> Files and instructions to perform :
+> * private simulation of Top EFT samples ;
+> * basic phenomenology studies ;
+> * analyse DESY TopZ ntuples ;
+> * run COMBINE.
 
 #### Table Of Contents
 
@@ -225,7 +225,7 @@ See the dedicated [README](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/m
 
 # COMBINE
 
-See the dedicated [README](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/COMBINE/README.md).
+See the dedicated [README](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis/COMBINE/README.md).
 
 
 _____________________________________________________________________________
