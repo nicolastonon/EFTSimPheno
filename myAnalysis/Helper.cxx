@@ -66,12 +66,24 @@ TString Convert_Number_To_TString(double number, int precision/*=3*/)
 }
 
 //Convert a TString into a float
-double Convert_TString_To_Number(TString ts)
+float Convert_TString_To_Number(TString ts)
 {
-	double number = 0;
+	float number = 0;
 	string s = ts.Data();
 	stringstream ss(s);
-	ss >> number;
+
+    //Bad characters may produce errors. Read 'out' these chars
+    while(ss >> number || !ss.eof())
+    {
+        if(ss.fail()) //Found bad char. Remove it, read the remaining string
+        {
+            ss.clear();
+            char dummy;
+            ss >> dummy;
+            continue;
+        }
+    }
+
 	return number;
 }
 
@@ -666,56 +678,45 @@ void Get_Samples_Colors(vector<int>& v_colors, vector<TString> v_samples, int co
 	int i_skipData = 0; //index //include data in color vector for now (empty element)
 
 //--------------------------------------------
-	if(color_scheme == 0) //From ttH/tHq 2016
+	if(color_scheme == 0)
 	{
 		for(int isample=0; isample<v_samples.size(); isample++)
 		{
             //Signals
-			if(v_samples[isample].Contains("tHq")) {v_colors[isample-i_skipData] = kOrange+10;}
-			else if(v_samples[isample].Contains("tHW")) {v_colors[isample-i_skipData] = kOrange+6;} //changed from orange+6
-			else if(v_samples[isample].Contains("ttH")) {v_colors[isample-i_skipData] = kOrange+2;}
-            else if(v_samples[isample].Contains("tH_ST")) {v_colors[isample-i_skipData] = kRed;}
-            else if(v_samples[isample].Contains("tH_TT")) {v_colors[isample-i_skipData] = kRed;}
-            else if(v_samples[isample].Contains("FCNC")) {v_colors[isample-i_skipData] = kRed;}
+            if(v_samples[isample] == "tZq") {v_colors[isample-i_skipData] = kOrange+10;}
+            else if(v_samples[isample] == "ttZ") {v_colors[isample-i_skipData] = kViolet-6;}
 
-            //ttZ, ttbar
-			else if(v_samples[isample].Contains("ttW") ) {v_colors[isample-i_skipData] = kGreen-5;}
-			else if(v_samples[isample].Contains("ttZ")) {v_colors[isample-i_skipData] = kSpring+2;}
-            else if(v_samples[isample].Contains("TTbar") || v_samples[isample].Contains("TTJet")) {v_colors[isample-i_skipData] = kSpring+2;}
+            //ttX
+            else if(v_samples[isample] == "ttH") {v_colors[isample-i_skipData] = kOrange+6;}
+            else if(v_samples[isample] == "ttW") {v_colors[isample-i_skipData] = kOrange+6;}
+            else if(v_samples[isample] == "tttt") {v_colors[isample-i_skipData] = kOrange+6;}
+            else if(v_samples[isample] == "ttZZ") {v_colors[isample-i_skipData] = kOrange+6;}
+            else if(v_samples[isample] == "ttWW") {v_colors[isample-i_skipData] = kOrange+6;}
+            else if(v_samples[isample] == "ttWZ") {v_colors[isample-i_skipData] = kOrange+6;}
+            else if(v_samples[isample] == "ttZH") {v_colors[isample-i_skipData] = kOrange+6;}
+            else if(v_samples[isample] == "ttWH") {v_colors[isample-i_skipData] = kOrange+6;}
 
-            //EWK
-			else if(v_samples[isample] == "WZ" || v_samples[isample].Contains("WZ_") ) {v_colors[isample-i_skipData] = kViolet-4;}
-			else if(v_samples[isample] == "ZZ") {v_colors[isample-i_skipData] = kViolet-4;}
-			else if(v_samples[isample].Contains("DY")) {v_colors[isample-i_skipData] = kViolet-4;}
-			else if(v_samples[isample] == "WJets") {v_colors[isample-i_skipData] = kViolet-4;}
+            //tX
+            else if(v_samples[isample] == "tHq") {v_colors[isample-i_skipData] = kViolet;}
+            else if(v_samples[isample] == "tHW") {v_colors[isample-i_skipData] = kViolet;}
+            else if(v_samples[isample] == "tGJets") {v_colors[isample-i_skipData] = kViolet;}
+            else if(v_samples[isample] == "ST") {v_colors[isample-i_skipData] = kViolet;}
 
-            //Rares
-            else if(v_samples[isample] == "tZq") {v_colors[isample-i_skipData] = kAzure-7;}
-            // else if(v_samples[isample] == "tZq") {v_colors[isample-i_skipData] = kAzure-9;}
-			else if(v_samples[isample] == "tWZ") {v_colors[isample-i_skipData] = kAzure-9;}
-			// else if(v_samples[isample] == "tWZ") {v_colors[isample-i_skipData] = kAzure;} //Different coloring for tWZ
-			else if(v_samples[isample] == "WZZ") {v_colors[isample-i_skipData] = kAzure-9;}
-            else if(v_samples[isample] == "WWZ") {v_colors[isample-i_skipData] = kAzure-9;}
-            else if(v_samples[isample] == "WZZ") {v_colors[isample-i_skipData] = kAzure-9;}
-            else if(v_samples[isample] == "ZZZ") {v_colors[isample-i_skipData] = kAzure-9;}
-            else if(v_samples[isample] == "WWW") {v_colors[isample-i_skipData] = kAzure-9;}
-			else if(v_samples[isample] == "TTTT") {v_colors[isample-i_skipData] = kAzure-9;}
-			else if(v_samples[isample] == "tGJets") {v_colors[isample-i_skipData] = kAzure-9;}
-			else if(v_samples[isample] == "WpWp") {v_colors[isample-i_skipData] = kAzure-9;}
-            else if(v_samples[isample] == "WW_DPS") {v_colors[isample-i_skipData] = kAzure-9;}
-            else if(v_samples[isample] == "ttG") {v_colors[isample-i_skipData] = kAzure-9;}
-            else if(v_samples[isample] == "tttW") {v_colors[isample-i_skipData] = kAzure-9;}
-            else if(v_samples[isample] == "ttWW") {v_colors[isample-i_skipData] = kAzure-9;}
-            else if(v_samples[isample] == "ttWH") {v_colors[isample-i_skipData] = kAzure-9;}
-            else if(v_samples[isample] == "WZG") {v_colors[isample-i_skipData] = kAzure-9;}
-			else if(v_samples[isample] == "GGHZZ4L") {v_colors[isample-i_skipData] = kAzure-9;}
-			else if(v_samples[isample] == "WG") {v_colors[isample-i_skipData] = kAzure-9;}
-			else if(v_samples[isample] == "VHToNonbb") {v_colors[isample-i_skipData] = kAzure-9;}
+            //VV(V)
+            else if(v_samples[isample] == "WZ") {v_colors[isample-i_skipData] = kGreen-2;}
+            else if(v_samples[isample] == "ZZ4l") {v_colors[isample-i_skipData] = kGreen-2;}
+            else if(v_samples[isample] == "ZZZ") {v_colors[isample-i_skipData] = kGreen-2;}
+            else if(v_samples[isample] == "WZZ") {v_colors[isample-i_skipData] = kGreen-2;}
+            else if(v_samples[isample] == "WWW") {v_colors[isample-i_skipData] = kGreen-2;}
+            else if(v_samples[isample] == "WWZ") {v_colors[isample-i_skipData] = kGreen-2;}
+            else if(v_samples[isample] == "WZ2l2q") {v_colors[isample-i_skipData] = kGreen-2;}
+            else if(v_samples[isample] == "ZZ2l2q") {v_colors[isample-i_skipData] = kGreen-2;}
+            else if(v_samples[isample] == "ZG2l2g") {v_colors[isample-i_skipData] = kGreen-2;}
 
-
-			else if(v_samples[isample].Contains("QFlip")) {v_colors[isample-i_skipData] = kBlack;}
-			else if(v_samples[isample].Contains("Fakes")) {v_colors[isample-i_skipData] = kBlack;}
-			else if(v_samples[isample].Contains("Conv") ) {v_colors[isample-i_skipData] = kOrange;}
+            //Fakes
+            else if(v_samples[isample] == "DY") {v_colors[isample-i_skipData] = kCyan;}
+            else if(v_samples[isample] == "TTbar_DiLep") {v_colors[isample-i_skipData] = kPink-4;}
+            else if(v_samples[isample] == "TTbar_SemiLep") {v_colors[isample-i_skipData] = kPink-4;}
 		}
 	}
 

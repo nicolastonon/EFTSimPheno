@@ -18,7 +18,7 @@ int main(int argc, char **argv)
     TString signal_process = "tZq";
 
     //-- Analysis main settings
-    double set_luminosity = 41.5; //2017 lumi
+    TString luminosity = "Run2"; //'2016','2017','2018', 'Run2' -- DECIDES WHICH NTUPLES ARE READ !
     bool split_analysis_by_channel = false;
     bool use_systematics = false;
 
@@ -90,15 +90,49 @@ int main(int argc, char **argv)
 //  ######  ##     ## ##     ## ##        ######## ########  ######
 //---------------------------------------------------------------------------
 
-//NB : if use_2016_ntuples==True, will automatically select the ntuples
+//thesamplelist <-> list of sample names (as found in ./input_ntuples) //thesamplegroups <-> can merge multiple ntuples into same group (plotting)
     vector<TString> thesamplelist, thesamplegroups;
 //-------------------
     //DATA --- Single sample, in first position
-    // thesamplelist.push_back("DATA"); thesamplegroups.push_back("DATA");
+    thesamplelist.push_back("DATA"); thesamplegroups.push_back("DATA");
 
+    //Signal(s)
     thesamplelist.push_back("tZq"); thesamplegroups.push_back("tZq");
-
     thesamplelist.push_back("ttZ"); thesamplegroups.push_back("ttZ");
+
+    //ttX
+    thesamplelist.push_back("ttH"); thesamplegroups.push_back("ttX");
+    thesamplelist.push_back("ttW"); thesamplegroups.push_back("ttX");
+    thesamplelist.push_back("ttZZ"); thesamplegroups.push_back("ttX");
+    thesamplelist.push_back("ttWW"); thesamplegroups.push_back("ttX");
+    thesamplelist.push_back("ttWZ"); thesamplegroups.push_back("ttX");
+    thesamplelist.push_back("ttZH"); thesamplegroups.push_back("ttX");
+    thesamplelist.push_back("ttWH"); thesamplegroups.push_back("ttX");
+    thesamplelist.push_back("tttt"); thesamplegroups.push_back("ttX");
+
+    //tX
+    thesamplelist.push_back("tHq"); thesamplegroups.push_back("tX");
+    thesamplelist.push_back("tHW"); thesamplegroups.push_back("tX");
+    thesamplelist.push_back("ST"); thesamplegroups.push_back("tX");
+    // thesamplelist.push_back("tGJets"); thesamplegroups.push_back("tX");
+
+    //VV)
+    thesamplelist.push_back("WZ"); thesamplegroups.push_back("VV");
+    thesamplelist.push_back("ZZ4l"); thesamplegroups.push_back("VV");
+    thesamplelist.push_back("ZZZ"); thesamplegroups.push_back("VV");
+    thesamplelist.push_back("WZZ"); thesamplegroups.push_back("VV");
+    thesamplelist.push_back("WWW"); thesamplegroups.push_back("VV");
+    thesamplelist.push_back("WWZ"); thesamplegroups.push_back("VV");
+    thesamplelist.push_back("WZ2l2q"); thesamplegroups.push_back("VV");
+    thesamplelist.push_back("ZZ2l2q"); thesamplegroups.push_back("VV");
+    thesamplelist.push_back("ZG2l2g"); thesamplegroups.push_back("VV");
+
+    //DY (VG?)
+    thesamplelist.push_back("DY"); thesamplegroups.push_back("DY");
+
+    //TTbar
+    thesamplelist.push_back("TTbar_DiLep"); thesamplegroups.push_back("TTbar");
+    // thesamplelist.push_back("TTbar_SemiLep"); thesamplegroups.push_back("TTbar");
 
 
 //---------------------------------------------------------------------------
@@ -116,12 +150,12 @@ int main(int argc, char **argv)
     thevarlist.push_back("metEt");
     thevarlist.push_back("maxEtaJet");
     thevarlist.push_back("leptonCharge");
-    // thevarlist.push_back("Mass_3l");
     thevarlist.push_back("maxDijetDelR");
     thevarlist.push_back("deepCSV_2nd");
     thevarlist.push_back("dEtaFwdJetBJet");
     thevarlist.push_back("dEtaFwdJetClosestLep");
     thevarlist.push_back("mHT");
+    thevarlist.push_back("Mass_3l");
 
 
 //---------------------------------------------------------------------------
@@ -235,7 +269,7 @@ int main(int argc, char **argv)
     //  CREATE INSTANCE OF CLASS & INITIALIZE
     //#############################################
 
-    TopEFT_analysis* theAnalysis = new TopEFT_analysis(thesamplelist, thesamplegroups, theSystWeights, theSystTree, thechannellist, thevarlist, set_v_cut_name, set_v_cut_def, set_v_cut_IsUsedForBDT, set_v_add_var_names, plot_extension, set_luminosity, show_pulls_ratio, region_choice, signal_process, classifier_name, DNN_type);
+    TopEFT_analysis* theAnalysis = new TopEFT_analysis(thesamplelist, thesamplegroups, theSystWeights, theSystTree, thechannellist, thevarlist, set_v_cut_name, set_v_cut_def, set_v_cut_IsUsedForBDT, set_v_add_var_names, plot_extension, luminosity, show_pulls_ratio, region_choice, signal_process, classifier_name, DNN_type);
     if(theAnalysis->stop_program) {return 1;}
 
     //#############################################

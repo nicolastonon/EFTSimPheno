@@ -67,7 +67,7 @@ class TopEFT_analysis
 	public :
 
 	TopEFT_analysis(); //Default constructor
-    TopEFT_analysis(vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<bool>, vector<TString>, TString, double, bool, TString, TString, TString, TString);
+    TopEFT_analysis(vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<bool>, vector<TString>, TString, TString, bool, TString, TString, TString, TString);
 	~TopEFT_analysis(); //Default destructor
 
 //--- METHODS
@@ -83,7 +83,7 @@ class TopEFT_analysis
 	private :
 
 //--- METHODS
-    void Set_Luminosity(double, TString);
+    void Set_Luminosity(TString);
 
 //--- MEMBERS
     TMVA::Reader *reader;
@@ -118,12 +118,13 @@ class TopEFT_analysis
     TString dir_ntuples; //Path to base dir. containing Ntuples
     TString t_name;
 	TString plot_extension;
-	double luminosity_rescale;
-	double ref_luminosity;
+	double lumiValue;
+    TString lumiYear;
 	int nbins; //nbin_templates
 	TString filename_suffix;
 	bool show_pulls_ratio;
     bool is_blind;
+    int nSampleGroups; //Nof sample groups (e.g. 'Rares',  ...)
 };
 
 #endif

@@ -60,7 +60,7 @@
     void MoveFile(TString, TString);
     void CopyFile(TString, TString);
 	TString Convert_Number_To_TString(double, int=3);
-	double Convert_TString_To_Number(TString);
+	float Convert_TString_To_Number(TString);
 	float Find_Number_In_TString(TString);
 	TString Convert_Sign_To_Word(TString);
 	std::pair<TString,TString> Break_Cuts_In_Two(TString);

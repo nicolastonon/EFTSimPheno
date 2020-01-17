@@ -48,21 +48,39 @@ using namespace std;
 //--------------------------------------------
 
 
-void Compute_Write_Yields(vector<TString> v_samples, vector<TString> v_label, TString region, TString signal)
+void Compute_Write_Yields(vector<TString> v_samples, vector<TString> v_label, TString region, TString signal, TString lumi, TString channel)
 {
     bool remove_totalSF = false; //SFs are applied to default weights ; can divide weight by total SF again to get nominal weight
+    bool group_samples = false; //true <-> group similar samples together
+
+//--------------------------------------------
 
     cout<<endl<<YELBKG("                          ")<<endl<<endl;
 	cout<<FYEL("--- Will count the yields for each sample ---")<<endl;
-	cout<<"(region : "<<region<<")"<<endl;
+	cout<<"(region : "<<region<<" / lumi : "<<lumi<<" / channel : "<<channel<<")"<<endl;
     cout<<endl<<YELBKG("                          ")<<endl<<endl;
 
-	TString dir_ntuples = "./input_ntuples/";
-
-    TString outname_latex = "cutflow/latex/Yields_"+region+".tex";
+	TString dir_ntuples = "./input_ntuples/" + lumi + "/";
 
     mkdir("cutflow", 0777);
     mkdir("cutflow/latex", 0777);
+
+    TString outname = "cutflow/Yields_"+region+"_"+lumi;
+    if(channel != "") {outname+= "_" + channel;}
+    outname+= ".txt";
+    TString outname_latex = "cutflow/latex/Yields_"+region+"_"+lumi;
+    if(channel != "") {outname_latex+= "_" + channel;}
+    outname_latex+= ".txt";
+
+    if(group_samples == false)
+    {
+        for(int isample=0; isample<v_label.size(); isample++)
+        {
+            // cout<<"v_label[isample] "<<v_label[isample];
+            v_label[isample] = v_samples[isample];
+            // cout<<" ==> "<<v_label[isample]<<endl;
+        }
+    }
 
 //--------------------------------------------
 /*
@@ -114,10 +132,8 @@ void Compute_Write_Yields(vector<TString> v_samples, vector<TString> v_label, TS
 //--------------------------------------------
 
 //--------------------------------------------
-    TString outname = "cutflow/Yields_"+region+".txt";
-
 	ofstream file_out(outname.Data());
-	file_out<<"## Yields  in "<<region<<" region ##"<<endl;
+	file_out<<"## Yields  in "<<region<<" region, "<<channel<<" channel ("<<lumi<<") ##"<<endl;
 	file_out<<"____________________________________________"<<endl;
 	file_out<<"____________________________________________"<<endl;
 
@@ -182,10 +198,13 @@ void Compute_Write_Yields(vector<TString> v_samples, vector<TString> v_label, TS
         t->SetBranchStatus("eventMCFactor", 1);
 		t->SetBranchAddress("eventMCFactor", &eventMCFactor);
 
-        //ADDED to reproduce ttH2017 categorization
-        float channel;
+        bool passedBJets;
+        t->SetBranchStatus("passedBJets", 1);
+		t->SetBranchAddress("passedBJets", &passedBJets);
+
+        float chan;
         t->SetBranchStatus("channel", 1);
-        t->SetBranchAddress("channel", &channel);
+        t->SetBranchAddress("channel", &chan);
 
  // ###### #    # ###### #    # #####    #       ####   ####  #####
  // #      #    # #      ##   #   #      #      #    # #    # #    #
@@ -201,24 +220,25 @@ void Compute_Write_Yields(vector<TString> v_samples, vector<TString> v_label, TS
 
 			t->GetEntry(ientry);
 
-			// if(nJets != 2) {continue;}
+            if(!passedBJets) {continue;}
+
+            if(channel == "uuu" && chan != 0) {continue;}
+            if(channel == "uue" && chan != 1) {continue;}
+            if(channel == "eeu" && chan != 2) {continue;}
+            if(channel == "eee" && chan != 3) {continue;}
 
 			if(isnan(weight*eventMCFactor) || isinf(weight*eventMCFactor))
 			{
 				cout<<BOLD(FRED("* Found event with weight*eventMCFactor = "<<weight<<"*"<<eventMCFactor<<" ; remove it..."))<<endl; continue;
 			}
-
-            if(!weight*eventMCFactor) {cout<<"weight*eventMCFactor = "<<weight<<"*"<<eventMCFactor<<" ! Is it expected ?"<<endl;}
+            // else if(!weight*eventMCFactor) {cout<<"weight*eventMCFactor = "<<weight<<"*"<<eventMCFactor<<" ! Is it expected ?"<<endl;}
 
             //After sanity checks, can compute final event weight
             weight*= eventMCFactor;
 
-			weight_avg+= weight;
+			// weight_avg+= weight;
 
-            //FIXME -- check chan value
-            // if(subcat != "" && !Check_isEvent_passSubCategory(subcat, channel, nMediumBJets, lepCharge) ) {continue;}
-
-            if(signal == "signal" && v_label[isample].Contains("tZq") ) //Signals, group together
+            if(v_label[isample] == "tZq" || v_label[isample] == "signal") //Signals, group together
 			{
 				yield_tmp+= weight;
 				statErr_tmp+= weight*weight;
@@ -229,12 +249,10 @@ void Compute_Write_Yields(vector<TString> v_samples, vector<TString> v_label, TS
 			}
 			else if(v_samples[isample] != "DATA") //Backgrounds
 			{
-				if(isample > 0 && v_samples[isample] == "Fakes_MC" && v_label[isample]==v_label[isample-1]) {yield_tmp-= weight;} //substract Fakes_MC to DD Fakes
-				else {yield_tmp+= weight; statErr_tmp+= weight*weight;}
-
-				if(v_samples[isample] == "Fakes_MC") {yield_bkg-= weight;} //susbtract MC prompt contributions to fakes/flip
-				else {yield_bkg+= weight;}
-				// statErr_bkg+= weight*weight;
+				// if(isample > 0 && v_samples[isample] == "Fakes_MC" && v_label[isample]==v_label[isample-1]) {yield_tmp-= weight;} //substract Fakes_MC to DD Fakes
+				// else {yield_tmp+= weight; statErr_tmp+= weight*weight;}
+                yield_tmp+= weight; statErr_tmp+= weight*weight;
+                yield_bkg+= weight;
 			}
 			else if(v_samples[isample] == "DATA") //DATA
 			{
@@ -312,28 +330,69 @@ int main(int argc, char **argv)
 {
     TString signal = "tZq";
     TString region = "SR"; //SR
+    TString lumi = "2016"; //2016,2017,2018,Run2
+    TString channel = ""; //'',uuu,uue,eeu,eee
 
 	if(argc > 1)
 	{
         if(!strcmp(argv[1],"SR") ) {region = argv[1];}
-		else {cout<<"Wrong first arg ! Should be 'SR' !"<<endl; return 0;}
+		else {cout<<"Wrong first arg !"<<endl; return 0;}
+
+        if(argc > 2)
+    	{
+            if(!strcmp(argv[2],"2016") || !strcmp(argv[2],"2017") || !strcmp(argv[2],"2018") || !strcmp(argv[2],"Run2")) {lumi = argv[2];}
+    		else {cout<<"Wrong second arg !"<<endl; return 0;}
+
+            if(argc > 3)
+        	{
+                if(!strcmp(argv[3],"") || !strcmp(argv[3],"uuu") || !strcmp(argv[3],"uue") || !strcmp(argv[3],"eeu") || !strcmp(argv[3],"eee")) {channel = argv[3];}
+        		else {cout<<"Wrong second arg !"<<endl; return 0;}
+        	}
+    	}
 	}
 
-    //-- Protections
-	if(region != "SR")  {cout<<"Wrong region !"<<endl; return 0;}
+//--------------------------------------------
 
-	//Sample names and labels
-	//NB : labels must be latex-compatible
+	//Sample names and labels //NB : labels must be latex-compatible
 	vector<TString> v_samples; vector<TString> v_label;
 
-    // v_samples.push_back("DATA"); v_label.push_back("DATA");
+    v_samples.push_back("DATA"); v_label.push_back("DATA");
 
     v_samples.push_back("tZq"); v_label.push_back("tZq");
     v_samples.push_back("ttZ"); v_label.push_back("ttZ");
 
+    v_samples.push_back("ttH"); v_label.push_back("ttX");
+    v_samples.push_back("ttW"); v_label.push_back("ttX");
+    v_samples.push_back("ttZZ"); v_label.push_back("ttX");
+    v_samples.push_back("ttWW"); v_label.push_back("ttX");
+    v_samples.push_back("ttWZ"); v_label.push_back("ttX");
+    v_samples.push_back("ttZH"); v_label.push_back("ttX");
+    v_samples.push_back("ttWH"); v_label.push_back("ttX");
+    v_samples.push_back("tttt"); v_label.push_back("ttX");
+
+    v_samples.push_back("tHq"); v_label.push_back("tX");
+    v_samples.push_back("tHW"); v_label.push_back("tX");
+    v_samples.push_back("ST"); v_label.push_back("tX");
+    v_samples.push_back("tGJets"); v_label.push_back("tX");
+
+    v_samples.push_back("WZ"); v_label.push_back("VV");
+    v_samples.push_back("ZZ4l"); v_label.push_back("VV");
+    v_samples.push_back("ZZZ"); v_label.push_back("VV");
+    v_samples.push_back("WZZ"); v_label.push_back("VV");
+    v_samples.push_back("WWW"); v_label.push_back("VV");
+    v_samples.push_back("WWZ"); v_label.push_back("VV");
+    v_samples.push_back("WZ2l2q"); v_label.push_back("VV");
+    v_samples.push_back("ZZ2l2q"); v_label.push_back("VV");
+    v_samples.push_back("ZG2l2g"); v_label.push_back("VV");
+
+    v_samples.push_back("DY"); v_label.push_back("DY");
+
+    v_samples.push_back("TTbar_DiLep"); v_label.push_back("TTbar");
+    v_samples.push_back("TTbar_SemiLep"); v_label.push_back("TTbar");
+
 //--------------------------------------------
-//--------------------------------------------
-	Compute_Write_Yields(v_samples, v_label, region, signal);
+
+	Compute_Write_Yields(v_samples, v_label, region, signal, lumi, channel);
 
 	return 0;
 }

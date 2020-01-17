@@ -43,7 +43,7 @@ using namespace std;
 /////////////////////////////////////////////////////////
 
 //Overloaded constructor
-TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> thesamplegroups, vector<TString> thesystlist, vector<TString> thesystTreelist, vector<TString> thechannellist, vector<TString> thevarlist, vector<TString> set_v_cut_name, vector<TString> set_v_cut_def, vector<bool> set_v_cut_IsUsedForBDT, vector<TString> set_v_add_var_names, TString theplotextension, double lumi, bool show_pulls, TString region, TString signal_process, TString classifier_name, TString DNN_type)
+TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> thesamplegroups, vector<TString> thesystlist, vector<TString> thesystTreelist, vector<TString> thechannellist, vector<TString> thevarlist, vector<TString> set_v_cut_name, vector<TString> set_v_cut_def, vector<bool> set_v_cut_IsUsedForBDT, vector<TString> set_v_add_var_names, TString theplotextension, TString lumiYear, bool show_pulls, TString region, TString signal_process, TString classifier_name, TString DNN_type)
 {
     //Canvas definition
     Load_Canvas_Style();
@@ -72,7 +72,20 @@ TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> 
         sample_groups[i] = thesamplegroups[i];
 	}
 
-	dir_ntuples = "./input_ntuples/";
+    //Count nof different sample groups
+    nSampleGroups=1; //minimum is 1 sample group
+    for(int i=1; i<sample_groups.size(); i++)
+    {
+        if(sample_groups[i] != sample_groups[i-1])
+        nSampleGroups++;
+    }
+
+
+    //Lumi choice determines which ntuples are read
+    this->lumiYear = lumiYear;
+    Set_Luminosity(lumiYear);
+
+    dir_ntuples = "./input_ntuples/" + lumiYear + "/";
 	// cout<<"dir_ntuples : "<<dir_ntuples<<endl;
 
 	//-- Get colors
@@ -88,11 +101,7 @@ TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> 
 		else {cout<<BOLD(FRED("Wrong value of DNN_type !"))<<endl; stop_program = true;}
 	}
 
-    // t_name = "Tree";
     t_name = "result";
-
-    //Lumi values : 2016=35.92 / 2.17=41.53/2018=59.74
-	Set_Luminosity(lumi, "2017");
 
 	plot_extension = theplotextension;
 
@@ -197,7 +206,7 @@ TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> 
 	// color_list.resize(thecolorlist.size());
 	// for(int i=0; i<thecolorlist.size(); i++)
 	// {
-	// 	color_list[i] = thecolorlist[i];
+	//     color_list[i] = thecolorlist[i];
 	// }
 	// if(use_custom_colorPalette) {Set_Custom_ColorPalette(v_custom_colors, color_list);}
 
@@ -252,24 +261,21 @@ TopEFT_analysis::~TopEFT_analysis()
  * Compute the luminosity re-scaling factor (MC),  to be used thoughout the code
  * @param desired_luminosity [Value of the desired lumi in fb-1]
  */
-void TopEFT_analysis::Set_Luminosity(double desired_luminosity, TString reference)
+void TopEFT_analysis::Set_Luminosity(TString lumiYear)
 {
-	if(reference == "2017") {ref_luminosity = 41.53;}
-    else if(reference == "2016") {ref_luminosity = 35.92;}
-    else if(reference == "2018") {ref_luminosity = 59.74;}
-    else if(reference == "Run2") {ref_luminosity = 35.92+41.53+59.74;}
+	if(lumiYear == "2017") {lumiValue = 41.53;}
+    else if(lumiYear == "2016") {lumiValue = 35.92;}
+    else if(lumiYear == "2018") {lumiValue = 59.74;}
+    else if(lumiYear == "Run2") {lumiValue = 35.92+41.53+59.74;}
 
-	assert(ref_luminosity > 0 && "Using wrong lumi reference -- FIX IT !"); //Make sure we use a sensible lumi value
+	assert(lumiValue > 0 && "Using wrong lumi reference -- FIX IT !"); //Make sure we use a sensible lumi value
 
-    luminosity_rescale = 1.;
-	// this->luminosity_rescale = desired_luminosity / ref_luminosity; //NB : not needed anymore to rescale here ; done at ntuple prod level
-
-    if(luminosity_rescale != 1)
-	{
-		cout<<endl<<BOLD(FBLU("##################################"))<<endl;
-		cout<<"--- Using luminosity scale factor : "<<desired_luminosity<<" / "<<ref_luminosity<<" = "<<luminosity_rescale<<" ! ---"<<endl;
-		cout<<BOLD(FBLU("##################################"))<<endl<<endl;
-	}
+    // if(luminosity_rescale != 1)
+	// {
+	// 	cout<<endl<<BOLD(FBLU("##################################"))<<endl;
+	// 	cout<<"--- Using luminosity scale factor : "<<desired_luminosity<<" / "<<lumiValue<<" = "<<luminosity_rescale<<" ! ---"<<endl;
+	// 	cout<<BOLD(FBLU("##################################"))<<endl<<endl;
+	// }
 
     return;
 }
@@ -490,8 +496,6 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
         else {cout<<endl<<FMAG("=== Opened file : ")<<inputfile<<endl<<endl;}
 
         // global event weights per tree (see below for setting event-wise weights)
-		//NB : in tHq2016, different global weights were attributed to each sample !
-		// ( see : https://github.com/stiegerb/cmgtools-lite/blob/80X_M17_tHqJan30/TTHAnalysis/python/plotter/tHq-multilepton/signal_mva/trainTHQMVA.py#L78-L98)
         Double_t signalWeight     = 1.0;
         Double_t backgroundWeight = 1.0;
 
@@ -843,8 +847,6 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 		total_var_list.push_back(template_name);
 	}
 
-    //FIXME
-    // vector<float> total_var_floats(total_var_list.size()); //NB : can not read/cut on BDT... (would conflict with input var floats ! Can not set address twice)
     vector<float> total_var_floats(total_var_list.size()); //NB : can not read/cut on BDT... (would conflict with input var floats ! Can not set address twice)
 
  // #    #      ##      #    #    #
@@ -885,12 +887,14 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 		for(int itree=0; itree<systTree_list.size(); itree++)
 		{
 			tree = 0;
-			if(systTree_list[itree] == "") {tree = (TTree*) file_input->Get(t_name);}
-			else {tree = (TTree*) file_input->Get(systTree_list[itree]);}
+            TString tmp = systTree_list[itree];
+			if(tmp == "") {tmp = t_name;}
+
+            tree = (TTree*) file_input->Get(tmp);
 
 			if(!tree)
 			{
-				cout<<BOLD(FRED("ERROR : tree '"<<systTree_list[itree]<<"' not found for sample : "<<sample_list[isample]<<" ! Skip !"))<<endl;
+				cout<<BOLD(FRED("ERROR : tree '"<<tmp<<"' not found in file : "<<inputfile<<" ! Skip !"))<<endl;
 				continue; //Skip sample
 			}
 
@@ -1276,7 +1280,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TString template_name, bool prefit, bool use_combine_file)
 {
 //--------------------------------------------
-	bool doNot_stack_signal = false;
+	// bool doNot_stack_signal = false;
 
 	bool draw_errors = true; //true <-> superimpose error bands on plot/ratio plot
 
@@ -1441,10 +1445,8 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 		//TH1F* to retrieve distributions
 		TH1F* h_tmp = 0; //Tmp storing histo
 
-		TH1F* h_thq = 0; //Store tHq shape
-		TH1F* h_thw = 0; //Store tHW shape
-		TH1F* h_fcnc = 0; //Store FCNC shape
-		TH1F* h_fcnc2 = 0; //Store FCNC shape
+		TH1F* h_tzq = 0; //Store tZq shape
+		TH1F* h_ttz = 0; //Store ttZ shape
 		TH1F* h_sum_data = 0; //Will store data histogram
 		vector<TH1F*> v_MC_histo; //Will store all MC histograms (1 TH1F* per MC sample)
 
@@ -1546,10 +1548,6 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 					//Increment errors
 					for(int ibin=0; ibin<nofbins; ibin++) //Start at bin 1
 					{
-						//For the processes which will not be stacked (FCNC, ...), don't increment the y-values of the errors
-						if(doNot_stack_signal && (samplename.Contains("tHq") || samplename.Contains("tHW")) ) {break;} //Don't stack signal
-						if(samplename.Contains("FCNC") ) {break;} //Don't stack FCNC signal
-
 						// NOTE : for postfit, the bin error accounts for all systematics !
 						//If using Combine output file (from MLF), bin error contains total error. Else if using template file directly, just stat. error
 						v_eyl[ibin]+= pow(h_tmp->GetBinError(ibin+1), 2);
@@ -1636,14 +1634,15 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 
 				h_tmp->SetFillColor(color_list[isample]);
 				h_tmp->SetLineColor(kBlack);
+                // cout<<"color_list[isample] "<<color_list[isample]<<endl;
 
-				if((doNot_stack_signal && (samplename.Contains("tHq") || samplename.Contains("tHW")) ) || samplename.Contains("FCNC")) //Superimpose BSM signal
-				{
-					h_tmp->SetFillColor(0);
-					h_tmp->SetLineColor(color_list[isample]);
-				}
+				// if((doNot_stack_signal && (samplename.Contains("tZq") || samplename.Contains("ttZ")) )) //Superimpose BSM signal
+				// {
+				// 	h_tmp->SetFillColor(0);
+				// 	h_tmp->SetLineColor(color_list[isample]);
+				// }
 
-				//Check color of previous *used* sample (up to 6)
+				//Check color of previous *used* sample (up to 6, to account for potentially skipped samples)
 				for(int k=1; k<6; k++)
 				{
 					if(isample - k >= 0)
@@ -1813,11 +1812,9 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 		TH1F* histo_total_MC = 0; //Sum of all MC samples
 
 		//Indices of important samples, for specific treatment
-		int index_tHq_sample = -99;
-		int index_tHW_sample = -99;
+		int index_tZq_sample = -99;
+		int index_ttZ_sample = -99;
 		int index_NPL_sample = -99;
-		int index_FCNC_sample = -99;
-		int index_FCNC_sample2 = -99;
 
 		// cout<<"v_MC_histo.size() "<<v_MC_histo.size()<<endl;
 		// cout<<"MC_samples_legend.size() "<<MC_samples_legend.size()<<endl;
@@ -1829,34 +1826,19 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 
 			// cout<<"MC_samples_legend[i] "<<MC_samples_legend[i]<<endl;
 
-			if(MC_samples_legend[i].Contains("tHq") )
+			if(MC_samples_legend[i].Contains("tZq") )
 			{
-				if(index_tHq_sample<0) {index_tHq_sample = i;}
-				if(!h_thq) {h_thq = (TH1F*) v_MC_histo[i]->Clone();}
-				else {h_thq->Add((TH1F*) v_MC_histo[i]->Clone());}
-				if(doNot_stack_signal) continue; //don't stack
+				if(index_tZq_sample<0) {index_tZq_sample = i;}
+				if(!h_tzq) {h_tzq = (TH1F*) v_MC_histo[i]->Clone();}
+				else {h_tzq->Add((TH1F*) v_MC_histo[i]->Clone());}
+				// if(doNot_stack_signal) continue; //don't stack
 			}
-			else if(MC_samples_legend[i].Contains("tHW") )
+			else if(MC_samples_legend[i].Contains("ttZ") )
 			{
-				if(index_tHW_sample<0) {index_tHW_sample = i;}
-				if(!h_thw) {h_thw = (TH1F*) v_MC_histo[i]->Clone();}
-				else {h_thw->Add((TH1F*) v_MC_histo[i]->Clone());}
-				if(doNot_stack_signal) continue; //don't stack
-			}
-			else if(MC_samples_legend[i].Contains("FCNC") )
-			{
-				if(MC_samples_legend[i].Contains("tH_TT"))
-				{
-					if(index_FCNC_sample2<0) {index_FCNC_sample2 = i;}
-					h_fcnc2 = (TH1F*) v_MC_histo[i]->Clone();
-					continue; //don't stack FCNC signal
-				}
-				else if(MC_samples_legend[i].Contains("tH_ST"))
-				{
-					if(index_FCNC_sample<0) {index_FCNC_sample = i;}
-					h_fcnc = (TH1F*) v_MC_histo[i]->Clone();
-					continue; //don't stack FCNC signal
-				}
+				if(index_ttZ_sample<0) {index_ttZ_sample = i;}
+				if(!h_ttz) {h_ttz = (TH1F*) v_MC_histo[i]->Clone();}
+				else {h_ttz->Add((TH1F*) v_MC_histo[i]->Clone());}
+				// if(doNot_stack_signal) continue; //don't stack
 			}
 
 			// cout<<"Adding sample "<<MC_samples_legend[i]<<" to histo_total_MC"<<endl;
@@ -1875,11 +1857,14 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 //    #    ####### ######  ####  ###### #    # #####
 
 		TLegend* qw = 0;
-        float x_left = 0.99-ceil(sample_list.size()/2.)*0.13; //each column takes 0.13 x-space
-        qw = new TLegend(x_left,0.88,0.99,0.99);
-        qw->SetNColumns(ceil(sample_list.size()/2.));
-		qw->SetLineColor(1);
-		qw->SetTextSize(0.03);
+        float x_left = 0.94-ceil(nSampleGroups/2.)*0.10; //each column allocated same x-space
+        // qw = new TLegend(x_left,0.88,0.99,0.99);
+        // qw = new TLegend(x_left,0.75,0.95,0.89); //y-space for 2 rows
+        qw = new TLegend(x_left,0.78,0.94,0.87); //y-space for 2 rows
+        qw->SetNColumns(ceil(nSampleGroups/2.));
+        // qw->SetLineColor(1);
+        qw->SetBorderSize(0);
+		qw->SetTextSize(0.04);
 
 		//--Data on top of legend
         if(use_combine_file && g_data != 0) {qw->AddEntry(g_data, "Data" , "ep");}
@@ -1888,7 +1873,7 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 
 		for(int i=0; i<v_MC_histo.size(); i++)
 		{
-			// cout<<"MC_samples_legend[i] "<<MC_samples_legend[i]<<endl;
+            // cout<<"MC_samples_legend[i] "<<MC_samples_legend[i]<<endl;
 
 			if(!v_MC_histo[i]) {continue;} //Fakes templates can be null
 
@@ -1897,30 +1882,17 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 	        // || MC_samples_legend[i] == "xxx"
 	        // ) {continue;}
 
-			if(MC_samples_legend[i] == "tHq" || MC_samples_legend[i] == "tHq_hww")
-			{
-				if(doNot_stack_signal)
-				{
-					h_thq->SetLineColor(color_list[i]);
-					if(sample_list[0] == "DATA") {h_thq->SetLineColor(color_list[i+1]);}
-					h_thq->SetFillColor(0);
-					h_thq->SetLineWidth(4);
-				}
-				else
-				{
-					qw->AddEntry(v_MC_histo[i], "tHq(#kappa_{t}=-1)", "f");
-				}
-			}
-
-            else if(MC_samples_legend[i].Contains("ttH")) {qw->AddEntry(v_MC_histo[i], "ttH", "f");}
-            else if(MC_samples_legend[i].Contains("tZq")) {qw->AddEntry(v_MC_histo[i], "tZq", "f");}
-            else if(MC_samples_legend[i].Contains("ttZ")) {qw->AddEntry(v_MC_histo[i], "ttZ", "f");}
-			else if(MC_samples_legend[i].Contains("ttW") ) {qw->AddEntry(v_MC_histo[i], "t#bar{t}W", "f");}
-			else if(MC_samples_legend[i] == "ttZ") {qw->AddEntry(v_MC_histo[i], "t#bar{t}Z", "f");}
-			else if(MC_samples_legend[i] == "WZ" || MC_samples_legend[i] == "WZ_b") {qw->AddEntry(v_MC_histo[i], "EWK", "f");}
+            //Decide here which sample are mentioned in the legend
+            if(MC_samples_legend[i].Contains("tZq")) {qw->AddEntry(v_MC_histo[i], "tZq", "f");}
+            else if(MC_samples_legend[i] == "ttZ") {qw->AddEntry(v_MC_histo[i], "t#bar{t}Z", "f");}
+            else if(MC_samples_legend[i] == "ttW") {qw->AddEntry(v_MC_histo[i], "t#bar{t}X", "f");}
+            else if(MC_samples_legend[i] == "tHq") {qw->AddEntry(v_MC_histo[i], "tX", "f");}
+			else if(MC_samples_legend[i] == "WZ") {qw->AddEntry(v_MC_histo[i], "VV(V)", "f");}
 			else if(MC_samples_legend[i] == "Fakes") {qw->AddEntry(v_MC_histo[i], "Non-prompt", "f");}
 			else if(MC_samples_legend[i] == "QFlip") {qw->AddEntry(v_MC_histo[i], "Flip", "f");}
-			else if(MC_samples_legend[i].Contains("GammaConv") ) {qw->AddEntry(v_MC_histo[i], "#gamma-conv.", "f");}
+            else if(MC_samples_legend[i] == "GammaConv") {qw->AddEntry(v_MC_histo[i], "#gamma-conv.", "f");}
+            else if(MC_samples_legend[i] == "DY" ) {qw->AddEntry(v_MC_histo[i], "V+jets", "f");}
+            else if(MC_samples_legend[i] == "TTbar_DiLep" ) {qw->AddEntry(v_MC_histo[i], "t#bar{t}", "f");}
 		}
 
 
@@ -1939,17 +1911,12 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 		{
 			if(!v_MC_histo[i]) {continue;} //Some templates may be null
 
-			if(doNot_stack_signal)
-			{
-				//-- If want to use split signal samples
-				// if(split_signals_byHiggsDecay && ((i>=index_tHq_sample && i<=index_tHq_sample+2) || ((i>=index_tHW_sample && i<=index_tHW_sample+2)) ) ) {continue;}
-				// else if(!split_signals_byHiggsDecay && (i==index_tHq_sample || i==index_tHW_sample) ) {continue;} //don't stack signal
-
-				//-- If want to use full signal samples
-				if(i==index_tHq_sample || i==index_tHW_sample) {continue;}
-				if(MC_samples_legend[i].Contains("tHq") || MC_samples_legend[i].Contains("tHW")) {continue;}
-			}
-			if(i==index_FCNC_sample || i==index_FCNC_sample2) {continue;} //don't stack FCNC signal
+            //-- If want to use full signal samples
+			// if(doNot_stack_signal)
+			// {
+			// 	if(i==index_tZq_sample || i==index_ttZ_sample) {continue;}
+			// 	if(MC_samples_legend[i].Contains("tZq") || MC_samples_legend[i].Contains("ttZ")) {continue;}
+			// }
 
 			stack_MC->Add(v_MC_histo[i]);
 			// cout<<"Stacking sample "<<MC_samples_legend[i]<<" / integral "<<v_MC_histo[i]->Integral()<<endl;
@@ -2017,11 +1984,11 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 		}
 
 		//Superimpose shape of signal
-		if(doNot_stack_signal)
-		{
-			if(h_thq != 0) {h_thq->Draw("same hist");}
-			if(h_thw != 0) {h_thw->Draw("same hist");}
-		}
+		// if(doNot_stack_signal)
+		// {
+		// 	if(h_tzq != 0) {h_tzq->Draw("same hist");}
+		// 	if(h_ttz != 0) {h_ttz->Draw("same hist");}
+		// }
 
 		qw->Draw("same"); //Draw legend
 
@@ -2345,19 +2312,15 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 		TString extraText = "Preliminary";
 		latex.SetTextFont(52);
 		latex.SetTextSize(0.05);
-		if(draw_cms_prelim_label)
-		{
-            latex.DrawLatex(l + 0.12, 0.92, extraText);
-            // latex.DrawLatex(l, 0.92, extraText);
-		}
+		if(draw_cms_prelim_label) {latex.DrawLatex(l + 0.12, 0.92, extraText);}
 
-		float lumi = ref_luminosity * luminosity_rescale;
-		TString lumi_13TeV = Convert_Number_To_TString(lumi);
-		lumi_13TeV += " fb^{-1} (13 TeV)";
+		float lumi = lumiValue;
+		TString lumi_ts = Convert_Number_To_TString(lumi);
+		lumi_ts += " fb^{-1} (13 TeV)";
 		latex.SetTextFont(42);
 		latex.SetTextAlign(31);
 		latex.SetTextSize(0.04);
-        // latex.DrawLatex(0.78, 0.92,lumi_13TeV);
+        latex.DrawLatex(0.96, 0.92,lumi_ts);
 
 		//------------------
 		//-- channel info
@@ -2683,15 +2646,16 @@ void TopEFT_analysis::Compare_TemplateShapes_Processes(TString template_name, TS
 
 			if(v_syst[isyst] == "")
 			{
-				if(v_groups[isample] == "tH") {qw->AddEntry(v2_histos[isample][isyst], "tH+ttH", "L");}
-				else if(v_groups[isample].Contains("ttH")) {qw->AddEntry(v2_histos[isample][isyst], "ttH", "L");}
-				else if(v_groups[isample].Contains("ttW") ) {qw->AddEntry(v2_histos[isample][isyst], "t#bar{t}W", "L");}
-				else if(v_groups[isample] == "ttZ") {qw->AddEntry(v2_histos[isample][isyst], "t#bar{t}Z", "L");}
-				// else if(v_groups[isample] == "WZ") {qw->AddEntry(v2_histos[isample][isyst], "EWK", "L");}
-				else if(v_groups[isample] == "Fakes") {qw->AddEntry(v2_histos[isample][isyst], "Non-prompt", "L");}
-				else if(v_groups[isample] == "QFlip") {qw->AddEntry(v2_histos[isample][isyst], "Flip", "L");}
-				else if(v_groups[isample].Contains("GammaConv") ) {qw->AddEntry(v2_histos[isample][isyst], "#gamma-conv.", "L");}
-				else {qw->AddEntry(v2_histos[isample][isyst], v_samples[isample], "L");}
+                if(v_groups[isample].Contains("tZq")) {qw->AddEntry(v2_histos[isample][isyst], "tZq", "f");}
+                else if(v_groups[isample] == "ttZ") {qw->AddEntry(v2_histos[isample][isyst], "t#bar{t}Z", "f");}
+                else if(v_groups[isample] == "ttW") {qw->AddEntry(v2_histos[isample][isyst], "t#bar{t}X", "f");}
+                else if(v_groups[isample] == "tHq") {qw->AddEntry(v2_histos[isample][isyst], "tX", "f");}
+    			else if(v_groups[isample] == "WZ") {qw->AddEntry(v2_histos[isample][isyst], "VV(V)", "f");}
+    			else if(v_groups[isample] == "Fakes") {qw->AddEntry(v2_histos[isample][isyst], "Non-prompt", "f");}
+    			else if(v_groups[isample] == "QFlip") {qw->AddEntry(v2_histos[isample][isyst], "Flip", "f");}
+                else if(v_groups[isample] == "GammaConv") {qw->AddEntry(v2_histos[isample][isyst], "#gamma-conv.", "f");}
+                else if(v_groups[isample] == "DY" ) {qw->AddEntry(v2_histos[isample][isyst], "V+jets", "f");}
+                else if(v_groups[isample] == "TTbar_DiLep" ) {qw->AddEntry(v2_histos[isample][isyst], "t#bar{t}", "f");}
 			}
 
 			//HARDCODED
@@ -2723,7 +2687,6 @@ void TopEFT_analysis::Compare_TemplateShapes_Processes(TString template_name, TS
 	latex.SetNDC();
 	latex.SetTextAngle(0);
 	latex.SetTextColor(kBlack);
-
 	latex.SetTextFont(61);
 	latex.SetTextAlign(11);
 	latex.SetTextSize(0.06);
@@ -2737,15 +2700,14 @@ void TopEFT_analysis::Compare_TemplateShapes_Processes(TString template_name, TS
 		// latex.DrawLatex(l + 0.12, 0.92, extraText);
 	}
 
-	float lumi = ref_luminosity * luminosity_rescale;
-	TString lumi_13TeV = Convert_Number_To_TString(lumi);
-	lumi_13TeV += " fb^{-1} (13 TeV)";
+	float lumi = lumiValue;
+	TString lumi_ts = Convert_Number_To_TString(lumi);
+	lumi_ts += " fb^{-1} (13 TeV)";
 
 	latex.SetTextFont(42);
 	latex.SetTextAlign(31);
 	latex.SetTextSize(0.04);
-
-	// latex.DrawLatex(0.78, 0.92,lumi_13TeV);
+	// latex.DrawLatex(0.96, 0.92,lumi_ts);
 
 	//------------------
 	//-- channel info
