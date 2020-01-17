@@ -51,7 +51,7 @@ using namespace std;
 void Compute_Write_Yields(vector<TString> v_samples, vector<TString> v_label, TString region, TString signal, TString lumi, TString channel)
 {
     bool remove_totalSF = false; //SFs are applied to default weights ; can divide weight by total SF again to get nominal weight
-    bool group_samples = false; //true <-> group similar samples together
+    bool group_samples_together = false; //true <-> group similar samples together
 
 //--------------------------------------------
 
@@ -63,16 +63,16 @@ void Compute_Write_Yields(vector<TString> v_samples, vector<TString> v_label, TS
 	TString dir_ntuples = "./input_ntuples/" + lumi + "/";
 
     mkdir("cutflow", 0777);
-    mkdir("cutflow/latex", 0777);
+    // mkdir("cutflow/latex", 0777);
 
     TString outname = "cutflow/Yields_"+region+"_"+lumi;
     if(channel != "") {outname+= "_" + channel;}
     outname+= ".txt";
-    TString outname_latex = "cutflow/latex/Yields_"+region+"_"+lumi;
-    if(channel != "") {outname_latex+= "_" + channel;}
-    outname_latex+= ".txt";
+    // TString outname_latex = "cutflow/latex/Yields_"+region+"_"+lumi;
+    // if(channel != "") {outname_latex+= "_" + channel;}
+    // outname_latex+= ".txt";
 
-    if(group_samples == false)
+    if(group_samples_together == false)
     {
         for(int isample=0; isample<v_label.size(); isample++)
         {
@@ -283,15 +283,19 @@ void Compute_Write_Yields(vector<TString> v_samples, vector<TString> v_label, TS
 
 	} //sample loop
 
-	float compareYield;
 	file_out<<endl<<"____________________________________________"<<endl;
 	file_out<<"____________________________________________"<<endl;
-	file_out<<left<<setw(25)<<"Signals"<<setprecision(5)<<yield_signals;
+	file_out<<left<<setw(25)<<"Signal"<<setprecision(5)<<yield_signals;
 	file_out<<endl;
 
-	file_out<<endl<<"____________________________________________"<<endl;
+    file_out<<endl<<"____________________________________________"<<endl;
 	file_out<<"____________________________________________"<<endl;
-	file_out<<left<<setw(25)<<"Total backgrounds"<<setprecision(5)<<yield_bkg;
+	file_out<<left<<setw(25)<<"Total background"<<setprecision(5)<<yield_bkg;
+	file_out<<endl;
+
+    file_out<<endl<<"____________________________________________"<<endl;
+	file_out<<"____________________________________________"<<endl;
+	file_out<<left<<setw(25)<<"Total MC"<<setprecision(5)<<yield_signals+yield_bkg;
 	file_out<<endl;
 
 	file_out<<endl<<"____________________________________________"<<endl;
@@ -328,9 +332,10 @@ void Compute_Write_Yields(vector<TString> v_samples, vector<TString> v_label, TS
 
 int main(int argc, char **argv)
 {
+    //-- Default args (can be over-riden via command line args)
     TString signal = "tZq";
     TString region = "SR"; //SR
-    TString lumi = "2016"; //2016,2017,2018,Run2
+    TString lumi = "all"; //2016,2017,2018,Run2,all
     TString channel = ""; //'',uuu,uue,eeu,eee
 
 	if(argc > 1)
@@ -392,7 +397,17 @@ int main(int argc, char **argv)
 
 //--------------------------------------------
 
-	Compute_Write_Yields(v_samples, v_label, region, signal, lumi, channel);
+    if(lumi == "all")
+    {
+        Compute_Write_Yields(v_samples, v_label, region, signal, "2016", channel);
+        Compute_Write_Yields(v_samples, v_label, region, signal, "2017", channel);
+        Compute_Write_Yields(v_samples, v_label, region, signal, "2018", channel);
+        Compute_Write_Yields(v_samples, v_label, region, signal, "Run2", channel);
+    }
+    else
+    {
+        Compute_Write_Yields(v_samples, v_label, region, signal, lumi, channel);
+    }
 
 	return 0;
 }

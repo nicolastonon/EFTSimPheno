@@ -24,12 +24,12 @@ OBJS = $(SRCS:.cxx=.o) #Object files are all files with .o extension, which have
 
 MY_ANALYSIS = analysis_main.exe #Name of executable file
 ROCS = ROCS/Compare_ROC_curves.exe
-Produce_Cutflow = Produce_Cutflow.exe
+PRODUCE_CUTFLOW = Produce_Cutflow.exe
 
 # .PHONY : $(wildcard *.o)  #Force to always recompile object
 
 #Instructions
-all: $(MY_ANALYSIS) $(ROCS) $(Produce_Cutflow)
+all: $(MY_ANALYSIS) $(ROCS) $(PRODUCE_CUTFLOW)
 
 #Obtain executables from object files
 $(MY_ANALYSIS): analysis_main.o Helper.o TopEFT_analysis.o
@@ -40,7 +40,7 @@ $(MY_ANALYSIS): analysis_main.o Helper.o TopEFT_analysis.o
 	@echo "###################################""#"
 	@echo ""
 
-$(ROCS):	ROCS/Compare_ROC_curves.cxx Helper.o
+$(ROCS): ROCS/Compare_ROC_curves.o Helper.o
 	@echo "###################################"
 	@echo "-- Creating executable $(ROCS) --"
 	@$(CC) ROCS/Compare_ROC_curves.o Helper.o -o $@ $(ROOTFLAGS) $(LFLAGS)
@@ -48,9 +48,9 @@ $(ROCS):	ROCS/Compare_ROC_curves.cxx Helper.o
 	@echo "###################################"
 	@echo ""
 
-$(Produce_Cutflow):	Produce_Cutflow.cxx Helper.o
+$(PRODUCE_CUTFLOW):	Produce_Cutflow.cxx Helper.o
 	@echo "###################################""#"
-	@echo "-- Creating executable ./$(Produce_Cutflow) --"
+	@echo "-- Creating executable ./$(PRODUCE_CUTFLOW) --"
 	@$(CC) Produce_Cutflow.cxx Helper.o -o $@ $(ROOTFLAGS) $(LFLAGS) $(INCFLAGS)
 	@echo "-- Done --"
 	@echo "###################################""#"

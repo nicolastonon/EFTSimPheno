@@ -85,7 +85,7 @@ TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> 
     this->lumiYear = lumiYear;
     Set_Luminosity(lumiYear);
 
-    dir_ntuples = "./input_ntuples/" + lumiYear + "/";
+    dir_ntuples = "./input_ntuples/"+lumiYear+"/";
 	// cout<<"dir_ntuples : "<<dir_ntuples<<endl;
 
 	//-- Get colors
@@ -309,7 +309,7 @@ void TopEFT_analysis::Set_Luminosity(TString lumiYear)
 void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
 {
 	//--- Options
-	bool use_relative_weights = false; //if false, will use fabs(weight)
+	bool use_relative_weights = false; //false <-> use abs(weight)
 
 //--------------------------------------------
     cout<<endl<<YELBKG("                          ")<<endl<<endl;
@@ -320,11 +320,8 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
 	else {cout<<"-- Using "<<BOLD(FGRN("*ABSOLUTE weights*"))<<" --"<<endl<<endl<<endl;}
 
 	mkdir("weights", 0777);
-	mkdir("weights/BDT", 0777);
-	// mkdir("weights/DNN", 0777);
-	// mkdir("weights/DNN/TMVA", 0777);
-	// mkdir("weights/DNN/PyKeras", 0777);
-	// mkdir("weights/DNN/Keras", 0777);
+    mkdir("weights/BDT", 0777);
+    mkdir(("weights/BDT/"+lumiYear).Data(), 0777);
 
 	usleep(1000000); //Pause for 1s (in microsec)
 
@@ -402,25 +399,26 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
 	// if there are too many input variables, the creation of correlations plots blows up memory and basically kills the TMVA execution --> avoid above critical number (which can be user defined)
 	(TMVA::gConfig().GetVariablePlotting()).fMaxNumOfAllowedVariablesForScatterPlots = 300;
 
-	TString output_file_name = "outputs/" + classifier_name;
+    //Output rootfile containing TMVAGui infos, ROCS, ...
+    TString output_file_name = "outputs/" + classifier_name + "_" + signal_process;
+    if(classifier_name == "DNN") {output_file_name+= DNN_type;}
 	if(channel != "") {output_file_name+= "_" + channel;}
-	if(classifier_name == "DNN") {output_file_name+= "_" + DNN_type;}
-	output_file_name+= "__" + signal_process;
+    output_file_name+= "_" + lumiYear;
 	output_file_name+= this->filename_suffix + ".root";
 
-	TFile* output_file = TFile::Open( output_file_name, "RECREATE" );
+	TFile* output_file = TFile::Open(output_file_name, "RECREATE");
 
 	// Create the factory object
 	// TMVA::Factory* factory = new TMVA::Factory(type.Data(), output_file, "!V:!Silent:Color:DrawProgressBar:AnalysisType=Classification" );
 	TString weights_dir = "weights";
-	TMVA::DataLoader *dataloader = new TMVA::DataLoader(weights_dir); //If no TString given in arg, will store weights in : default/weights/...
+	TMVA::DataLoader *dataloader = new TMVA::DataLoader(weights_dir); //If no TString given in arg, path of weightdir *in TTree* will be : default/weights/...
 
-	//--- Could modify here the name of dir. containing the BDT weights (default = "weights")
+	//--- Could modify here the name of local dir. storing the BDT weights (default = "weights")
 	//By setting it to "", weight files will be stored directly at the path given to dataloader
 	//Complete path for weight files is : [path_given_toDataloader]/[fWeightFileDir]
 	//Apparently, TMVAGui can't handle nested repos in path given to dataloader... so split path in 2 here
-	TMVA::gConfig().GetIONames().fWeightFileDir = "BDT";
-	if(classifier_name == "DNN" && DNN_type == "TMVA") {TMVA::gConfig().GetIONames().fWeightFileDir = "DNN/TMVA";}
+	TMVA::gConfig().GetIONames().fWeightFileDir = "BDT/"+lumiYear;
+	if(classifier_name == "DNN" && DNN_type == "TMVA") {TMVA::gConfig().GetIONames().fWeightFileDir = "DNN/TMVA/"+lumiYear;}
 
 //--------------------------------------------
  // #    #   ##   #####  #   ##   #####  #      ######  ####
@@ -469,6 +467,9 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
 	std::vector<TFile *> files_to_close;
 	for(int isample=0; isample<sample_list.size(); isample++)
     {
+        //-- Protections
+        if(sample_list[isample] == "DATA") {continue;} //don't use data for training
+
 		cout<<"-- Sample : "<<sample_list[isample]<<endl;
 
 		TString samplename_tmp = sample_list[isample];
@@ -555,7 +556,6 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
     // Tell the factory how to use the training and testing events
 
 	// If nTraining_Events=nTesting_Events="0", half of the events in the tree are used for training, and the other half for testing
-	//NB : ttH seem to use 80% of stat for training, 20% for testing. Kirill using 25K training and testing events for now
 	//NB : when converting nEvents to TString, make sure to ask for sufficient precision !
 
 	// float trainingEv_proportion = 0.5;
@@ -591,12 +591,9 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
 	//--- Boosted Decision Trees -- Choose method
 	TMVA::Factory *factory = new TMVA::Factory(classifier_name, output_file, "V:!Silent:Color:DrawProgressBar:Correlations=True:AnalysisType=Classification");
 
-	// TString method_title = channel + this->filename_suffix; //So that the output weights are labelled differently for each channel
-	TString method_title = ""; //So that the output weights are labelled differently for each channel
-	if(channel != "") {method_title = channel;}
-	else {method_title = "all";}
-	method_title+= "_" + region;
-	method_title+= "__" + signal_process;
+	//So that the output weights are labelled differently
+	TString method_title = signal_process;
+	if(channel != "") {method_title = "_" + channel;}
 
 //--------------------------------------------
 //  ####  #####  ##### #  ####  #    #  ####     #    # ###### ##### #    #  ####  #####
@@ -608,8 +605,14 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
 //--------------------------------------------
     TString method_options = "";
 
-    //ttH2017
-    method_options= "!H:!V:NTrees=200:BoostType=Grad:Shrinkage=0.10:!UseBaggedGrad:nCuts=200:NNodesMax=5:MaxDepth=8:NegWeightTreatment=PairNegWeightsGlobal:CreateMVAPdfs:DoBoostMonitor=True";
+    //~ttH2017
+    // method_options= "!H:!V:NTrees=200:BoostType=Grad:Shrinkage=0.10:!UseBaggedGrad:nCuts=200:MinNodeSize=5%:NNodesMax=5:MaxDepth=8:NegWeightTreatment=PairNegWeightsGlobal:CreateMVAPdfs:DoBoostMonitor=True";
+
+    //~tZq2017
+    method_options = "!H:!V:NTrees=1000:nCuts=200:MaxDepth=4:MinNodeSize=5%:UseBaggedGrad=True:BaggedSampleFraction=0.5:BoostType=Grad:Shrinkage=0.10:!UseBaggedGrad:NegWeightTreatment=PairNegWeightsGlobal:CreateMVAPdfs";
+
+    //~tHq2017
+    // method_options = "!H:!V:NTrees=200:nCuts=40:MaxDepth=4:BoostType=Grad:Shrinkage=0.10:MinNodeSize=5%:!UseBaggedGrad:NegWeightTreatment=PairNegWeightsGlobal:CreateMVAPdfs";
 
 
 //--------------------------------------------
@@ -626,14 +629,15 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
 
 	output_file->cd();
 
-	mkdir("outputs/Rankings", 0777); //Dir. containing variable ranking infos
-	mkdir("outputs/ROCS", 0777); //Dir. containing variable ranking infos
+    mkdir("outputs/Rankings", 0777);
+    mkdir(("outputs/Rankings/"+lumiYear).Data(), 0777); //Dir. containing variable ranking infos
 
-	TString ranking_file_path = "outputs/Rankings/rank_"+classifier_name+"_"+region+".txt";
+	TString ranking_file_path = "outputs/Rankings/"+lumiYear+"/rank_"+classifier_name+"_"+signal_process+".txt";
 
 	if(write_ranking_info) cout<<endl<<endl<<endl<<FBLU("NB : Temporarily redirecting standard output to file '"<<ranking_file_path<<"' in order to save Ranking Info !!")<<endl<<endl<<endl;
 
 	std::ofstream out("ranking_info_tmp.txt"); //Temporary name
+    out<<endl;
 	std::streambuf *coutbuf = std::cout.rdbuf(); //save old buf
 	if(write_ranking_info) std::cout.rdbuf(out.rdbuf()); //redirect std::cout to text file --> Ranking info will be saved !
 
@@ -745,20 +749,13 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
 	//Output file name
 	//-- For BDT templates
-	TString output_file_name = "outputs/Templates_" + classifier_name + template_name;
-	output_file_name+= "_" + region + filename_suffix;
-    output_file_name+= ".root";
+	TString output_file_name = "outputs/Templates_" + classifier_name + template_name + "_" + region + "_" + lumiYear + filename_suffix + ".root";
 
 	//-- For input vars
-	if(makeHisto_inputVars)
-	{
-		output_file_name = "outputs/ControlHistograms";
-		output_file_name+= "_" + region + filename_suffix +".root";
-	}
+	if(makeHisto_inputVars) {output_file_name = "outputs/ControlHistograms_" + region + "_" + lumiYear + filename_suffix +".root";}
 
     //Create output file
-	TFile* file_output = 0;
-    file_output = TFile::Open(output_file_name, "RECREATE");
+	TFile* file_output = TFile::Open(output_file_name, "RECREATE");
 
     //NB : TMVA requires floats, nothing else, to ensure reproducibility of results (training done with floats) => Need to recast e.g. doubles as flots
     //See : https://sourceforge.net/p/tmva/mailman/message/836453/
@@ -766,7 +763,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
 	// Name & adress of local variables which carry the updated input values during the event loop
 	// NB : the variable names MUST corresponds in name and type to those given in the weight file(s) used -- same order
-	// NB : if booking 2 BDTs (e.g. template_name=="2Dlin", must make sure that they use the same input variables... or else, find some way to make it work in the code)
+	// NB : if booking 2 BDTs, must make sure that they use the same input variables... or else, find some way to make it work in the code)
 	for(int i=0; i<var_list.size(); i++)
 	{
         reader->AddVariable(var_list[i].Data(), &var_list_floats[i]);
@@ -782,43 +779,21 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 	}
 
 	// --- Book the MVA methods (1 or 2, depending on template)
-	TString dir = "weights/";
-	dir+= classifier_name;
-
+	TString dir = "weights/" + classifier_name + "/" + lumiYear;
 	TString MVA_method_name1 = "", MVA_method_name2 = "";
 	TString weightfile = "";
 	TString template_name_MVA = "";
 	if(!makeHisto_inputVars)
 	{
-		if(template_name == "ttbar" || template_name == "ttV") //Book only 1 BDT
-		{
-			template_name_MVA = template_name + "_all";
+        template_name_MVA = "BDT::"+signal_process; //Not sure if matters ; use same name as found in xml file
 
-			MVA_method_name1 = template_name_MVA + " method";
-			weightfile = dir + "/" + classifier_name + "_" + template_name_MVA;
-			weightfile+= "__" + signal_process + ".weights.xml";
+		MVA_method_name1 = template_name_MVA + " method";
+		weightfile = dir + "/" + classifier_name + "_" + signal_process + ".weights.xml";
 
-			if(!Check_File_Existence(weightfile) ) {cout<<BOLD(FRED("Weight file "<<weightfile<<" not found ! Abort"))<<endl; return;}
+		if(!Check_File_Existence(weightfile) ) {cout<<BOLD(FRED("Weight file "<<weightfile<<" not found ! Abort"))<<endl; return;}
 
-			reader->BookMVA(MVA_method_name1, weightfile);
-		}
-		else if((template_name == "2Dlin" || template_name == "2D") && !makeHisto_inputVars) //Need to book 2 BDTs
-		{
-			template_name_MVA = "ttbar_all";
-			MVA_method_name1 = template_name_MVA + " method";
-			weightfile = dir + "/" + classifier_name + "_" + template_name_MVA + "__" + signal_process + ".weights.xml";
-			if(!Check_File_Existence(weightfile) ) {cout<<BOLD(FRED("Weight file "<<weightfile<<" not found ! Abort"))<<endl; return;}
-			reader1->BookMVA(MVA_method_name1, weightfile);
-
-			template_name_MVA = "ttV_all";
-			MVA_method_name2 = template_name_MVA + " method";
-			weightfile = dir + "/" + classifier_name + "_" + template_name_MVA + "__" + signal_process + ".weights.xml";
-			if(!Check_File_Existence(weightfile) ) {cout<<BOLD(FRED("Weight file "<<weightfile<<" not found ! Abort"))<<endl; return;}
-			reader2->BookMVA(MVA_method_name2, weightfile);
-		}
-
-		// cout<<"MVA_method_name1 "<<MVA_method_name1<<endl;
-		// cout<<"MVA_method_name2 "<<MVA_method_name2<<endl;
+        cout<<"MVA_method_name1 "<<MVA_method_name1<<endl;
+		reader->BookMVA(MVA_method_name1, weightfile);
 	}
 
 	//Input TFile and TTree, called for each sample
@@ -863,12 +838,25 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
  // #      #    # #    # #      #    #
  // ######  ####   ####  #       ####
 
-	cout<<endl<<endl<<"-- Ntuples dir. : "<<dir_ntuples<<endl<<endl;
+	cout<<endl<<ITAL("-- Ntuples dir. : "<<dir_ntuples<<"")<<endl<<endl;
+
+    // float tmp_compare = 0;
+    float total_nentries_toProcess = Count_Total_Nof_Entries(dir_ntuples, t_name, sample_list, systTree_list, syst_list, total_var_list);
+
+    cout<<endl<<FBLU(OVERLINE("                           "))<<endl;
+    cout<<FBLU(BOLD("Will process "<<std::setprecision(12)<<total_nentries_toProcess<<" entries..."))<<endl;
+    cout<<FBLU(UNDL("                           "))<<endl<<endl<<endl;
+
+    //Draw progress bar
+    Int_t ibar = 0; //event counter
+    TMVA::Timer timer(total_nentries_toProcess, "", true);
+    TMVA::gConfig().SetDrawProgressBar(1);
+    TMVA::gConfig().SetUseColor(1);
 
 	//SAMPLE LOOP
 	for(int isample=0; isample<sample_list.size(); isample++)
 	{
-		cout<<endl<<endl<<UNDL(FBLU("Sample : "<<sample_list[isample]<<""))<<endl;
+		// cout<<endl<<endl<<UNDL(FBLU("Sample : "<<sample_list[isample]<<""))<<endl;
 
 		//Open input TFile
 		TString inputfile = dir_ntuples + sample_list[isample] + ".root";
@@ -994,30 +982,26 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 				if(sample_list[isample] == "DATA" || sample_list[isample] == "QFlip" || systTree_list[itree] != "")
 				{
 					v3_histo_chan_syst_var[ichan].resize(1); //Cases for which we only need to store the nominal weight
-					if(template_name == "2D") {v3_histo_chan_syst_var2D[ichan].resize(1);}
+					// if(template_name == "2D") {v3_histo_chan_syst_var2D[ichan].resize(1);}
 				}
 				else //Subcategories -> 1 histo for nominal + 1 histo per systematic
 				{
 					v3_histo_chan_syst_var[ichan].resize(syst_list.size());
-					if(template_name == "2D") {v3_histo_chan_syst_var2D[ichan].resize(syst_list.size());}
+					// if(template_name == "2D") {v3_histo_chan_syst_var2D[ichan].resize(syst_list.size());}
 				}
 
 				//Init TH1Fs
 				for(int isyst=0; isyst<v3_histo_chan_syst_var[ichan].size(); isyst++)
 				{
 					v3_histo_chan_syst_var[ichan][isyst].resize(total_var_list.size());
-
-					if(template_name == "2D")
-					{
-						v3_histo_chan_syst_var2D[ichan][isyst].resize(1);
-					}
+					// if(template_name == "2D") {v3_histo_chan_syst_var2D[ichan][isyst].resize(1);}
 
 					for(int ivar=0; ivar<total_var_list.size(); ivar++)
 					{
 						if(makeHisto_inputVars && !Get_Variable_Range(total_var_list[ivar], nbins, xmin, xmax)) {cout<<FRED("Unknown variable name : "<<total_var_list[ivar]<<"! (add in function 'Get_Variable_Range()')")<<endl; continue;} //Get binning for this input variable
 
 						v3_histo_chan_syst_var[ichan][isyst][ivar] = new TH1F("", "", nbins, xmin, xmax);
-						if(template_name == "2D") {v3_histo_chan_syst_var2D[ichan][isyst][0] = new TH2F("", "", 10, -1, 1, 10, -1, 1);}
+						// if(template_name == "2D") {v3_histo_chan_syst_var2D[ichan][isyst][0] = new TH2F("", "", 10, -1, 1, 10, -1, 1);}
 					}
 				} //syst
 			} //chan
@@ -1032,15 +1016,14 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 // #       #  #  #      #   ##   #      #      #    # #    # #
 // ######   ##   ###### #    #   #      ######  ####   ####  #
 
-			cout<<"* Tree '"<<systTree_list[itree]<<"' :"<<endl;
+			// cout<<"* Tree '"<<systTree_list[itree]<<"' :"<<endl;
 
 			// int nentries = 10;
 			int nentries = tree->GetEntries();
 
-			// if(writeTemplate_forAllCouplingPoints) {nentries = 100;}
-
 			float total_nentries = total_var_list.size()*nentries;
-			cout<<"Will process : "<<total_var_list.size()<<" vars * "<<nentries<<" = "<<setprecision(9)<<total_nentries<<" events...."<<endl<<endl;
+            // tmp_compare+= total_nentries;
+			// cout<<"Will process : "<<total_var_list.size()<<" variable(s) * "<<nentries<<" = "<<setprecision(9)<<total_nentries<<" events...."<<endl<<endl;
 
 			//Draw progress bar
 			// Int_t ibar = 0; //progress bar
@@ -1054,8 +1037,8 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 				// if(!makeHisto_inputVars && ientry%20000==0) {cout<<ITAL(""<<ientry<<" / "<<nentries<<"")<<endl;}
 				// else if(makeHisto_inputVars)
 				// {
-				// 	ibar++;
-				// 	if(ibar%20000==0) {timer.DrawProgressBar(ibar, "test");}
+					ibar++;
+					if(ibar%20000==0) {timer.DrawProgressBar(ibar, "test");}
 				// }
 
 				weight_SF = 1;
@@ -1098,8 +1081,8 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
                     mva_value1 = reader->EvaluateMVA(MVA_method_name1);
                 }
 
-				//Get relevant binning
-				float xValue_tmp = -1;
+				//Can use this tmp var to modify the template binning as desired
+				float xValue_tmp = mva_value1;
 
 				// cout<<"//--------------------------------------------"<<endl;
 				// cout<<"xValue_tmp = "<<xValue_tmp<<endl;
@@ -1152,11 +1135,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 								Fill_TH1F_UnderOverflow(v3_histo_chan_syst_var[ichan][isyst][ivar], total_var_floats[ivar], weight_tmp);
 							}
 						}
-						else
-						{
-                            if(template_name == "2D") {v3_histo_chan_syst_var2D[ichan][isyst][0]->Fill(mva_value1, mva_value2, weight_tmp);}
-                            else {Fill_TH1F_UnderOverflow(v3_histo_chan_syst_var[ichan][isyst][0], xValue_tmp, weight_tmp);}
-						}
+						else {Fill_TH1F_UnderOverflow(v3_histo_chan_syst_var[ichan][isyst][0], xValue_tmp, weight_tmp);}
 					} //syst loop
 
 					if(channel_list[ichan] != "") {break;} //subcategories are orthogonal ; if already found, can break subcat. loop
@@ -1197,7 +1176,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 						}
 						else
 						{
-							output_histo_name = classifier_name + template_name + "__" + region;
+							output_histo_name = classifier_name + template_name + "_" + region;
 							if(channel_list[ichan] != "") {output_histo_name+= "_" + channel_list[ichan];}
 							output_histo_name+= "__" + samplename;
 							if(syst_list[isyst] != "") {output_histo_name+= "__" + syst_list[isyst];}
@@ -1206,11 +1185,11 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
 						file_output->cd();
 
-						if(template_name == "2D") {v3_histo_chan_syst_var2D[ichan][isyst][ivar]->Write(output_histo_name);}
-						else {v3_histo_chan_syst_var[ichan][isyst][ivar]->Write(output_histo_name);}
+						// if(template_name == "2D") {v3_histo_chan_syst_var2D[ichan][isyst][ivar]->Write(output_histo_name);}
+						v3_histo_chan_syst_var[ichan][isyst][ivar]->Write(output_histo_name);
 
 						delete v3_histo_chan_syst_var[ichan][isyst][ivar]; v3_histo_chan_syst_var[ichan][isyst][ivar] = NULL;
-						if(template_name == "2D") {delete v3_histo_chan_syst_var[ichan][isyst][ivar]; v3_histo_chan_syst_var[ichan][isyst][ivar] = NULL;}
+						// if(template_name == "2D") {delete v3_histo_chan_syst_var[ichan][isyst][ivar]; v3_histo_chan_syst_var[ichan][isyst][ivar] = NULL;}
 					} //var loop
 				} //syst loop
 			} //chan loop
@@ -1237,12 +1216,16 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
 	file_output->Close(); file_output = NULL;
 
-    if(template_name == "2Dlin" || template_name == "2D")
-	{
-		delete reader1; reader1 = NULL;
-		delete reader2; reader2 = NULL;
-	}
-    else {delete reader; reader = NULL;}
+    // if(template_name == "2Dlin" || template_name == "2D")
+	// {
+	// 	delete reader1; reader1 = NULL;
+	// 	delete reader2; reader2 = NULL;
+	// }
+    delete reader; reader = NULL;
+
+    //-- Can verify that the total nof processed entries computed from Count_Total_Nof_Entries() was effectively the nof processed entries
+    // cout<<"total_nentries_toProcess --> "<<total_nentries_toProcess<<endl;
+    // cout<<"tmp_compare --> "<<tmp_compare<<endl;
 
 	return;
 }
@@ -1289,7 +1272,7 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 
     cout<<endl<<YELBKG("                          ")<<endl<<endl;
 	if(drawInputVars) {cout<<FYEL("--- Producing Input Variables Plots / channel : "<<channel<<" ---")<<endl;}
-	else if(template_name == "") {cout<<FYEL("--- Producing "<<template_name<<" Template Plots / channel : "<<channel<<" ---")<<endl;}
+	else if(template_name == "") {cout<<FYEL("--- Producing "<<classifier_name<<" Template Plots ---")<<endl;}
 	else {cout<<FRED("--- ERROR : invalid args !")<<endl;}
     cout<<endl<<YELBKG("                          ")<<endl<<endl;
 
@@ -1326,7 +1309,7 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 
 	TString input_name = "";
 
-	if(use_combine_file)
+	if(use_combine_file) //FIXME
 	{
 		input_name = "./outputs/fitDiagnostics_";
 		input_name+= classifier_name + template_name + "_" + region + filename_suffix;
@@ -1338,7 +1321,7 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 			input_name = "./outputs/fitDiagnostics.root"; //Try another name
 			if(!Check_File_Existence(input_name))
 			{
-				cout<<FBLU("-- NB : File ")<<input_name<<FBLU(" (<-> file produced by COMBINE) not found !")<<endl;
+				cout<<FBLU("-- NB : File ")<<input_name<<FBLU(" (produced by COMBINE) not found !")<<endl;
 				if(!prefit) {cout<<FRED("=> Can not produce postfit plots ! Abort !")<<endl; return;}
 
 				use_combine_file = false;
@@ -1356,7 +1339,7 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 
 				if(!Check_File_Existence(input_name))
 				{
-					cout<<FRED("File "<<input_name<<" (<-> file containing prefit templates) not found ! Did you specify the region/background ? Abort")<<endl;
+					cout<<FRED("File "<<input_name<<" (prefit templates) not found ! Did you specify the region/background ? Abort")<<endl;
 					return;
 				}
 				else {cout<<FBLU("--> Using file ")<<input_name<<FBLU(" instead (NB : only stat. error will be included)")<<endl;}
@@ -1365,22 +1348,22 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 		}
 		else {cout<<FBLU("--> Using Combine output file : ")<<input_name<<FBLU(" (NB : total error included)")<<endl; use_combine_file = true;}
 	}
-	else
+	else //Using my own template file
 	{
 		if(drawInputVars) //Input vars
 		{
-			input_name = "outputs/ControlHistograms_" + region + filename_suffix + ".root";
+			input_name = "outputs/ControlHistograms_" + region + "_" + lumiYear + filename_suffix + ".root";
 		}
 		else //Templates
 		{
-			input_name = "outputs/Templates_" + classifier_name + template_name + "_" + region + filename_suffix;
+			input_name = "outputs/Templates_" + classifier_name + template_name + "_" + region + "_" + lumiYear + filename_suffix;
 			if(classifier_name == "DNN") {input_name+= "_" + DNN_type;}
 			input_name+= ".root";
 		}
 
 		if(!Check_File_Existence(input_name))
 		{
-			cout<<FRED("File "<<input_name<<" (<-> file containing prefit templates) not found ! Did you specify the region/background ? Abort")<<endl;
+			cout<<FRED("File "<<input_name<<" (prefit templates) not found ! Did you specify the region/background ? Abort")<<endl;
 			return;
 		}
 	}
@@ -1389,8 +1372,7 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 	usleep(1000000); //Pause for 1s (in microsec)
 
 	//Input file containing histos
-	TFile* file_input = 0;
-	file_input = TFile::Open(input_name);
+	TFile* file_input = TFile::Open(input_name);
 
 	//Need to rescale signal to fitted signal strength manually, and add its error in quadrature in each bin (verify)
 	double sigStrength = 0;
@@ -1523,8 +1505,8 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 					histo_name+= + "__" + samplename;
 				}
 
-				if(use_combine_file && !file_input->GetDirectory(dir_hist)->GetListOfKeys()->Contains(samplename) ) {cout<<ITAL("Histogram '"<<histo_name<<"' : not found ! Skip...")<<endl; v_isSkippedSample[isample] = true; nof_skipped_samples++; continue;}
-				else if(!use_combine_file && !file_input->GetListOfKeys()->Contains(histo_name) ) {cout<<ITAL("Histogram '"<<histo_name<<"' : not found ! Skip...")<<endl; v_isSkippedSample[isample] = true; nof_skipped_samples++; continue;}
+				if(use_combine_file && !file_input->GetDirectory(dir_hist)->GetListOfKeys()->Contains(samplename) ) {cout<<ITAL(DIM("Histogram '"<<histo_name<<"' : not found ! Skip..."))<<endl; v_isSkippedSample[isample] = true; nof_skipped_samples++; continue;}
+				else if(!use_combine_file && !file_input->GetListOfKeys()->Contains(histo_name) ) {cout<<ITAL(DIM("Histogram '"<<histo_name<<"' : not found ! Skip..."))<<endl; v_isSkippedSample[isample] = true; nof_skipped_samples++; continue;}
 
 				h_tmp = (TH1F*) file_input->Get(histo_name);
 				// cout<<"histo_name "<<histo_name<<endl;
@@ -1563,7 +1545,7 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 					//--------------------------------------------
 					if(!use_combine_file) //In Combine file, already accounted in binError
 					{
-						for(int itree=0; itree<systTree_list.size(); itree++)
+						for(int itree=0; itree<systTree_list.size(); itree++) //not accounted for ?
 						{
 							for(int isyst=0; isyst<syst_list.size(); isyst++)
 							{
@@ -2163,9 +2145,10 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 		}
 		else
 		{
-			if(template_name=="2D") {histo_ratio_data->GetXaxis()->SetTitle("BDT2D bin");}
-			else if(template_name=="2Dlin") {histo_ratio_data->GetXaxis()->SetTitle("BDT bin");}
-			else {histo_ratio_data->GetXaxis()->SetTitle(classifier_name+" (vs "+template_name + ")");}
+			// if(template_name=="2D") {histo_ratio_data->GetXaxis()->SetTitle("BDT2D bin");}
+			// else if(template_name=="2Dlin") {histo_ratio_data->GetXaxis()->SetTitle("BDT bin");}
+            // histo_ratio_data->GetXaxis()->SetTitle(classifier_name+" (vs "+template_name + ")");
+            histo_ratio_data->GetXaxis()->SetTitle(classifier_name);
 
 			if(template_name == "categ") //Vertical text X labels (categories names)
 			{
@@ -2347,19 +2330,17 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 
 		if(drawInputVars)
 		{
-			mkdir("plots", 0777);
 			mkdir("plots/input_vars", 0777);
-			mkdir("plots/input_vars/", 0777);
-			mkdir( ("plots/input_vars/"+region).Data(), 0777);
+            mkdir(("plots/input_vars/"+region).Data(), 0777);
+            mkdir(("plots/input_vars/"+region+"/"+lumiYear).Data(), 0777);
 		}
 		else
 		{
-			mkdir("plots", 0777);
 			mkdir("plots/templates", 0777);
-			mkdir("plots/templates/", 0777);
-			mkdir( ("plots/templates/"+region).Data(), 0777);
-			if(prefit) {mkdir( ("plots/templates/"+region+"/prefit").Data(), 0777);}
-			else {mkdir( ("plots/templates/"+region+"/postfit").Data(), 0777);}
+            mkdir( ("plots/templates/"+region).Data(), 0777);
+            mkdir( ("plots/templates/"+region+"/"+lumiYear).Data(), 0777);
+			if(prefit) {mkdir( ("plots/templates/"+region+"/"+lumiYear+"/prefit").Data(), 0777);}
+			else {mkdir( ("plots/templates/"+region+"/"+lumiYear+"/postfit").Data(), 0777);}
 		}
 
 		//Output
@@ -2367,11 +2348,11 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 
 		if(drawInputVars)
 		{
-			output_plot_name = "plots/input_vars/" + region + "/" + total_var_list[ivar];
+			output_plot_name = "plots/input_vars/" + region + "/" + lumiYear + "/" + total_var_list[ivar];
 		}
 		else
 		{
-			output_plot_name = "plots/templates/" + region;
+			output_plot_name = "plots/templates/" + region + "/" + lumiYear;
 			if(prefit) {output_plot_name+= "/prefit/";}
 			else {output_plot_name+= "/postfit/";}
 			output_plot_name+= classifier_name + template_name + "_template";
@@ -2459,8 +2440,6 @@ void TopEFT_analysis::Compare_TemplateShapes_Processes(TString template_name, TS
 
     cout<<endl<<YELBKG("                          ")<<endl<<endl;
 	if(drawInputVars) {cout<<FYEL("--- Producing Input Vars Plots / channel : "<<channel<<" ---")<<endl;}
-	// else if(template_name == "ttbar" || template_name == "ttV" || template_name == "2D" || template_name == "2Dlin" || template_name == "categ") {cout<<FYEL("--- Producing "<<template_name<<" Template Plots / channel : "<<channel<<" ---")<<endl;}
-	// else {cout<<FRED("--- ERROR : invalid template_name value !")<<endl;}
     cout<<endl<<YELBKG("                          ")<<endl<<endl;
 
 //  ####  ###### ##### #    # #####
@@ -2485,7 +2464,7 @@ void TopEFT_analysis::Compare_TemplateShapes_Processes(TString template_name, TS
 
 	if(!Check_File_Existence(input_name))
 	{
-		cout<<FRED("File "<<input_name<<" (<-> file containing prefit templates) not found ! Did you specify the region/background ? Abort")<<endl;
+		cout<<FRED("File "<<input_name<<" (prefit templates) not found ! Did you specify the region/background ? Abort")<<endl;
 		return;
 	}
 	else {cout<<FBLU("--> Using file ")<<input_name<<FBLU(" instead (NB : only stat. error will be included)")<<endl;}
@@ -2629,7 +2608,8 @@ void TopEFT_analysis::Compare_TemplateShapes_Processes(TString template_name, TS
 				// else {v2_histos[isample][isyst]->SetMaximum(11.);}
 
 				if(drawInputVars) {v2_histos[isample][isyst]->GetXaxis()->SetTitle(template_name);}
-				else {v2_histos[isample][isyst]->GetXaxis()->SetTitle(classifier_name+" (vs "+template_name + ")");}
+                // else {v2_histos[isample][isyst]->GetXaxis()->SetTitle(classifier_name+" (vs "+template_name + ")");}
+                else {v2_histos[isample][isyst]->GetXaxis()->SetTitle(classifier_name);}
 			}
 
 			if(isample < v2_histos.size() - 1)
@@ -2733,8 +2713,8 @@ void TopEFT_analysis::Compare_TemplateShapes_Processes(TString template_name, TS
 // ##  ## #   #  #   #   #         #    # #    #   #   #      #    #   #
 // #    # #    # #   #   ######     ####   ####    #   #       ####    #
 
-	mkdir("plots", 0777);
-	mkdir("plots/templates_shapes", 0777);
+    mkdir("plots/templates_shapes", 0777);
+    mkdir(("plots/templates_shapes/"+lumiYear).Data(), 0777);
 
 	//Output
 	TString output_plot_name = "plots/templates_shapes/";

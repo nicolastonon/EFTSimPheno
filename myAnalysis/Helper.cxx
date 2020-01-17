@@ -798,3 +798,52 @@ TString Get_Category_Boolean_Name()
 
     return categ_bool_name;
 }
+
+//Computes total nof entries which will be processed by the Produce_Templates() function, so that the Timebar is correct
+float Count_Total_Nof_Entries(TString dir_ntuples, TString t_name, vector<TString> v_samples, vector<TString> v_systTrees, vector<TString> v_syst, vector<TString> v_vars)
+{
+    float total_nentries = 0;
+
+    for(int isample=0; isample<v_samples.size(); isample++)
+    {
+        //Open input TFile
+        TString inputfile = dir_ntuples + v_samples[isample] + ".root";
+        // cout<<"inputfile "<<inputfile<<endl;
+        if(!Check_File_Existence(inputfile))
+        {
+            // cout<<endl<<"File "<<inputfile<<FRED(" not found!")<<endl;
+            continue;
+        }
+        TFile* file_input = TFile::Open(inputfile, "READ");
+
+        for(int itree=0; itree<v_systTrees.size(); itree++)
+		{
+			TTree* tree = 0;
+            TString tmp = v_systTrees[itree];
+			if(tmp == "") {tmp = t_name;}
+            tree = (TTree*) file_input->Get(tmp);
+			if(!tree)
+			{
+				// cout<<BOLD(FRED("ERROR : tree '"<<tmp<<"' not found in file : "<<inputfile<<" ! Skip !"))<<endl;
+				continue; //Skip sample
+			}
+
+            float nentries_tmp = tree->GetEntries();
+
+            for(int isyst=0; isyst<v_syst.size(); isyst++)
+            {
+                for(int ivar=0; ivar<v_vars.size(); ivar++)
+                {
+                    //-- Protections : can skip here some sample/syst/var combinations which are skipped in main code
+                    // if(xxx) {continue;}
+
+                    total_nentries+= nentries_tmp; //Multiply nof entries by nof loops
+                } //vars
+            } //systs
+        } //trees
+    } //samples
+
+    // cout<<"total_nentries "<<total_nentries<<endl;
+
+    return total_nentries;
+}
