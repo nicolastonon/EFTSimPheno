@@ -2,8 +2,6 @@
 
 using namespace std;
 
-
-
 //--------------------------------------------
 //  ######   ######## ##    ## ######## ########  ####  ######
 // ##    ##  ##       ###   ## ##       ##     ##  ##  ##    ##
@@ -800,12 +798,16 @@ TString Get_Category_Boolean_Name()
 }
 
 //Computes total nof entries which will be processed by the Produce_Templates() function, so that the Timebar is correct
-float Count_Total_Nof_Entries(TString dir_ntuples, TString t_name, vector<TString> v_samples, vector<TString> v_systTrees, vector<TString> v_syst, vector<TString> v_vars)
+//NB1 : don't account for nof syst weights, since they are computed all at once when reading an event
+//NB2 : this returns the nof entries which will get read, not processed (else, should take cuts into account, etc.)
+float Count_Total_Nof_Entries(TString dir_ntuples, TString t_name, vector<TString> v_samples, vector<TString> v_systTrees, vector<TString> v_vars)
 {
     float total_nentries = 0;
 
     for(int isample=0; isample<v_samples.size(); isample++)
     {
+        // cout<<"v_samples[isample] "<<v_samples[isample]<<endl;
+
         //Open input TFile
         TString inputfile = dir_ntuples + v_samples[isample] + ".root";
         // cout<<"inputfile "<<inputfile<<endl;
@@ -829,17 +831,14 @@ float Count_Total_Nof_Entries(TString dir_ntuples, TString t_name, vector<TStrin
 			}
 
             float nentries_tmp = tree->GetEntries();
+            // float nentries_tmp = tree->GetEntries("passedBJets");
 
-            for(int isyst=0; isyst<v_syst.size(); isyst++)
+            for(int ivar=0; ivar<v_vars.size(); ivar++)
             {
-                for(int ivar=0; ivar<v_vars.size(); ivar++)
-                {
-                    //-- Protections : can skip here some sample/syst/var combinations which are skipped in main code
-                    // if(xxx) {continue;}
+                total_nentries+= nentries_tmp; //Multiply nof entries by nof loops
 
-                    total_nentries+= nentries_tmp; //Multiply nof entries by nof loops
-                } //vars
-            } //systs
+                // cout<<"total_nentries = "<<total_nentries<<endl;
+            } //vars
         } //trees
     } //samples
 
@@ -847,3 +846,45 @@ float Count_Total_Nof_Entries(TString dir_ntuples, TString t_name, vector<TStrin
 
     return total_nentries;
 }
+
+//In Potato code, systematics variations weights are encoded into vectors
+//NB : inconsistent indices : down variation may be element 0 or 1...
+//Use this function to hard-code which vector element corresponds to which systematics, and set the address
+/*
+void SetBranchAddress_SystVariationArray(TTree* t, TString systname, double* var)
+{
+    TString original_variable_name = ""; //Name of the systematic as stored in the ntuple
+
+    if(!t) {return;}
+
+    if(systname == "") {return;}
+    else if(systname == "PUDown") {original_variable_name = "varWeightPU[0]";}
+    else if(systname == "PUUp") {original_variable_name = "varWeightPU[1]";}
+
+    else if(systname == "prefiringWeightDown") {original_variable_name = "varWeightPrefire[0]";}
+    else if(systname == "prefiringWeightUp") {original_variable_name = "varWeightPrefire[1]";}
+
+    else if(systname == "BtagHDown") {original_variable_name = "btagEventWeight[1]";}
+    else if(systname == "BtagHUp") {original_variable_name = "btagEventWeight[0]";}
+
+    else if(systname == "BtagLDown") {original_variable_name = "btagEventWeight[3]";}
+    else if(systname == "BtagLUp") {original_variable_name = "btagEventWeight[2]";}
+
+    else if(systname == "LepEff_muLooseDown") {original_variable_name = "var_weight_Mu[0]";}
+    else if(systname == "LepEff_muLooseUp") {original_variable_name = "var_weight_Mu[1]";}
+    else if(systname == "LepEff_muTightDown") {original_variable_name = "var_weight_Mu[2]";}
+    else if(systname == "LepEff_muTightUp") {original_variable_name = "var_weight_Mu[3]";}
+
+    else if(systname == "LepEff_elLooseDown") {original_variable_name = "var_weight_El[0]";}
+    else if(systname == "LepEff_elLooseUp") {original_variable_name = "var_weight_El[1]";}
+    else if(systname == "LepEff_elTightDown") {original_variable_name = "var_weight_El[2]";}
+    else if(systname == "LepEff_elTightUp") {original_variable_name = "var_weight_El[3]";}
+
+    else{cout<<FRED("ERROR ! Systematic '"<<systname<<"' not included in function SetBranchAddress_SystVariation() from Helper.cxx ! Can *not* compute it !")<<endl; return;}
+
+    t->SetBranchStatus(original_variable_name, 1);
+    t->SetBranchAddress(original_variable_name, var);
+
+    return;
+}
+*/

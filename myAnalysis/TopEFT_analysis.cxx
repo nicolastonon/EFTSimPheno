@@ -8,26 +8,16 @@
 
 // Draw_Templates
 
+// SetBranchAddress_SystVariationArray()
+// Merge_Templates_ByProcess()
+
 //--------------------------------------------
 
 #include "TopEFT_analysis.h"
 
-// #include "TMVA/PyMethodBase.h" //PYTHON -- Keras interface
-// #include "TMVA/MethodPyKeras.h" //PYTHON -- Keras interface
-// #include "TMVA/HyperParameterOptimisation.h"
-// #include "TMVA/VariableImportance.h"
-// #include "TMVA/CrossValidation.h" //REMOVABLE -- needed for BDT optim
-
-//To read weights from DNN trained with Keras (without TMVA) -- requires c++14, etc.
-// #include "fdeep/fdeep.hpp" //REMOVABLE
-
 #define MYDEBUG(msg) cout<<endl<<ITAL("-- DEBUG: " << __FILE__ << ":" << __LINE__ <<":")<<FRED(" " << msg  <<"")<<endl
 
 using namespace std;
-
-
-
-
 
 //---------------------------------------------------------------------------
 // ####    ##    ##    ####    ########
@@ -210,6 +200,12 @@ TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> 
 	// }
 	// if(use_custom_colorPalette) {Set_Custom_ColorPalette(v_custom_colors, color_list);}
 
+    array_PU = NULL;
+    array_prefiringWeight = NULL;
+    array_Btag = NULL;
+    array_LepEff_mu = NULL;
+    array_LepEff_el = NULL;
+
 	//Store the "cut name" that will be written as a suffix in the name of each output file
 	this->filename_suffix = "";
 	TString tmp = "";
@@ -251,7 +247,7 @@ TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> 
 
 TopEFT_analysis::~TopEFT_analysis()
 {
-
+    // cout<<"~TopEFT_analysis "<<endl;
 }
 
 
@@ -720,7 +716,7 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
 void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_inputVars)
 {
 //--------------------------------------------
-    // bool xxx = xxx;
+    bool noSysts_inputVars = false; //true <-> don't compute syst weights for histos of input variables (not worth the CPU)
 //--------------------------------------------
 
     cout<<endl<<YELBKG("                          ")<<endl<<endl;
@@ -731,12 +727,30 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
 	if(classifier_name != "BDT") {cout<<BOLD(FRED("Error : DNNs are not supported !"))<<endl; return;}
 
-	//Don't make systematics shifted histos for input vars (too long)
+
+    TString restore_classifier_name = classifier_name;
 	if(makeHisto_inputVars)
 	{
 		classifier_name = ""; //For naming conventions
-		// syst_list.resize(1); syst_list[0] = ""; //Force Remove systematics
 	}
+    //Don't make systematics shifted histos for input vars (too long)
+    //Force removal of systematics ; restore values at end of this func
+    vector<TString> restore_syst_list = syst_list;
+    if(noSysts_inputVars)
+    {
+        syst_list.resize(1);
+        syst_list[0] = "";
+    }
+    else
+    {
+        //Must allocate memory to these arrays, which will hold the values of the systematics variations weights
+        //NB : the sizes of the arrays are hardcoded, depends on Potato implementation (could alos set same large size for all)
+        array_PU = new double[2];
+        array_prefiringWeight = new double[2];
+        array_Btag = new double[4];
+        array_LepEff_mu = new double[4];
+        array_LepEff_el = new double[4];
+    }
 
 //  ####  ###### ##### #    # #####
 // #      #        #   #    # #    #
@@ -841,13 +855,15 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 	cout<<endl<<ITAL("-- Ntuples dir. : "<<dir_ntuples<<"")<<endl<<endl;
 
     // float tmp_compare = 0;
-    float total_nentries_toProcess = Count_Total_Nof_Entries(dir_ntuples, t_name, sample_list, systTree_list, syst_list, total_var_list);
+    float total_nentries_toProcess = Count_Total_Nof_Entries(dir_ntuples, t_name, sample_list, systTree_list, total_var_list);
 
     cout<<endl<<FBLU(OVERLINE("                           "))<<endl;
     cout<<FBLU(BOLD("Will process "<<std::setprecision(12)<<total_nentries_toProcess<<" entries..."))<<endl;
     cout<<FBLU(UNDL("                           "))<<endl<<endl<<endl;
 
     //Draw progress bar
+    bool draw_progress_bar = true;
+    if(total_nentries_toProcess < 200000) {draw_progress_bar = false;}
     Int_t ibar = 0; //event counter
     TMVA::Timer timer(total_nentries_toProcess, "", true);
     TMVA::gConfig().SetDrawProgressBar(1);
@@ -874,6 +890,8 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 		//NB : only nominal TTree contains systematic weights ; others only contain the nominal weight (but variables have different values)
 		for(int itree=0; itree<systTree_list.size(); itree++)
 		{
+            if(sample_list[isample] == "DATA" && systTree_list[itree] != "") {continue;}
+
 			tree = 0;
             TString tmp = systTree_list[itree];
 			if(tmp == "") {tmp = t_name;}
@@ -956,57 +974,51 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 			// tree->SetBranchStatus("mc_weight_originalValue", 1);
 			// tree->SetBranchAddress("mc_weight_originalValue", &mc_weight_originalValue);
 
-            //Reserve 1 float for each systematic weight
-			vector<Float_t> v_float_systWeights(syst_list.size());
+            //Reserve 1 float for each systematic weight (also for nominal to keep ordering, but not used)
+			vector<Double_t*> v_double_systWeights(syst_list.size(), NULL);
 			for(int isyst=0; isyst<syst_list.size(); isyst++)
 			{
 				//-- Protections : not all syst weights apply to all samples, etc.
-				// if(sample_list[isample] == "DATA" || sample_list[isample] == "QFlip") {break;}
-				// else if(systTree_list[itree] != "") {break;} //Syst event weights only stored in nominal TTree
-				// else if((syst_list[isyst].Contains("FR_") ) && !sample_list[isample].Contains("Fake") ) {continue;}
-				// else if(sample_list[isample].Contains("Fake") && !syst_list[isyst].Contains("FR_") && syst_list[isyst] != "") {continue;}
-                // else if(syst_list[isyst].Contains("thu_shape") || syst_list[isyst].Contains("Clos") ) {continue;} //these weights are computed within this func
+				if(sample_list[isample] == "DATA") {break;}
+				if(systTree_list[itree] != "") {break;} //Syst event weights only stored in nominal TTree
 
-				if(syst_list[isyst] != "") {tree->SetBranchStatus(syst_list[isyst], 1); tree->SetBranchAddress(syst_list[isyst], &v_float_systWeights[isyst]);} //Nominal weight already set, don't redo it
+                //Set proper branch address (hard-coded mapping)
+                SetBranchAddress_SystVariationArray(tree, syst_list[isyst], v_double_systWeights, isyst);
 			}
 
 			//Reserve memory for 1 TH1F* per category, per systematic
 			vector<vector<vector<TH1F*>>> v3_histo_chan_syst_var(channel_list.size());
-			vector<vector<vector<TH2F*>>> v3_histo_chan_syst_var2D(channel_list.size());
 
 			for(int ichan=0; ichan<channel_list.size(); ichan++)
 			{
 				if((channel_list.size() > 1 && channel_list[ichan] == "") || sample_list[isample] == "DATA" || systTree_list[itree] != "") {v3_histo_chan_syst_var[ichan].resize(1);} //Cases for which we only need to store the nominal weight
 
                 //Reserve memory for TH1Fs
-				if(sample_list[isample] == "DATA" || sample_list[isample] == "QFlip" || systTree_list[itree] != "")
+				if(sample_list[isample] == "DATA" || systTree_list[itree] != "") //1 single weight
 				{
 					v3_histo_chan_syst_var[ichan].resize(1); //Cases for which we only need to store the nominal weight
-					// if(template_name == "2D") {v3_histo_chan_syst_var2D[ichan].resize(1);}
 				}
 				else //Subcategories -> 1 histo for nominal + 1 histo per systematic
 				{
 					v3_histo_chan_syst_var[ichan].resize(syst_list.size());
-					// if(template_name == "2D") {v3_histo_chan_syst_var2D[ichan].resize(syst_list.size());}
 				}
 
 				//Init TH1Fs
 				for(int isyst=0; isyst<v3_histo_chan_syst_var[ichan].size(); isyst++)
 				{
 					v3_histo_chan_syst_var[ichan][isyst].resize(total_var_list.size());
-					// if(template_name == "2D") {v3_histo_chan_syst_var2D[ichan][isyst].resize(1);}
 
 					for(int ivar=0; ivar<total_var_list.size(); ivar++)
 					{
 						if(makeHisto_inputVars && !Get_Variable_Range(total_var_list[ivar], nbins, xmin, xmax)) {cout<<FRED("Unknown variable name : "<<total_var_list[ivar]<<"! (add in function 'Get_Variable_Range()')")<<endl; continue;} //Get binning for this input variable
 
 						v3_histo_chan_syst_var[ichan][isyst][ivar] = new TH1F("", "", nbins, xmin, xmax);
-						// if(template_name == "2D") {v3_histo_chan_syst_var2D[ichan][isyst][0] = new TH2F("", "", 10, -1, 1, 10, -1, 1);}
 					}
 				} //syst
 			} //chan
 
-			// cout<<endl<< "--- "<<sample_list[isample]<<" : Processing: " << tree->GetEntries() << " events" << std::endl;
+            // if(!draw_progress_bar) {cout<<endl<< "--- "<<sample_list[isample]<<" : Processing: " << tree->GetEntries() << " events" << std::endl;}
+            cout<<endl<< "--- "<<sample_list[isample]<<" : Processing: " << tree->GetEntries() << " events" << std::endl;
 
 
 // ###### #    # ###### #    # #####    #       ####   ####  #####
@@ -1021,25 +1033,16 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 			// int nentries = 10;
 			int nentries = tree->GetEntries();
 
-			float total_nentries = total_var_list.size()*nentries;
+			// float total_nentries = total_var_list.size()*nentries;
             // tmp_compare+= total_nentries;
 			// cout<<"Will process : "<<total_var_list.size()<<" variable(s) * "<<nentries<<" = "<<setprecision(9)<<total_nentries<<" events...."<<endl<<endl;
-
-			//Draw progress bar
-			// Int_t ibar = 0; //progress bar
-			// TMVA::Timer timer(total_nentries, "", true);
-			// TMVA::gConfig().SetDrawProgressBar(1);
 
 			for(int ientry=0; ientry<nentries; ientry++)
 			{
 				// cout<<"ientry "<<ientry<<endl;
 
-				// if(!makeHisto_inputVars && ientry%20000==0) {cout<<ITAL(""<<ientry<<" / "<<nentries<<"")<<endl;}
-				// else if(makeHisto_inputVars)
-				// {
-					ibar++;
-					if(ibar%20000==0) {timer.DrawProgressBar(ibar, "test");}
-				// }
+                ibar++;
+                if(draw_progress_bar && ibar%50000==0) {timer.DrawProgressBar(ibar, ""); cout<<ibar<<" / "<<total_nentries_toProcess<<endl; }
 
 				weight_SF = 1;
 
@@ -1100,17 +1103,19 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
 					for(int isyst=0; isyst<syst_list.size(); isyst++)
 					{
+                        //-- Protections : not all syst weights apply to all samples, etc.
+                        if(sample_list[isample] == "DATA" && syst_list[isyst] != "") {break;}
+                        else if(systTree_list[itree] != "") {break;} //Syst event weights only stored in nominal TTree
+
 						double weight_tmp = 0; //Fill histo with this weight ; manipulate differently depending on syst
 
-						// cout<<"-- channel "<<channel_list[ichan]<<" / syst "<<syst_list[isyst]<<endl;
+						// cout<<"-- sample "<<sample_list[isample]<<" / channel "<<channel_list[ichan]<<" / syst "<<syst_list[isyst]<<endl;
 
-						if(syst_list[isyst] != "")
-						{
-							weight_tmp = v_float_systWeights[isyst];
-						}
-						else {weight_tmp = weight*eventMCFactor;} //Nominal (no syst)
+						weight_tmp = weight*eventMCFactor; //Nominal (no syst)
 
-						// cout<<"v_float_systWeights[isyst] "<<v_float_systWeights[isyst]<<endl;
+                        // cout<<"nominal : "<<weight_tmp<<endl;
+                        if(syst_list[isyst] != "") {weight_tmp*= *(v_double_systWeights[isyst]);} //Syst weights were already divided by nominal weight
+                        // cout<<"syst : "<<weight_tmp<<endl;
 
 						if(isnan(weight_tmp) || isinf(weight_tmp))
 						{
@@ -1118,10 +1123,6 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 							cout<<"(channel "<<channel_list[ichan]<<" / syst "<<syst_list[isyst]<<")"<<endl;
 							continue;
 						}
-
-						//Printout weight
-                        // if(sample_list[isample] == "ZZ" && syst_list[isyst].Contains("PU") && channel_list[ichan] == "")
-						// cout<<"v3_histo_chan_syst_var["<<channel_list[ichan]<<"]["<<syst_list[isyst]<<"]+= "<<weight_tmp<<" => Integral "<<v3_histo_chan_syst_var[ichan][isyst]->Integral()<<endl;
 
 						if(makeHisto_inputVars)
 						{
@@ -1161,6 +1162,10 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
 				for(int isyst=0; isyst<syst_list.size(); isyst++)
 				{
+                    //-- Protections : not all syst weights apply to all samples, etc.
+                    if(sample_list[isample] == "DATA" && syst_list[isyst] != "") {break;}
+                    else if(systTree_list[itree] != "") {break;} //Syst event weights only stored in nominal TTree
+
 					// cout<<"isyst "<<isyst<<endl;
 
 					for(int ivar=0; ivar<total_var_list.size(); ivar++)
@@ -1185,11 +1190,9 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
 						file_output->cd();
 
-						// if(template_name == "2D") {v3_histo_chan_syst_var2D[ichan][isyst][ivar]->Write(output_histo_name);}
 						v3_histo_chan_syst_var[ichan][isyst][ivar]->Write(output_histo_name);
 
 						delete v3_histo_chan_syst_var[ichan][isyst][ivar]; v3_histo_chan_syst_var[ichan][isyst][ivar] = NULL;
-						// if(template_name == "2D") {delete v3_histo_chan_syst_var[ichan][isyst][ivar]; v3_histo_chan_syst_var[ichan][isyst][ivar] = NULL;}
 					} //var loop
 				} //syst loop
 			} //chan loop
@@ -1216,16 +1219,38 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
 	file_output->Close(); file_output = NULL;
 
-    // if(template_name == "2Dlin" || template_name == "2D")
-	// {
-	// 	delete reader1; reader1 = NULL;
-	// 	delete reader2; reader2 = NULL;
-	// }
     delete reader; reader = NULL;
 
     //-- Can verify that the total nof processed entries computed from Count_Total_Nof_Entries() was effectively the nof processed entries
     // cout<<"total_nentries_toProcess --> "<<total_nentries_toProcess<<endl;
     // cout<<"tmp_compare --> "<<tmp_compare<<endl;
+
+    //Restore potentially modified variables
+    classifier_name = restore_classifier_name;
+    syst_list = restore_syst_list;
+
+    if(!noSysts_inputVars) //free memory
+    {
+        delete array_PU; array_PU = NULL;
+        delete array_prefiringWeight; array_prefiringWeight = NULL;
+        delete array_Btag; array_Btag = NULL;
+        delete array_LepEff_mu; array_LepEff_mu = NULL;
+        delete array_LepEff_el; array_LepEff_el = NULL;
+    }
+
+
+
+// #    # ###### #####   ####  ######
+// ##  ## #      #    # #    # #
+// # ## # #####  #    # #      #####
+// #    # #      #####  #  ### #
+// #    # #      #   #  #    # #
+// #    # ###### #    #  ####  ######
+
+    if(!makeHisto_inputVars) //For COMBINE fit, want to directly merge contributions from different processes into single histograms
+    {
+        Merge_Templates_ByProcess(output_file_name, template_name);
+    }
 
 	return;
 }
@@ -1309,7 +1334,7 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 
 	TString input_name = "";
 
-	if(use_combine_file) //FIXME
+	if(use_combine_file) //CHANGED
 	{
 		input_name = "./outputs/fitDiagnostics_";
 		input_name+= classifier_name + template_name + "_" + region + filename_suffix;
@@ -1545,18 +1570,20 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 					//--------------------------------------------
 					if(!use_combine_file) //In Combine file, already accounted in binError
 					{
-						for(int itree=0; itree<systTree_list.size(); itree++) //not accounted for ?
+						for(int itree=0; itree<systTree_list.size(); itree++)
 						{
 							for(int isyst=0; isyst<syst_list.size(); isyst++)
 							{
 								//-- Protections : not all syst weights apply to all samples, etc.
-								// if(syst_list[isyst] != "" && systTree_list[itree] != "") {break;} //only nominal
+								if(syst_list[isyst] != "" && systTree_list[itree] != "") {break;} //JES,JER,... -> read first element only
 
 								// cout<<"sample "<<sample_list[isample]<<" / channel "<<channel_list[ichan]<<" / syst "<<syst_list[isyst]<<endl;
 
 								TH1F* histo_syst = 0; //Store the "systematic histograms"
 
-								TString histo_name_syst = histo_name + "__" + syst_list[isyst];
+								TString histo_name_syst = histo_name + "__";
+                                if(syst_list[isyst] != "") {histo_name_syst+= syst_list[isyst];}
+                                else {histo_name_syst+= systTree_list[itree];}
 
 								if(!file_input->GetListOfKeys()->Contains(histo_name_syst)) {continue;} //No error messages if systematics histos not found
 
@@ -2145,8 +2172,6 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 		}
 		else
 		{
-			// if(template_name=="2D") {histo_ratio_data->GetXaxis()->SetTitle("BDT2D bin");}
-			// else if(template_name=="2Dlin") {histo_ratio_data->GetXaxis()->SetTitle("BDT bin");}
             // histo_ratio_data->GetXaxis()->SetTitle(classifier_name+" (vs "+template_name + ")");
             histo_ratio_data->GetXaxis()->SetTitle(classifier_name);
 
@@ -2740,6 +2765,228 @@ void TopEFT_analysis::Compare_TemplateShapes_Processes(TString template_name, TS
 
 	delete c; c = NULL;
 	delete qw; qw = NULL;
+
+	return;
+}
+
+
+
+
+
+
+
+//--------------------------------------------
+//  ######  ######## ########     ######  ##    ##  ######  ########
+// ##    ## ##          ##       ##    ##  ##  ##  ##    ##    ##
+// ##       ##          ##       ##         ####   ##          ##
+//  ######  ######      ##        ######     ##     ######     ##
+//       ## ##          ##             ##    ##          ##    ##
+// ##    ## ##          ##       ##    ##    ##    ##    ##    ##    ###
+//  ######  ########    ##        ######     ##     ######     ##    ###
+
+//    ###    ########  ########  ########  ########  ######   ######  ########  ######
+//   ## ##   ##     ## ##     ## ##     ## ##       ##    ## ##    ## ##       ##    ##
+//  ##   ##  ##     ## ##     ## ##     ## ##       ##       ##       ##       ##
+// ##     ## ##     ## ##     ## ########  ######    ######   ######  ######    ######
+// ######### ##     ## ##     ## ##   ##   ##             ##       ## ##             ##
+// ##     ## ##     ## ##     ## ##    ##  ##       ##    ## ##    ## ##       ##    ##
+// ##     ## ########  ########  ##     ## ########  ######   ######  ########  ######
+//--------------------------------------------
+
+//Problem : in Potato code, systematics variations weights are encoded into arrays. Hence, can not directly set branch addresses via SetBranchAddress('name', &var)
+//==> My solution : for each of these arrays, hard-code 1 class member array with corresponding size. This member array 'reads' the array stored in the ntuple.
+//==> To make things simpler, I then use a vector<double*> so that each element will effectively read the value of a given systematic variation. From there, can proceed as usual...
+//Use this function to hard-code which vector element corresponds to which systematics, and set the address
+//NB : some inconsistent indices : down variation may be element 0 or 1... hence, hard-coded !
+void TopEFT_analysis::SetBranchAddress_SystVariationArray(TTree* t, TString systname, vector<Double_t*> &v_doubles, int isyst)
+{
+    TString array_name = ""; //Name of the systematic array as stored in the ntuple
+    double* address_memberArray = NULL; //Address to the class member which will hold the array values (hardcoded)
+    int index=-1; //index of the specific array member which holds the value of the syst of interest (hardcoded)
+
+    if(systname == "") {return;}
+    else if(systname.BeginsWith("PU"))
+    {
+        address_memberArray = array_PU;
+        array_name = "varWeightPU";
+        if(systname.EndsWith("Down")) {index = 0;}
+        else if(systname.EndsWith("Up")) {index = 1;}
+    }
+    else if(systname.BeginsWith("prefiringWeight"))
+    {
+        address_memberArray = array_prefiringWeight;
+        array_name = "varWeightPrefire";
+        if(systname.EndsWith("Down")) {index = 0;}
+        else if(systname.EndsWith("Up")) {index = 1;}
+    }
+    else if(systname.BeginsWith("Btag"))
+    {
+        address_memberArray = array_Btag;
+        array_name = "btagEventWeightVar";
+        if(systname.EndsWith("HUp")) {index = 0;}
+        else if(systname.EndsWith("HDown")) {index = 1;}
+        else if(systname.EndsWith("LUp")) {index = 2;}
+        else if(systname.EndsWith("LDown")) {index = 3;}
+    }
+    else if(systname.BeginsWith("LepEff_mu"))
+    {
+        address_memberArray = array_LepEff_mu;
+        array_name = "varWeightMuon";
+        if(systname.EndsWith("LooseDown")) {index = 0;}
+        else if(systname.EndsWith("LooseUp")) {index = 1;}
+        else if(systname.EndsWith("TightDown")) {index = 2;}
+        else if(systname.EndsWith("TightUp")) {index = 3;}
+    }
+    else if(systname.BeginsWith("LepEff_el"))
+    {
+        address_memberArray = array_LepEff_el;
+        array_name = "varWeightElectron";
+        if(systname.EndsWith("LooseDown")) {index = 0;}
+        else if(systname.EndsWith("LooseUp")) {index = 1;}
+        else if(systname.EndsWith("TightDown")) {index = 2;}
+        else if(systname.EndsWith("TightUp")) {index = 3;}
+    }
+    else{cout<<FRED("ERROR ! Systematic '"<<systname<<"' not included in function SetBranchAddress_SystVariation() from Helper.cxx ! Can *not* compute it !")<<endl; return;}
+
+    t->SetBranchStatus(array_name, 1);
+    t->SetBranchAddress(array_name, address_memberArray);
+    v_doubles[isyst] = &address_memberArray[index];
+
+    return;
+}
+
+
+
+
+
+
+
+
+
+//--------------------------------------------
+ // #    # ###### #####   ####  ######    ##### ###### #    # #####  #        ##   ##### ######  ####
+ // ##  ## #      #    # #    # #           #   #      ##  ## #    # #       #  #    #   #      #
+ // # ## # #####  #    # #      #####       #   #####  # ## # #    # #      #    #   #   #####   ####
+ // #    # #      #####  #  ### #           #   #      #    # #####  #      ######   #   #           #
+ // #    # #      #   #  #    # #           #   #      #    # #      #      #    #   #   #      #    #
+ // #    # ###### #    #  ####  ######      #   ###### #    # #      ###### #    #   #   ######  ####
+//--------------------------------------------
+
+/**
+ * The main code is producing/plotting template histograms for each subprocess independently
+ * However, in COMBINE, may want to group some processes (e.g. "Rares", "EWK", ...)
+ * ===> In addition to individual histos, also merge the relevant subprocesses together and store the merged histos
+ * NB : here the order of loops is important because we sum histograms recursively, and the 'sample_list' loop must be the most nested one !
+ */
+void TopEFT_analysis::Merge_Templates_ByProcess(TString filename, TString template_name, bool force_normTemplate_positive/*=false*/)
+{
+	cout<<endl<<FYEL("==> Merging some templates in file : ")<<filename<<endl;
+
+	if(!Check_File_Existence(filename) ) {cout<<endl<<FRED("File "<<filename<<" not found! Abort template merging !")<<endl; return;}
+	TFile* f = TFile::Open(filename, "UPDATE");
+
+	//NB :here the order of loops is important because we sum histograms recursively ! The 'sample_list' loop *must be the most nested one* !
+	for(int ichan=0; ichan<channel_list.size(); ichan++)
+	{
+		for(int itree=0; itree<systTree_list.size(); itree++)
+		{
+			// if(systTree_list[itree] != "" && channel_list.size() > 1 && channel_list[ichan] == "") {continue;}
+
+			for(int isyst=0; isyst<syst_list.size(); isyst++)
+			{
+				// if(((channel_list.size() > 1 && channel_list[ichan] == "") || systTree_list[itree] != "") && syst_list[isyst] != "") {continue;}
+				if(systTree_list[itree] != "" && syst_list[isyst] != "") {break;}
+
+				TH1F* h_merging = 0; //Merged histogram
+
+				for(int isample=0; isample<sample_list.size(); isample++)
+				{
+					//-- Protections : not all syst weights apply to all samples, etc.
+					if(sample_list[isample] == "DATA" && (systTree_list[itree] != "" || syst_list[isyst] != "")) {continue;} //nominal data only
+
+					// cout<<endl<<"Syst "<<syst_list[isyst]<<systTree_list[itree]<<" / chan "<<channel_list[ichan]<<" / sample "<<sample_list[isample]<<endl;
+
+					//Check if this sample needs to be merged, i.e. if the samples before/after belong to the same "group of samples"
+					bool merge_this_sample = false;
+					if(!isample && sample_groups.size() > 1 && sample_groups[isample+1] == sample_groups[isample]) {merge_this_sample = true;}
+					else if(isample == sample_list.size()-1 && sample_groups[isample-1] == sample_groups[isample]) {merge_this_sample = true;}
+					else if(isample > 0 && isample < sample_list.size()-1 && (sample_groups[isample+1] == sample_groups[isample] || sample_groups[isample-1] == sample_groups[isample])) {merge_this_sample = true;}
+
+					// cout<<"merge_this_sample "<<merge_this_sample<<endl;
+					if(!merge_this_sample) {continue;} //Only care about samples to merge : others are already stored in file
+
+					TString samplename = sample_list[isample];
+					if(samplename == "DATA") {samplename = "data_obs";}
+
+					TString histoname = classifier_name + template_name + "_" + region;
+					if(channel_list[ichan] != "") {histoname+= "_" + channel_list[ichan];}
+					histoname+= "__" + samplename;
+					if(syst_list[isyst] != "") {histoname+= "__" + syst_list[isyst];}
+					else if(systTree_list[itree] != "") {histoname+= "__" + systTree_list[itree];}
+					// cout<<"histoname "<<histoname<<endl;
+
+					if(!f->GetListOfKeys()->Contains(histoname) )
+					{
+						cout<<FRED("Histo "<<histoname<<" not found in file "<<filename<<" !")<<endl;
+					 	continue;
+					}
+
+					TH1F* h_tmp = (TH1F*) f->Get(histoname); //Get individual histograms
+					// cout<<"h_tmp->Integral() = "<<h_tmp->Integral()<<endl;
+
+					int factor = +1; //Addition
+					// if(sample_list[isample] == "Fakes_MC") {factor = -1;} //Substraction of 'MC Fakes' (prompt contribution to fakes)
+
+					if(h_tmp != 0)
+					{
+						if(!h_merging) {h_merging = (TH1F*) h_tmp->Clone();}
+						else {h_merging->Add(h_tmp, factor);}
+					}
+					else {cout<<"h_tmp null !"<<endl;}
+
+					// cout<<"h_merging->Integral() = "<<h_merging->Integral()<<endl;
+
+					delete h_tmp; h_tmp = 0;
+					if(!h_merging) {cout<<"h_merging is null ! Fix this first"<<endl; return;}
+
+					//Check if next sample will be merged with this one, or else if must write the histogram
+					if(isample < sample_list.size()-1 && sample_groups[isample+1] == sample_groups[isample]) {continue;}
+					else
+					{
+						// if(force_normTemplate_positive)
+						// {
+						// 	//If integral of histo is negative, set to 0 (else COMBINE crashes) -- must mean that norm is close to 0 anyway
+						// 	if(h_merging->Integral() <= 0)
+						// 	{
+						// 		// cout<<endl<<"While merging processes by groups ('Rares'/...) :"<<endl<<FRED(" h_merging->Integral() = "<<h_merging->Integral()<<" (<= 0) ! Distribution set to ~>0 (flat), to avoid crashes in COMBINE !")<<endl;
+						// 		Set_Histogram_FlatZero(h_merging, true, "h_merging");
+						// 		cout<<"(Syst "<<syst_list[isyst]<<systTree_list[itree]<<" / chan "<<channel_list[ichan]<<" / sample "<<sample_list[isample]<<")"<<endl;
+						// 	}
+						// }
+						// cout<<"h_merging->Integral() = "<<h_merging->Integral()<<endl;
+
+						TString histoname_new = classifier_name + template_name + "_" + region;
+						if(channel_list[ichan] != "") {histoname_new+="_"  + channel_list[ichan];}
+						histoname_new+= "__" + sample_groups[isample];
+						if(syst_list[isyst] != "") {histoname_new+= "__" + syst_list[isyst];}
+						else if(systTree_list[itree] != "") {histoname_new+= "__" + systTree_list[itree];}
+
+						f->cd();
+						h_merging->Write(histoname_new, TObject::kOverwrite);
+
+						// if(sample_groups[isample] == "Fakes")
+						// cout<<"- Writing merged histo "<<histoname_new<<" with integral "<<h_merging->Integral()<<endl;
+
+						delete h_merging; h_merging = 0;
+					} //write histo
+				} //sample loop
+			} //syst loop
+		} //tree loop
+	} //channel loop
+
+	f->Close();
+
+	cout<<endl<<FYEL("... Done")<<endl<<endl<<endl;
 
 	return;
 }

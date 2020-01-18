@@ -76,6 +76,9 @@ class TopEFT_analysis
     void Draw_Templates(bool, TString, TString="", bool=true, bool=false); //Draw templates or input variables
     void Compare_TemplateShapes_Processes(TString, TString);
 
+    void SetBranchAddress_SystVariationArray(TTree*, TString, vector<Double_t*>&, int); //Details in func comments
+    void Merge_Templates_ByProcess(TString, TString, bool=false);
+
 //--- MEMBERS
 	bool stop_program;
 
@@ -125,6 +128,13 @@ class TopEFT_analysis
 	bool show_pulls_ratio;
     bool is_blind;
     int nSampleGroups; //Nof sample groups (e.g. 'Rares',  ...)
+
+    //Systematics variations arrays //More details in comments of func Handle_SystVariationArray()
+    double* array_PU;
+    double* array_prefiringWeight;
+    double* array_Btag;
+    double* array_LepEff_mu;
+    double* array_LepEff_el;
 };
 
 #endif

@@ -18,7 +18,7 @@ int main(int argc, char **argv)
     TString signal_process = "tZq";
     TString luminosity = "2016"; //'2016','2017','2018', 'Run2' -- DECIDES WHICH NTUPLES ARE READ !
     bool split_analysis_by_channel = true; //true <-> will *also* produce templates/histos/plots for each subchannel (defined below)
-    bool use_systematics = false;
+    bool use_systematics = true; //true <-> will compute/store systematics selected below
 
     //-- MVA
     TString classifier_name = "BDT";
@@ -112,7 +112,7 @@ int main(int argc, char **argv)
     thesamplelist.push_back("tHq"); thesamplegroups.push_back("tX");
     thesamplelist.push_back("tHW"); thesamplegroups.push_back("tX");
     thesamplelist.push_back("ST"); thesamplegroups.push_back("tX");
-    // thesamplelist.push_back("tGJets"); thesamplegroups.push_back("tX");
+    // thesamplelist.push_back("tGJets"); thesamplegroups.push_back("tX"); //useless ?
 
     //VV)
     thesamplelist.push_back("WZ"); thesamplegroups.push_back("VV");
@@ -130,7 +130,7 @@ int main(int argc, char **argv)
 
     //TTbar
     thesamplelist.push_back("TTbar_DiLep"); thesamplegroups.push_back("TTbar");
-    // thesamplelist.push_back("TTbar_SemiLep"); thesamplegroups.push_back("TTbar");
+    // thesamplelist.push_back("TTbar_SemiLep"); thesamplegroups.push_back("TTbar"); //useless ?
 
 
 //---------------------------------------------------------------------------
@@ -188,13 +188,30 @@ int main(int argc, char **argv)
     vector<TString> theSystTree; //List of systematics implemented as separate TTrees
     theSystTree.push_back(""); //KEEP ! (<-> nominal TTree)
 
-    if(use_systematics)
+    if(use_systematics) //Define here the list of syst to run
     {
         //-- Implemented as separate TTrees
         // theSystTree.push_back("JESDown"); theSystTree.push_back("JESUp");
 
         //-- Implementend as event weights
-        // theSystWeights.push_back("PUDown"); theSystWeights.push_back("PUUp");
+        theSystWeights.push_back("PUDown"); theSystWeights.push_back("PUUp");
+        theSystWeights.push_back("prefiringWeightDown"); theSystWeights.push_back("prefiringWeightUp");
+        theSystWeights.push_back("BtagHDown"); theSystWeights.push_back("BtagHUp");
+        theSystWeights.push_back("BtagLDown"); theSystWeights.push_back("BtagLUp");
+        theSystWeights.push_back("LepEff_muLooseDown"); theSystWeights.push_back("LepEff_muLooseUp");
+        theSystWeights.push_back("LepEff_muTightDown"); theSystWeights.push_back("LepEff_muTightUp");
+        theSystWeights.push_back("LepEff_elLooseDown"); theSystWeights.push_back("LepEff_elLooseUp");
+        theSystWeights.push_back("LepEff_elTightDown"); theSystWeights.push_back("LepEff_elTightUp");
+
+        // theSystWeights.push_back("TrigEffDown"); theSystWeights.push_back("TrigEffUp");
+        // theSystWeights.push_back("LFcontDown"); theSystWeights.push_back("LFcontUp");
+        // theSystWeights.push_back("HFstats1Down"); theSystWeights.push_back("HFstats1Up");
+        // theSystWeights.push_back("HFstats2Down"); theSystWeights.push_back("HFstats2Up");
+        // theSystWeights.push_back("CFerr1Down"); theSystWeights.push_back("CFerr1Up");
+        // theSystWeights.push_back("CFerr2Down"); theSystWeights.push_back("CFerr2Up");
+        // theSystWeights.push_back("HFcontDown"); theSystWeights.push_back("HFcontUp");
+        // theSystWeights.push_back("LFstats1Down"); theSystWeights.push_back("LFstats1Up");
+        // theSystWeights.push_back("LFstats2Down"); theSystWeights.push_back("LFstats2Up");
     }
 
 
@@ -211,7 +228,7 @@ int main(int argc, char **argv)
 //*** CHOOSE HERE FROM BOOLEANS WHAT YOU WANT TO DO !
 
 //-----------------    TRAINING
-    bool train_BDT = true; //Train selected BDT in selected region (with events in training category)
+    bool train_BDT = false; //Train selected BDT in selected region (with events in training category)
 
 //-----------------    TEMPLATES CREATION
     bool create_templates = true; //Create MVA templates
@@ -222,7 +239,7 @@ int main(int argc, char **argv)
 //-----------------    PLOTS
     TString plotChannel = ""; //Can choose to plot particular subchannel //uu, ue, ee, ...
 
-    bool draw_templates = true; //Plot templates of selected BDT, in selected region
+    bool draw_templates = false; //Plot templates of selected BDT, in selected region
         bool prefit = true; //true <-> plot prefit templates ; else postfit (requires combine output file)
         bool use_combine_file = false; //true <-> use MLF output file from Combine (can get postfit plots, total error, etc.)
 
