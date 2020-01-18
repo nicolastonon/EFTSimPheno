@@ -47,7 +47,7 @@ using namespace std;
 /**
  * Produce script containing the commands to produce the datacards (single and combination) automatically
  */
-void Script_Datacards_TemplateFit(char include_systematics, char include_statistical, TString template_name, TString region, vector<TString> v_templates, vector<TString> v_channel, vector<TString> v_regions)
+void Script_Datacards_TemplateFit(char include_systematics, char include_statistical, TString template_name, TString region, vector<TString> v_templates, vector<TString> v_channel, vector<TString> v_regions, TString lumiYear)
 {
     //Check if use shape syst or not
 	TString systChoice;
@@ -98,7 +98,7 @@ void Script_Datacards_TemplateFit(char include_systematics, char include_statist
 			file_out <<"mkdir "<<dir+"/"+region_tmp<<endl<<endl;
 
 		    // TString file_histos = "../templates/Combine_Input.root";
-			TString file_histos = "../../../../templates/Templates_BDT"+v_templates[itemplate]+"_"+region_tmp+".root";
+			TString file_histos = "../../../templates/Templates_BDT"+v_templates[itemplate]+"_"+region_tmp+"_"+lumiYear+".root";
 
 			cout<<"---> Will use filepath : "<<file_histos<<endl<<endl;
 
@@ -215,8 +215,19 @@ for(int ichan=0; ichan<v_channel.size(); ichan++)
 //--------------------------------------------
 
 //Ask user to choose options at command line for script generation
-void Choose_Arguments_From_CommandLine(char& include_systematics, char& include_statistical, TString& template_name, TString& region)
+void Choose_Arguments_From_CommandLine(char& include_systematics, char& include_statistical, TString& template_name, TString& region, TString& lumiYear)
 {
+    cout<<endl<<FBLU("Choose the luminosity ('Run2' / '2016' / '2017' / '2018') ")<<endl;
+    cin>>lumiYear;
+    while(lumiYear != "Run2" && lumiYear != "2016" && lumiYear != "2017" && lumiYear != "2018")
+    {
+    	cin.clear();
+    	cin.ignore(1000, '\n');
+
+    	cout<<" Wrong answer ! Retry :"<<endl;
+    	cin>>lumiYear;
+    }
+
 	//Choose whether to include shape syst or not
 	cout<<endl<<FYEL("--- Do you want to include the *shape* systematics as nuisances in the datacards ? (y/n)")<<endl;
 	cin>>include_systematics;
@@ -292,6 +303,8 @@ int main()
 {
 //Can set options here (can be modified at command line)
 //--------------------------------------------
+    TString lumiYear = "2016"; //2016,2017,2018,Run2
+
     vector<TString> v_templates;
     v_templates.push_back(""); //Default BDT
 
@@ -303,17 +316,18 @@ int main()
 
     vector<TString> v_regions;
 	v_regions.push_back("SR");
+
+    char include_systematics = 'n';
+    char include_statistical = 'n';
 //--------------------------------------------
 
 
 //Automated
 //--------------------------------------------
-    char include_systematics = 'n';
-    char include_statistical = 'n';
     TString template_name = "0", region = "0";
-    Choose_Arguments_From_CommandLine(include_systematics, include_statistical, template_name, region);
+    Choose_Arguments_From_CommandLine(include_systematics, include_statistical, template_name, region, lumiYear);
 
-	Script_Datacards_TemplateFit(include_systematics, include_statistical, template_name, region, v_templates, v_channel, v_regions);
+	Script_Datacards_TemplateFit(include_systematics, include_statistical, template_name, region, v_templates, v_channel, v_regions, lumiYear);
 
 	return 0;
 }

@@ -427,10 +427,15 @@ int main()
     }
     else {cout<<FRED("Wrong arg ! Abort !")<<endl; return 0;}
 
-    v_samples.push_back("ttW"); v_isSignal.push_back(0); v_sampleUncert.push_back(15);
-    v_samples.push_back("ttH"); v_isSignal.push_back(0); v_sampleUncert.push_back(15);
+    // v_samples.push_back("ttW"); v_isSignal.push_back(0); v_sampleUncert.push_back(15);
+    // v_samples.push_back("ttH"); v_isSignal.push_back(0); v_sampleUncert.push_back(15);
     // v_samples.push_back("Rares"); v_isSignal.push_back(0); v_sampleUncert.push_back(-1);
-    // v_samples.push_back("Rares"); v_isSignal.push_back(0); v_sampleUncert.push_back(-1);
+
+    v_samples.push_back("ttX"); v_isSignal.push_back(0); v_sampleUncert.push_back(20);
+    v_samples.push_back("tX"); v_isSignal.push_back(0); v_sampleUncert.push_back(20);
+    v_samples.push_back("VV"); v_isSignal.push_back(0); v_sampleUncert.push_back(20);
+    v_samples.push_back("DY"); v_isSignal.push_back(0); v_sampleUncert.push_back(20);
+    v_samples.push_back("TTbar_DiLep"); v_isSignal.push_back(0); v_sampleUncert.push_back(20);
 
 
 
@@ -464,6 +469,14 @@ int main()
 //--------------------------------------------
     vector<TString> v_shapeSyst;
     // v_shapeSyst.push_back("JER");
+    v_shapeSyst.push_back("PU");
+    v_shapeSyst.push_back("prefiringWeight");
+    v_shapeSyst.push_back("BtagH");
+    v_shapeSyst.push_back("BtagL");
+    v_shapeSyst.push_back("LepEff_muLoose");
+    v_shapeSyst.push_back("LepEff_muTight");
+    v_shapeSyst.push_back("LepEff_elLoose");
+    v_shapeSyst.push_back("LepEff_elTight");
 
 
 //  ####    ##   #      #       ####
