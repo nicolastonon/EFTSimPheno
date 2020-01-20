@@ -559,7 +559,42 @@ void Compare_Histograms(TString filepath1, TString filepath2, TString histname1,
 	return;
 }
 
+//Use custom color palette
+//-- //-- Idea : take good-looking/efficient color palettes from web and apply it manually
+void Set_Custom_ColorPalette(vector<TColor*> &v_custom_colors, vector<int> &v, vector<TString> v_sampleGroups)
+{
+    // TColor* col = new TColor(1700, 141./255., 211./255., 199./255.);
+    // col.SetRGB(141./255., 211./255., 199./255.);
+    // cout<<col->GetNumber()<<endl;
 
+    // Int_t dark   = TColor::GetColorDark(color_index);
+    // Int_t bright = TColor::GetColorBright(color_index);
+
+    // Int_t ci = TColor::GetFreeColorIndex(); //returns a free color index which can be used to define a user custom color.
+    // TColor *color = new TColor(ci, 0.1, 0.2, 0.3);
+
+	v.resize(10);
+	v_custom_colors.resize(10, 0);
+
+	//-- Colors definition : Number + RGB value, from 0 to 1
+    v_custom_colors[0] = 0; //FIXME
+    v_custom_colors[1] = new TColor(9002, 31./255., 120./255., 180./255.);
+    v_custom_colors[2] = new TColor(9001, 166./255., 206./255., 227./255.);
+    v_custom_colors[3] = new TColor(9004, 51./255., 160./255., 44./255.);
+    v_custom_colors[4] = new TColor(9003, 178./255., 223./255., 138./255.);
+    // v_custom_colors[5] = new TColor(9005, 251./255., 251./255., 153./255.);
+	// v_custom_colors[6] = new TColor(9006, 227./255., 26./255., 28./255.);
+
+    int index_customColor = 0;
+    for(int isample=0; isample<v_sampleGroups.size(); isample++)
+    {
+        if(isample >=1 && v_sampleGroups[isample] != v_sampleGroups[isample-1]) {index_customColor++;}
+
+        if(v_custom_colors[index_customColor] != 0) {v[isample] = v_custom_colors[index_customColor]->GetNumber();}
+    }
+
+    return;
+}
 
 
 
@@ -675,6 +710,8 @@ void Get_Samples_Colors(vector<int>& v_colors, vector<TString> v_samples, int co
 {
 	int i_skipData = 0; //index //include data in color vector for now (empty element)
 
+    TColor test(9001, 166./255., 206./255., 227./255.);
+
 //--------------------------------------------
 	if(color_scheme == 0)
 	{
@@ -682,6 +719,7 @@ void Get_Samples_Colors(vector<int>& v_colors, vector<TString> v_samples, int co
 		{
             //Signals
             if(v_samples[isample] == "tZq") {v_colors[isample-i_skipData] = kOrange+10;}
+            if(v_samples[isample] == "tZq") {v_colors[isample-i_skipData] = test.GetNumber();}
             else if(v_samples[isample] == "ttZ") {v_colors[isample-i_skipData] = kOrange+6;}
 
             //ttX
@@ -701,60 +739,25 @@ void Get_Samples_Colors(vector<int>& v_colors, vector<TString> v_samples, int co
             else if(v_samples[isample] == "ST") {v_colors[isample-i_skipData] = kSpring+2;}
 
             //VV(V)
-            else if(v_samples[isample] == "WZ") {v_colors[isample-i_skipData] = kViolet-4;}
-            else if(v_samples[isample] == "ZZ4l") {v_colors[isample-i_skipData] = kViolet-4;}
-            else if(v_samples[isample] == "ZZZ") {v_colors[isample-i_skipData] = kViolet-4;}
-            else if(v_samples[isample] == "WZZ") {v_colors[isample-i_skipData] = kViolet-4;}
-            else if(v_samples[isample] == "WWW") {v_colors[isample-i_skipData] = kViolet-4;}
-            else if(v_samples[isample] == "WWZ") {v_colors[isample-i_skipData] = kViolet-4;}
-            else if(v_samples[isample] == "WZ2l2q") {v_colors[isample-i_skipData] = kViolet-4;}
-            else if(v_samples[isample] == "ZZ2l2q") {v_colors[isample-i_skipData] = kViolet-4;}
-            else if(v_samples[isample] == "ZG2l2g") {v_colors[isample-i_skipData] = kViolet-4;}
+            else if(v_samples[isample] == "WZ") {v_colors[isample-i_skipData] = kViolet-6;}
+            else if(v_samples[isample] == "ZZ4l") {v_colors[isample-i_skipData] = kViolet-6;}
+            else if(v_samples[isample] == "ZZZ") {v_colors[isample-i_skipData] = kViolet-6;}
+            else if(v_samples[isample] == "WZZ") {v_colors[isample-i_skipData] = kViolet-6;}
+            else if(v_samples[isample] == "WWW") {v_colors[isample-i_skipData] = kViolet-6;}
+            else if(v_samples[isample] == "WWZ") {v_colors[isample-i_skipData] = kViolet-6;}
+            else if(v_samples[isample] == "WZ2l2q") {v_colors[isample-i_skipData] = kViolet-6;}
+            else if(v_samples[isample] == "ZZ2l2q") {v_colors[isample-i_skipData] = kViolet-6;}
+            else if(v_samples[isample] == "ZG2l2g") {v_colors[isample-i_skipData] = kViolet-6;}
 
             //Fakes
-            else if(v_samples[isample] == "DY") {v_colors[isample-i_skipData] = kAzure-7;}
+            else if(v_samples[isample] == "DY") {v_colors[isample-i_skipData] = kGray;} //kAzure-7
 
-            else if(v_samples[isample] == "TTbar_DiLep") {v_colors[isample-i_skipData] = kCyan-6;} //kPink-4
-            else if(v_samples[isample] == "TTbar_SemiLep") {v_colors[isample-i_skipData] = kCyan-6;}
+            else if(v_samples[isample] == "TTbar_DiLep") {v_colors[isample-i_skipData] = kGray+2;} //kPink-4, kCyan-6;
+            else if(v_samples[isample] == "TTbar_SemiLep") {v_colors[isample-i_skipData] = kGray+2;}
 		}
 	}
 
 	return;
-}
-
-//Use custom color palette
-//-- Idea : take good-looking/efficient color palettes from web and apply it manually
-void Set_Custom_ColorPalette(vector<TColor*> &v_custom_colors, vector<int> &v)
-{
-    // TColor* col = new TColor(1700, 141./255., 211./255., 199./255.);
-    // col.SetRGB(141./255., 211./255., 199./255.);
-    // cout<<col->GetNumber()<<endl;
-
-	v.resize(9);
-	v_custom_colors.resize(9);
-
-	//-- Colors definition : Number + RGB value, from 0 to 1
-	v_custom_colors[0] = new TColor(9001, 166./255., 206./255., 227./255.);
-    v_custom_colors[1] = new TColor(9002, 31./255., 120./255., 180./255.);
-    v_custom_colors[2] = new TColor(9003, 178./255., 223./255., 138./255.);
-    v_custom_colors[3] = new TColor(9004, 51./255., 160./255., 44./255.);
-    v_custom_colors[4] = new TColor(9005, 251./255., 251./255., 153./255.);
-	v_custom_colors[5] = new TColor(9006, 227./255., 26./255., 28./255.);
-	v_custom_colors[6] = new TColor(9007, 1, 0, 0);
-	v_custom_colors[7] = new TColor(9008, 0, 1, 0);
-	v_custom_colors[8] = new TColor(9009, 0, 0, 1);
-
-    v[0] = v_custom_colors[0]->GetNumber();
-    v[1] = v_custom_colors[1]->GetNumber();
-    v[2] = v_custom_colors[2]->GetNumber();
-    v[3] = v_custom_colors[3]->GetNumber();
-    v[4] = v_custom_colors[3]->GetNumber();
-	v[5] = v_custom_colors[4]->GetNumber();
-	v[6] = v_custom_colors[5]->GetNumber();
-	v[7] = v_custom_colors[6]->GetNumber();
-	v[8] = v_custom_colors[7]->GetNumber();
-
-    return;
 }
 
 //Store here the binnings and ranges of all the variables to be plotted via ControlHistograms files
@@ -769,6 +772,7 @@ bool Get_Variable_Range(TString var, int& nbins, double& xmin, double& xmax)
 	else if(var == "minDRll") {nbins = 15; xmin = 0; xmax = 3.5;}
     else if(var == "maxEtaJet") {nbins = 10; xmin = 0; xmax = 5;}
     else if(var == "forwardJetAbsEta") {nbins = 10; xmin = 0; xmax = 5;}
+    else if(var == "jPrimeAbsEta") {nbins = 10; xmin = 0; xmax = 5;}
 	else if(var == "dPhiHighestPtSSPair") {nbins = 20; xmin = 0; xmax = 3.2;}
 	else if(var == "nJetEta1") {nbins = 7; xmin = 0.5; xmax = 7.5;}
 	else if(var == "lepCharge") {nbins = 3; xmin = -1.5; xmax = 1.5;}
@@ -783,15 +787,8 @@ bool Get_Variable_Range(TString var, int& nbins, double& xmin, double& xmax)
     else if(var == "maxDelPhiLL") {nbins = 10; xmin = 0; xmax = 3;}
     else if(var == "m3l" || var == "Mass_3l") {nbins = 20; xmin = 100; xmax = 500;}
     else if(var == "leptonCharge") {nbins = 3; xmin = -1.5; xmax = 1.5;}
-
     else if(var == "mTW") {nbins = 20; xmin = 0.; xmax = 250;}
-    else if(var == "leptonCharge") {nbins = 3; xmin = -1.5; xmax = 1.5;}
-    else if(var == "leptonCharge") {nbins = 3; xmin = -1.5; xmax = 1.5;}
-    else if(var == "leptonCharge") {nbins = 3; xmin = -1.5; xmax = 1.5;}
-    else if(var == "leptonCharge") {nbins = 3; xmin = -1.5; xmax = 1.5;}
-    else if(var == "leptonCharge") {nbins = 3; xmin = -1.5; xmax = 1.5;}
-    else if(var == "leptonCharge") {nbins = 3; xmin = -1.5; xmax = 1.5;}
-    else if(var == "leptonCharge") {nbins = 3; xmin = -1.5; xmax = 1.5;}
+    else if(var == "recoZ_Mass") {nbins = 20; xmin = 70.; xmax = 120;}
 
     else if(var.Contains("CSV")) {nbins = 20; xmin = 0.; xmax = 1.1;}
     else if(var.Contains("dR") || var.Contains("DelR") ) {nbins = 20; xmin = 0; xmax = 7.;}
@@ -799,7 +796,7 @@ bool Get_Variable_Range(TString var, int& nbins, double& xmin, double& xmax)
 
     // else if(var == "Lep3Pt") {nbins = 20; xmin = 0; xmax = 80;}
 
-    else {nbins = 20; xmin = -5.; xmax = 100.;}
+    else {nbins = 20; xmin = -5.; xmax = 150.;}
     // else {return false;}
 
 	return true;

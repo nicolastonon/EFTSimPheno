@@ -16,7 +16,7 @@ int main(int argc, char **argv)
 
     //-- MAIN OPTIONS --
     TString signal_process = "tZq";
-    TString luminosity = "Run2"; //'2016','2017','2018', 'Run2' -- DECIDES WHICH NTUPLES ARE READ !
+    TString luminosity = "2018"; //'2016','2017','2018', 'Run2' -- DECIDES WHICH NTUPLES ARE READ !
     bool split_analysis_by_channel = true; //true <-> will *also* produce templates/histos/plots for each subchannel (defined below)
     bool use_systematics = true; //true <-> will compute/store systematics selected below
 
@@ -31,6 +31,7 @@ int main(int argc, char **argv)
 
     //-- Other options
     TString plot_extension = ".png"; //extension of plots
+    bool use_custom_colorPalette = true; //true <-> user-defined sample colors
 
 //------------------------------------
 //Apply choices given via command line, if any
@@ -303,7 +304,7 @@ int main(int argc, char **argv)
     //  CREATE INSTANCE OF CLASS & INITIALIZE
     //#############################################
 
-    TopEFT_analysis* theAnalysis = new TopEFT_analysis(thesamplelist, thesamplegroups, theSystWeights, theSystTree, thechannellist, thevarlist, set_v_cut_name, set_v_cut_def, set_v_cut_IsUsedForBDT, set_v_add_var_names, plot_extension, luminosity, show_pulls_ratio, region_choice, signal_process, classifier_name, DNN_type);
+    TopEFT_analysis* theAnalysis = new TopEFT_analysis(thesamplelist, thesamplegroups, theSystWeights, theSystTree, thechannellist, thevarlist, set_v_cut_name, set_v_cut_def, set_v_cut_IsUsedForBDT, set_v_add_var_names, plot_extension, luminosity, show_pulls_ratio, region_choice, signal_process, classifier_name, DNN_type, use_custom_colorPalette);
     if(theAnalysis->stop_program) {return 1;}
 
     //#############################################

@@ -33,7 +33,7 @@ using namespace std;
 /////////////////////////////////////////////////////////
 
 //Overloaded constructor
-TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> thesamplegroups, vector<TString> thesystlist, vector<TString> thesystTreelist, vector<TString> thechannellist, vector<TString> thevarlist, vector<TString> set_v_cut_name, vector<TString> set_v_cut_def, vector<bool> set_v_cut_IsUsedForBDT, vector<TString> set_v_add_var_names, TString theplotextension, TString lumiYear, bool show_pulls, TString region, TString signal_process, TString classifier_name, TString DNN_type)
+TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> thesamplegroups, vector<TString> thesystlist, vector<TString> thesystTreelist, vector<TString> thechannellist, vector<TString> thevarlist, vector<TString> set_v_cut_name, vector<TString> set_v_cut_def, vector<bool> set_v_cut_IsUsedForBDT, vector<TString> set_v_add_var_names, TString theplotextension, TString lumiYear, bool show_pulls, TString region, TString signal_process, TString classifier_name, TString DNN_type, bool use_custom_colorPalette)
 {
     //Canvas definition
     Load_Canvas_Style();
@@ -66,8 +66,7 @@ TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> 
     nSampleGroups=1; //minimum is 1 sample group
     for(int i=1; i<sample_groups.size(); i++)
     {
-        if(sample_groups[i] != sample_groups[i-1])
-        nSampleGroups++;
+        if(sample_groups[i] != sample_groups[i-1]) {nSampleGroups++;}
     }
 
 
@@ -79,8 +78,10 @@ TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> 
 	// cout<<"dir_ntuples : "<<dir_ntuples<<endl;
 
 	//-- Get colors
+    this->use_custom_colorPalette = use_custom_colorPalette;
 	color_list.resize(sample_list.size());
-	Get_Samples_Colors(color_list, sample_list, 0);
+	Get_Samples_Colors(color_list, sample_list, 0); //Read hard-coded sample colors
+    if(use_custom_colorPalette) {Set_Custom_ColorPalette(v_custom_colors, color_list, sample_groups);} //Replace colors with custom color list
 
 	this->classifier_name = classifier_name;
 	if(classifier_name == "DNN")
@@ -193,13 +194,6 @@ TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> 
 		}
 	}
 
-	// color_list.resize(thecolorlist.size());
-	// for(int i=0; i<thecolorlist.size(); i++)
-	// {
-	//     color_list[i] = thecolorlist[i];
-	// }
-	// if(use_custom_colorPalette) {Set_Custom_ColorPalette(v_custom_colors, color_list);}
-
     array_PU = NULL;
     array_prefiringWeight = NULL;
     array_Btag = NULL;
@@ -249,6 +243,14 @@ TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> 
 TopEFT_analysis::~TopEFT_analysis()
 {
     // cout<<"~TopEFT_analysis "<<endl;
+
+    if(use_custom_colorPalette)
+    {
+        for(int icol=0; icol<v_custom_colors.size(); icol++)
+        {
+            delete v_custom_colors[icol];
+        }
+    }
 }
 
 
@@ -1654,7 +1656,8 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 
 				h_tmp->SetFillColor(color_list[isample]);
 				h_tmp->SetLineColor(kBlack);
-                // cout<<"color_list[isample] "<<color_list[isample]<<endl;
+                // cout<<"sample_list[isample] "<<sample_list[isample];
+                // cout<<" => color_list[isample] "<<color_list[isample]<<endl;
 
 				// if((doNot_stack_signal && (samplename.Contains("tZq") || samplename.Contains("ttZ")) )) //Superimpose BSM signal
 				// {

@@ -67,7 +67,7 @@ class TopEFT_analysis
 	public :
 
 	TopEFT_analysis(); //Default constructor
-    TopEFT_analysis(vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<bool>, vector<TString>, TString, TString, bool, TString, TString, TString, TString);
+    TopEFT_analysis(vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<bool>, vector<TString>, TString, TString, bool, TString, TString, TString, TString, bool);
 	~TopEFT_analysis(); //Default destructor
 
 //--- METHODS
@@ -128,6 +128,7 @@ class TopEFT_analysis
 	bool show_pulls_ratio;
     bool is_blind;
     int nSampleGroups; //Nof sample groups (e.g. 'Rares',  ...)
+    bool use_custom_colorPalette;
 
     //Systematics variations arrays //More details in comments of func Handle_SystVariationArray()
     double* array_PU;
