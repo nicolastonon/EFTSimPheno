@@ -84,7 +84,7 @@
     void Set_Custom_ColorPalette(std::vector<TColor*>&, std::vector<int>&); //Set custom color palette
     bool Get_Variable_Range(TString, int&, double&, double&);
     TString Get_Category_Boolean_Name();
-    float Count_Total_Nof_Entries(TString, TString, std::vector<TString>, std::vector<TString>, std::vector<TString>);
+    float Count_Total_Nof_Entries(TString, TString, std::vector<TString>, std::vector<TString>, std::vector<TString>, std::vector<TString>, bool);
     // void SetBranchAddress_SystVariationArray(TTree*, TString, double*);
 
 //--------------------------------------------

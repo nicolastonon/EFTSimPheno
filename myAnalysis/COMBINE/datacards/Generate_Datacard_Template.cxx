@@ -435,7 +435,7 @@ int main()
     v_samples.push_back("tX"); v_isSignal.push_back(0); v_sampleUncert.push_back(20);
     v_samples.push_back("VV"); v_isSignal.push_back(0); v_sampleUncert.push_back(20);
     v_samples.push_back("DY"); v_isSignal.push_back(0); v_sampleUncert.push_back(20);
-    v_samples.push_back("TTbar_DiLep"); v_isSignal.push_back(0); v_sampleUncert.push_back(20);
+    v_samples.push_back("TTbar"); v_isSignal.push_back(0); v_sampleUncert.push_back(20);
 
 
 

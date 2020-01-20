@@ -682,39 +682,40 @@ void Get_Samples_Colors(vector<int>& v_colors, vector<TString> v_samples, int co
 		{
             //Signals
             if(v_samples[isample] == "tZq") {v_colors[isample-i_skipData] = kOrange+10;}
-            else if(v_samples[isample] == "ttZ") {v_colors[isample-i_skipData] = kViolet-6;}
+            else if(v_samples[isample] == "ttZ") {v_colors[isample-i_skipData] = kOrange+6;}
 
             //ttX
-            else if(v_samples[isample] == "ttH") {v_colors[isample-i_skipData] = kOrange+6;}
-            else if(v_samples[isample] == "ttW") {v_colors[isample-i_skipData] = kOrange+6;}
-            else if(v_samples[isample] == "tttt") {v_colors[isample-i_skipData] = kOrange+6;}
-            else if(v_samples[isample] == "ttZZ") {v_colors[isample-i_skipData] = kOrange+6;}
-            else if(v_samples[isample] == "ttWW") {v_colors[isample-i_skipData] = kOrange+6;}
-            else if(v_samples[isample] == "ttWZ") {v_colors[isample-i_skipData] = kOrange+6;}
-            else if(v_samples[isample] == "ttZH") {v_colors[isample-i_skipData] = kOrange+6;}
-            else if(v_samples[isample] == "ttWH") {v_colors[isample-i_skipData] = kOrange+6;}
+            else if(v_samples[isample] == "ttH") {v_colors[isample-i_skipData] = kGreen-5;}
+            else if(v_samples[isample] == "ttW") {v_colors[isample-i_skipData] = kGreen-5;}
+            else if(v_samples[isample] == "tttt") {v_colors[isample-i_skipData] = kGreen-5;}
+            else if(v_samples[isample] == "ttZZ") {v_colors[isample-i_skipData] = kGreen-5;}
+            else if(v_samples[isample] == "ttWW") {v_colors[isample-i_skipData] = kGreen-5;}
+            else if(v_samples[isample] == "ttWZ") {v_colors[isample-i_skipData] = kGreen-5;}
+            else if(v_samples[isample] == "ttZH") {v_colors[isample-i_skipData] = kGreen-5;}
+            else if(v_samples[isample] == "ttWH") {v_colors[isample-i_skipData] = kGreen-5;}
 
             //tX
-            else if(v_samples[isample] == "tHq") {v_colors[isample-i_skipData] = kViolet;}
-            else if(v_samples[isample] == "tHW") {v_colors[isample-i_skipData] = kViolet;}
-            else if(v_samples[isample] == "tGJets") {v_colors[isample-i_skipData] = kViolet;}
-            else if(v_samples[isample] == "ST") {v_colors[isample-i_skipData] = kViolet;}
+            else if(v_samples[isample] == "tHq") {v_colors[isample-i_skipData] = kSpring+2;}
+            else if(v_samples[isample] == "tHW") {v_colors[isample-i_skipData] = kSpring+2;}
+            else if(v_samples[isample] == "tGJets") {v_colors[isample-i_skipData] = kSpring+2;}
+            else if(v_samples[isample] == "ST") {v_colors[isample-i_skipData] = kSpring+2;}
 
             //VV(V)
-            else if(v_samples[isample] == "WZ") {v_colors[isample-i_skipData] = kGreen-2;}
-            else if(v_samples[isample] == "ZZ4l") {v_colors[isample-i_skipData] = kGreen-2;}
-            else if(v_samples[isample] == "ZZZ") {v_colors[isample-i_skipData] = kGreen-2;}
-            else if(v_samples[isample] == "WZZ") {v_colors[isample-i_skipData] = kGreen-2;}
-            else if(v_samples[isample] == "WWW") {v_colors[isample-i_skipData] = kGreen-2;}
-            else if(v_samples[isample] == "WWZ") {v_colors[isample-i_skipData] = kGreen-2;}
-            else if(v_samples[isample] == "WZ2l2q") {v_colors[isample-i_skipData] = kGreen-2;}
-            else if(v_samples[isample] == "ZZ2l2q") {v_colors[isample-i_skipData] = kGreen-2;}
-            else if(v_samples[isample] == "ZG2l2g") {v_colors[isample-i_skipData] = kGreen-2;}
+            else if(v_samples[isample] == "WZ") {v_colors[isample-i_skipData] = kViolet-4;}
+            else if(v_samples[isample] == "ZZ4l") {v_colors[isample-i_skipData] = kViolet-4;}
+            else if(v_samples[isample] == "ZZZ") {v_colors[isample-i_skipData] = kViolet-4;}
+            else if(v_samples[isample] == "WZZ") {v_colors[isample-i_skipData] = kViolet-4;}
+            else if(v_samples[isample] == "WWW") {v_colors[isample-i_skipData] = kViolet-4;}
+            else if(v_samples[isample] == "WWZ") {v_colors[isample-i_skipData] = kViolet-4;}
+            else if(v_samples[isample] == "WZ2l2q") {v_colors[isample-i_skipData] = kViolet-4;}
+            else if(v_samples[isample] == "ZZ2l2q") {v_colors[isample-i_skipData] = kViolet-4;}
+            else if(v_samples[isample] == "ZG2l2g") {v_colors[isample-i_skipData] = kViolet-4;}
 
             //Fakes
-            else if(v_samples[isample] == "DY") {v_colors[isample-i_skipData] = kCyan;}
-            else if(v_samples[isample] == "TTbar_DiLep") {v_colors[isample-i_skipData] = kPink-4;}
-            else if(v_samples[isample] == "TTbar_SemiLep") {v_colors[isample-i_skipData] = kPink-4;}
+            else if(v_samples[isample] == "DY") {v_colors[isample-i_skipData] = kAzure-7;}
+
+            else if(v_samples[isample] == "TTbar_DiLep") {v_colors[isample-i_skipData] = kCyan-6;} //kPink-4
+            else if(v_samples[isample] == "TTbar_SemiLep") {v_colors[isample-i_skipData] = kCyan-6;}
 		}
 	}
 
@@ -767,24 +768,39 @@ bool Get_Variable_Range(TString var, int& nbins, double& xmin, double& xmax)
 	else if(var == "dEtaFwdJetClosestLep") {nbins = 15; xmin = 0; xmax = 5;}
 	else if(var == "minDRll") {nbins = 15; xmin = 0; xmax = 3.5;}
     else if(var == "maxEtaJet") {nbins = 10; xmin = 0; xmax = 5;}
+    else if(var == "forwardJetAbsEta") {nbins = 10; xmin = 0; xmax = 5;}
 	else if(var == "dPhiHighestPtSSPair") {nbins = 20; xmin = 0; xmax = 3.2;}
 	else if(var == "nJetEta1") {nbins = 7; xmin = 0.5; xmax = 7.5;}
 	else if(var == "lepCharge") {nbins = 3; xmin = -1.5; xmax = 1.5;}
 	else if(var == "hardestBjetPt") {nbins = 20; xmin = 20; xmax = 300;}
-	else if(var == "hardestBjetEta") {nbins = 40; xmin = 0; xmax = 0.5;}
+    else if(var == "hardestBjetEta") {nbins = 40; xmin = 0; xmax = 2.5;}
 	else if(var == "FwdJetPt") {nbins = 20; xmin = 20; xmax = 200;}
 	else if(var == "inv_mll") {nbins = 20; xmin = 50; xmax = 130;}
     else if(var == "mHT") {nbins = 10; xmin = 200; xmax = 1200;}
     else if(var == "top_mass") {nbins = 15; xmin = 100; xmax = 300;}
     else if(var == "dPhijj_max") {nbins = 10; xmin = 0; xmax = 3;}
+    else if(var == "maxDijetMass") {nbins = 10; xmin = 0; xmax = 400;}
+    else if(var == "maxDelPhiLL") {nbins = 10; xmin = 0; xmax = 3;}
     else if(var == "m3l" || var == "Mass_3l") {nbins = 20; xmin = 100; xmax = 500;}
     else if(var == "leptonCharge") {nbins = 3; xmin = -1.5; xmax = 1.5;}
-    else if(var.Contains("CSV")) {nbins = 20; xmin = 0.; xmax = 1.1;}
 
+    else if(var == "mTW") {nbins = 20; xmin = 0.; xmax = 250;}
+    else if(var == "leptonCharge") {nbins = 3; xmin = -1.5; xmax = 1.5;}
+    else if(var == "leptonCharge") {nbins = 3; xmin = -1.5; xmax = 1.5;}
+    else if(var == "leptonCharge") {nbins = 3; xmin = -1.5; xmax = 1.5;}
+    else if(var == "leptonCharge") {nbins = 3; xmin = -1.5; xmax = 1.5;}
+    else if(var == "leptonCharge") {nbins = 3; xmin = -1.5; xmax = 1.5;}
+    else if(var == "leptonCharge") {nbins = 3; xmin = -1.5; xmax = 1.5;}
+    else if(var == "leptonCharge") {nbins = 3; xmin = -1.5; xmax = 1.5;}
+
+    else if(var.Contains("CSV")) {nbins = 20; xmin = 0.; xmax = 1.1;}
     else if(var.Contains("dR") || var.Contains("DelR") ) {nbins = 20; xmin = 0; xmax = 7.;}
+    else if(var.BeginsWith("cos")) {nbins = 20; xmin = -1.; xmax = 1.;}
 
     // else if(var == "Lep3Pt") {nbins = 20; xmin = 0; xmax = 80;}
-	else {return false;}
+
+    else {nbins = 20; xmin = -5.; xmax = 100.;}
+    // else {return false;}
 
 	return true;
 }
@@ -800,9 +816,39 @@ TString Get_Category_Boolean_Name()
 //Computes total nof entries which will be processed by the Produce_Templates() function, so that the Timebar is correct
 //NB1 : don't account for nof syst weights, since they are computed all at once when reading an event
 //NB2 : this returns the nof entries which will get read, not processed (else, should take cuts into account, etc.)
-float Count_Total_Nof_Entries(TString dir_ntuples, TString t_name, vector<TString> v_samples, vector<TString> v_systTrees, vector<TString> v_vars)
+float Count_Total_Nof_Entries(TString dir_ntuples, TString t_name, vector<TString> v_samples, vector<TString> v_systTrees, vector<TString> v_cut_name, vector<TString> v_cut_def, bool noSysts_inputVars)
 {
     float total_nentries = 0;
+
+    if(noSysts_inputVars) //syst weights not computed
+    {
+        v_systTrees.resize(1);
+    }
+
+    //--- Define the cut chain to apply to events
+    TString cuts_chain = "";
+    for(int ivar=0; ivar<v_cut_name.size(); ivar++)
+    {
+        if(v_cut_def[ivar] != "")
+        {
+            if(cuts_chain != "") {cuts_chain+= " && ";}
+
+            if(!v_cut_def[ivar].Contains("&&") && !v_cut_def[ivar].Contains("||")) {cuts_chain+= v_cut_name[ivar] + v_cut_def[ivar];} //If cut contains only 1 condition
+            else if(v_cut_def[ivar].Contains("&&") && v_cut_def[ivar].Contains("||")) {cout<<BOLD(FRED("ERROR ! Wrong cut definition !"))<<endl;}
+            else if(v_cut_def[ivar].Contains("&&") )//If '&&' in the cut, break it in 2
+            {
+                cuts_chain+= v_cut_name[ivar] + Break_Cuts_In_Two(v_cut_def[ivar]).first;
+                cuts_chain+= " && ";
+                cuts_chain+= v_cut_name[ivar] + Break_Cuts_In_Two(v_cut_def[ivar]).second;
+            }
+            else if(v_cut_def[ivar].Contains("||") )//If '||' in the cut, break it in 2
+            {
+                cuts_chain+= v_cut_name[ivar] + Break_Cuts_In_Two(v_cut_def[ivar]).first;
+                cuts_chain+= " || ";
+                cuts_chain+= v_cut_name[ivar] + Break_Cuts_In_Two(v_cut_def[ivar]).second;
+            }
+        }
+    }
 
     for(int isample=0; isample<v_samples.size(); isample++)
     {
@@ -830,15 +876,12 @@ float Count_Total_Nof_Entries(TString dir_ntuples, TString t_name, vector<TStrin
 				continue; //Skip sample
 			}
 
-            float nentries_tmp = tree->GetEntries();
             // float nentries_tmp = tree->GetEntries("passedBJets");
+            float nentries_tmp = tree->GetEntries(cuts_chain);
 
-            for(int ivar=0; ivar<v_vars.size(); ivar++)
-            {
-                total_nentries+= nentries_tmp; //Multiply nof entries by nof loops
+            total_nentries+= nentries_tmp; //Multiply nof entries by nof loops
 
-                // cout<<"total_nentries = "<<total_nentries<<endl;
-            } //vars
+            // cout<<"total_nentries = "<<total_nentries<<endl;
         } //trees
     } //samples
 
@@ -846,45 +889,3 @@ float Count_Total_Nof_Entries(TString dir_ntuples, TString t_name, vector<TStrin
 
     return total_nentries;
 }
-
-//In Potato code, systematics variations weights are encoded into vectors
-//NB : inconsistent indices : down variation may be element 0 or 1...
-//Use this function to hard-code which vector element corresponds to which systematics, and set the address
-/*
-void SetBranchAddress_SystVariationArray(TTree* t, TString systname, double* var)
-{
-    TString original_variable_name = ""; //Name of the systematic as stored in the ntuple
-
-    if(!t) {return;}
-
-    if(systname == "") {return;}
-    else if(systname == "PUDown") {original_variable_name = "varWeightPU[0]";}
-    else if(systname == "PUUp") {original_variable_name = "varWeightPU[1]";}
-
-    else if(systname == "prefiringWeightDown") {original_variable_name = "varWeightPrefire[0]";}
-    else if(systname == "prefiringWeightUp") {original_variable_name = "varWeightPrefire[1]";}
-
-    else if(systname == "BtagHDown") {original_variable_name = "btagEventWeight[1]";}
-    else if(systname == "BtagHUp") {original_variable_name = "btagEventWeight[0]";}
-
-    else if(systname == "BtagLDown") {original_variable_name = "btagEventWeight[3]";}
-    else if(systname == "BtagLUp") {original_variable_name = "btagEventWeight[2]";}
-
-    else if(systname == "LepEff_muLooseDown") {original_variable_name = "var_weight_Mu[0]";}
-    else if(systname == "LepEff_muLooseUp") {original_variable_name = "var_weight_Mu[1]";}
-    else if(systname == "LepEff_muTightDown") {original_variable_name = "var_weight_Mu[2]";}
-    else if(systname == "LepEff_muTightUp") {original_variable_name = "var_weight_Mu[3]";}
-
-    else if(systname == "LepEff_elLooseDown") {original_variable_name = "var_weight_El[0]";}
-    else if(systname == "LepEff_elLooseUp") {original_variable_name = "var_weight_El[1]";}
-    else if(systname == "LepEff_elTightDown") {original_variable_name = "var_weight_El[2]";}
-    else if(systname == "LepEff_elTightUp") {original_variable_name = "var_weight_El[3]";}
-
-    else{cout<<FRED("ERROR ! Systematic '"<<systname<<"' not included in function SetBranchAddress_SystVariation() from Helper.cxx ! Can *not* compute it !")<<endl; return;}
-
-    t->SetBranchStatus(original_variable_name, 1);
-    t->SetBranchAddress(original_variable_name, var);
-
-    return;
-}
-*/

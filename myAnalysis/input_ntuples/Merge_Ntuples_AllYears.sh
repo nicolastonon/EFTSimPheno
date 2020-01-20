@@ -11,7 +11,7 @@ mkdir $outDir
 # sampleList2017=$(ls $dirCheck | cut -d"." -f1)
 # echo $sampleList2017
 
-#Get list of samples from 2018 repository (contains all samples, except SingleElectron, but included in 'DATA')
+#Get list of samples from 2018 repository (contains all samples)
 dirCheck="./2018"
 sampleList2018=$(ls $dirCheck | cut -d"." -f1)
 # echo $sampleList2018

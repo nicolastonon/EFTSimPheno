@@ -238,7 +238,8 @@ TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> 
 		}
 	}
 
-	cout<<endl<<endl<<BLINK(BOLD(FBLU("[Region : "<<region<<"]")))<<endl<<endl<<endl;
+    cout<<endl<<endl<<BLINK(BOLD(FBLU("[Region : "<<region<<"]")))<<endl;
+    cout<<endl<<BLINK(BOLD(FBLU("[Luminosity : "<<lumiYear<<"]")))<<endl<<endl<<endl;
 
     //-- Protections
 
@@ -305,7 +306,7 @@ void TopEFT_analysis::Set_Luminosity(TString lumiYear)
 void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
 {
 	//--- Options
-	bool use_relative_weights = false; //false <-> use abs(weight)
+	bool use_relative_weights = false; //false <-> use abs(weight), much faster if there are many negative weights
 
 //--------------------------------------------
     cout<<endl<<YELBKG("                          ")<<endl<<endl;
@@ -336,7 +337,7 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
 	TString tmp = "";
 
 	//--- CHOOSE TRAINING EVENTS <--> cut on corresponding category
-	TString cat_tmp = "";
+	// TString cat_tmp = "";
 	// cat_tmp = Get_Category_Boolean_Name(nLep_cat, region, analysis_type, "", scheme);
 
 	//Even if ask templates in the SR, need to use training (looser) category for training !
@@ -463,12 +464,18 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
 	std::vector<TFile *> files_to_close;
 	for(int isample=0; isample<sample_list.size(); isample++)
     {
+        TString samplename_tmp = sample_list[isample];
+
         //-- Protections
         if(sample_list[isample] == "DATA") {continue;} //don't use data for training
 
-		cout<<"-- Sample : "<<sample_list[isample]<<endl;
+        //Can hardcode here the backgrounds against which to train, instead of considering full list of samples
+        if(signal_process == "tZq")
+        {
+            if(samplename_tmp != "tZq" && samplename_tmp != "ttZ" && samplename_tmp != "ttH" && samplename_tmp != "ttW" && samplename_tmp != "WZ" && samplename_tmp != "ZZ4l" && samplename_tmp != "DY" && samplename_tmp != "TTbar_DiLep") {continue;}
+        }
 
-		TString samplename_tmp = sample_list[isample];
+		cout<<endl<<"-- Sample : "<<sample_list[isample]<<endl;
 
         // --- Register the training and test trees
         TString inputfile = dir_ntuples + sample_list[isample] + ".root";
@@ -490,7 +497,7 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
         files_to_close.push_back(file_input);
         tree = (TTree*) file_input->Get(t_name);
         if(tree==0) {cout<<BOLD(FRED("ERROR :"))<<" file "<<inputfile<<" --> *tree = 0 !"<<endl; continue;}
-        else {cout<<endl<<FMAG("=== Opened file : ")<<inputfile<<endl<<endl;}
+        else {cout<<FMAG("=== Opened file : ")<<inputfile<<endl<<endl;}
 
         // global event weights per tree (see below for setting event-wise weights)
         Double_t signalWeight     = 1.0;
@@ -554,13 +561,13 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
 	// If nTraining_Events=nTesting_Events="0", half of the events in the tree are used for training, and the other half for testing
 	//NB : when converting nEvents to TString, make sure to ask for sufficient precision !
 
-	// float trainingEv_proportion = 0.5;
-	float trainingEv_proportion = 0.7;
+	float trainingEv_proportion = 0.5;
+	// float trainingEv_proportion = 0.7;
 
 	//-- Choose dataset splitting
 	TString nTraining_Events_sig = "", nTraining_Events_bkg = "", nTesting_Events_sig = "", nTesting_Events_bkg = "";
 
-    int nmaxEv = 150000; //max nof events for train or test
+    int nmaxEv = 100000; //max nof events for train or test
     int nTrainEvSig = (nEvents_sig * trainingEv_proportion < nmaxEv) ? nEvents_sig * trainingEv_proportion : nmaxEv;
     int nTrainEvBkg = (nEvents_bkg * trainingEv_proportion < nmaxEv) ? nEvents_bkg * trainingEv_proportion : nmaxEv;
     int nTestEvSig = (nEvents_sig * (1-trainingEv_proportion) < nmaxEv) ? nEvents_sig * (1-trainingEv_proportion) : nmaxEv;
@@ -716,7 +723,7 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
 void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_inputVars)
 {
 //--------------------------------------------
-    bool noSysts_inputVars = false; //true <-> don't compute syst weights for histos of input variables (not worth the CPU)
+    bool noSysts_inputVars = true; //true <-> don't compute syst weights for histos of input variables (not worth the CPU)
 //--------------------------------------------
 
     cout<<endl<<YELBKG("                          ")<<endl<<endl;
@@ -727,7 +734,6 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
 	if(classifier_name != "BDT") {cout<<BOLD(FRED("Error : DNNs are not supported !"))<<endl; return;}
 
-
     TString restore_classifier_name = classifier_name;
 	if(makeHisto_inputVars)
 	{
@@ -736,10 +742,13 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
     //Don't make systematics shifted histos for input vars (too long)
     //Force removal of systematics ; restore values at end of this func
     vector<TString> restore_syst_list = syst_list;
+    vector<TString> restore_systTree_list = systTree_list;
     if(noSysts_inputVars)
     {
         syst_list.resize(1);
         syst_list[0] = "";
+        systTree_list.resize(1);
+        systTree_list[0] = "";
     }
     else
     {
@@ -771,7 +780,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
     //Create output file
 	TFile* file_output = TFile::Open(output_file_name, "RECREATE");
 
-    //NB : TMVA requires floats, nothing else, to ensure reproducibility of results (training done with floats) => Need to recast e.g. doubles as flots
+    //NB : TMVA requires floats, and nothing else, to ensure reproducibility of results (training done with floats) => Need to recast e.g. doubles as flots
     //See : https://sourceforge.net/p/tmva/mailman/message/836453/
     reader = new TMVA::Reader("!Color:!Silent");
 
@@ -780,8 +789,8 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 	// NB : if booking 2 BDTs, must make sure that they use the same input variables... or else, find some way to make it work in the code)
 	for(int i=0; i<var_list.size(); i++)
 	{
-        reader->AddVariable(var_list[i].Data(), &var_list_floats[i]);
         //cout<<"Added variable "<<var_list[i]<<endl;
+        reader->AddVariable(var_list[i].Data(), &var_list_floats[i]);
 	}
 
 	for(int i=0; i<v_cut_name.size(); i++)
@@ -806,7 +815,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
 		if(!Check_File_Existence(weightfile) ) {cout<<BOLD(FRED("Weight file "<<weightfile<<" not found ! Abort"))<<endl; return;}
 
-        cout<<"MVA_method_name1 "<<MVA_method_name1<<endl;
+        // cout<<"MVA_method_name1 "<<MVA_method_name1<<endl;
 		reader->BookMVA(MVA_method_name1, weightfile);
 	}
 
@@ -852,10 +861,10 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
  // #      #    # #    # #      #    #
  // ######  ####   ####  #       ####
 
-	cout<<endl<<ITAL("-- Ntuples dir. : "<<dir_ntuples<<"")<<endl<<endl;
+	cout<<endl<<ITAL("-- Ntuples directory : "<<dir_ntuples<<"")<<endl<<endl;
 
     // float tmp_compare = 0;
-    float total_nentries_toProcess = Count_Total_Nof_Entries(dir_ntuples, t_name, sample_list, systTree_list, total_var_list);
+    float total_nentries_toProcess = Count_Total_Nof_Entries(dir_ntuples, t_name, sample_list, systTree_list, v_cut_name, v_cut_def, noSysts_inputVars);
 
     cout<<endl<<FBLU(OVERLINE("                           "))<<endl;
     cout<<FBLU(BOLD("Will process "<<std::setprecision(12)<<total_nentries_toProcess<<" entries..."))<<endl;
@@ -962,13 +971,12 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 			tree->SetBranchAddress("channel", &channel);
 
             //--- Event weights
-            // float weight;
-            double weight;
+            double eventWeight;
             float eventMCFactor;
             float weight_SF; //Stored separately
 			float mc_weight_originalValue;
             tree->SetBranchStatus("eventWeight", 1);
-			tree->SetBranchAddress("eventWeight", &weight);
+			tree->SetBranchAddress("eventWeight", &eventWeight);
             tree->SetBranchStatus("eventMCFactor", 1);
 			tree->SetBranchAddress("eventMCFactor", &eventMCFactor);
 			// tree->SetBranchStatus("mc_weight_originalValue", 1);
@@ -1010,7 +1018,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
 					for(int ivar=0; ivar<total_var_list.size(); ivar++)
 					{
-						if(makeHisto_inputVars && !Get_Variable_Range(total_var_list[ivar], nbins, xmin, xmax)) {cout<<FRED("Unknown variable name : "<<total_var_list[ivar]<<"! (add in function 'Get_Variable_Range()')")<<endl; continue;} //Get binning for this input variable
+						if(makeHisto_inputVars && !Get_Variable_Range(total_var_list[ivar], nbins, xmin, xmax)) {cout<<FRED("Unknown variable name : "<<total_var_list[ivar]<<"! (include it in function Get_Variable_Range() in Helper.cxx)")<<endl; continue;} //Get binning for this input variable
 
 						v3_histo_chan_syst_var[ichan][isyst][ivar] = new TH1F("", "", nbins, xmin, xmax);
 					}
@@ -1041,7 +1049,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 			{
 				// cout<<"ientry "<<ientry<<endl;
 
-                ibar++;
+                // ibar++; //-- only count events which pass the cuts...
                 if(draw_progress_bar && ibar%50000==0) {timer.DrawProgressBar(ibar, ""); cout<<ibar<<" / "<<total_nentries_toProcess<<endl; }
 
 				weight_SF = 1;
@@ -1051,9 +1059,9 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
 				tree->GetEntry(ientry);
 
-				if(isnan(weight*eventMCFactor) || isinf(weight*eventMCFactor))
+				if(isnan(eventWeight*eventMCFactor) || isinf(eventWeight*eventMCFactor))
 				{
-					cout<<BOLD(FRED("* Found event with weight*eventMCFactor = "<<weight*eventMCFactor<<" ; remove it..."))<<endl; continue;
+					cout<<BOLD(FRED("* Found event with eventWeight*eventMCFactor = "<<eventWeight*eventMCFactor<<" ; remove it..."))<<endl; continue;
 				}
 
 				//--- Cut on category value
@@ -1073,7 +1081,9 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 				if(!pass_all_cuts) {continue;}
 //--------------------------------------------
 
-                // cout<<"weight "<<weight<<endl;
+                ibar++;
+
+                // cout<<"eventWeight "<<eventWeight<<endl;
                 // cout<<"eventMCFactor "<<eventMCFactor<<endl;
 
 				//Get MVA value to make template
@@ -1111,7 +1121,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
 						// cout<<"-- sample "<<sample_list[isample]<<" / channel "<<channel_list[ichan]<<" / syst "<<syst_list[isyst]<<endl;
 
-						weight_tmp = weight*eventMCFactor; //Nominal (no syst)
+						weight_tmp = eventWeight*eventMCFactor; //Nominal (no syst)
 
                         // cout<<"nominal : "<<weight_tmp<<endl;
                         if(syst_list[isyst] != "") {weight_tmp*= *(v_double_systWeights[isyst]);} //Syst weights were already divided by nominal weight
@@ -1228,6 +1238,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
     //Restore potentially modified variables
     classifier_name = restore_classifier_name;
     syst_list = restore_syst_list;
+    systTree_list = restore_systTree_list;
 
     if(!noSysts_inputVars) //free memory
     {
@@ -1290,7 +1301,7 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 //--------------------------------------------
 	// bool doNot_stack_signal = false;
 
-	bool draw_errors = true; //true <-> superimpose error bands on plot/ratio plot
+	bool draw_errors = false; //true <-> superimpose error bands on plot/ratio plot
 
 	bool draw_logarithm = false;
 //--------------------------------------------
@@ -1510,7 +1521,7 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 				TString samplename = sample_list[isample];
 				if(use_combine_file)
 				{
-					if(isample > 0 && sample_groups[isample] == sample_groups[isample-1]) {v_isSkippedSample[isample] = true; nof_skipped_samples++; continue;} //if same group as previous sample
+					if(isample > 0 && sample_groups[isample] == sample_groups[isample-1]) {v_isSkippedSample[isample] = true; nof_skipped_samples++; continue;} //if same group as previous sample, skip it
 					else {samplename = sample_groups[isample];}
 				}
 
@@ -1856,6 +1867,13 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 			else {histo_total_MC->Add((TH1F*) v_MC_histo[i]->Clone());}
 		}
 
+        //If histo_total_MC is null, variable was not found, skip it
+        if(!histo_total_MC)
+        {
+            cout<<FRED("Error ! Variable '"<<total_var_list[ivar]<<"' not found ! Skip it...")<<endl;
+            continue;
+        }
+
 
 // ####### #
 //    #    #       ######  ####  ###### #    # #####
@@ -1901,7 +1919,12 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 			else if(MC_samples_legend[i] == "QFlip") {qw->AddEntry(v_MC_histo[i], "Flip", "f");}
             else if(MC_samples_legend[i] == "GammaConv") {qw->AddEntry(v_MC_histo[i], "#gamma-conv.", "f");}
             else if(MC_samples_legend[i] == "DY" ) {qw->AddEntry(v_MC_histo[i], "V+jets", "f");}
-            else if(MC_samples_legend[i] == "TTbar_DiLep" ) {qw->AddEntry(v_MC_histo[i], "t#bar{t}", "f");}
+            else if(MC_samples_legend[i] == "TTbar_DiLep" || MC_samples_legend[i] == "TTbar") {qw->AddEntry(v_MC_histo[i], "t#bar{t}", "f");}
+
+            //group names
+            else if(MC_samples_legend[i] == "ttX" ) {qw->AddEntry(v_MC_histo[i], "t#bar{t}X", "f");}
+            else if(MC_samples_legend[i] == "tX" ) {qw->AddEntry(v_MC_histo[i], "tX", "f");}
+            else if(MC_samples_legend[i] == "VV" ) {qw->AddEntry(v_MC_histo[i], "VV", "f");}
 		}
 
 
@@ -2383,7 +2406,7 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 			output_plot_name = "plots/templates/" + region + "/" + lumiYear;
 			if(prefit) {output_plot_name+= "/prefit/";}
 			else {output_plot_name+= "/postfit/";}
-			output_plot_name+= classifier_name + template_name + "_template";
+			output_plot_name+= classifier_name + template_name + "_template_" + signal_process;
 		}
 		if(channel != "") {output_plot_name+= "_" + channel;}
 		output_plot_name+= this->filename_suffix;
@@ -2925,7 +2948,7 @@ void TopEFT_analysis::Merge_Templates_ByProcess(TString filename, TString templa
 					else if(systTree_list[itree] != "") {histoname+= "__" + systTree_list[itree];}
 					// cout<<"histoname "<<histoname<<endl;
 
-					if(!f->GetListOfKeys()->Contains(histoname) )
+					if(!f->GetListOfKeys()->Contains(histoname) && systTree_list[itree] == "" && syst_list[isyst] == "")
 					{
 						cout<<FRED("Histo "<<histoname<<" not found in file "<<filename<<" !")<<endl;
 					 	continue;
