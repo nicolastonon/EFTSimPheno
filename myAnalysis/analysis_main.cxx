@@ -16,7 +16,7 @@ int main(int argc, char **argv)
 
     //-- MAIN OPTIONS --
     TString signal_process = "tZq";
-    TString luminosity = "2018"; //'2016','2017','2018', 'Run2' -- DECIDES WHICH NTUPLES ARE READ !
+    TString luminosity = "Run2"; //'2016','2017','2018', 'Run2' -- DECIDES WHICH NTUPLES ARE READ !
     bool split_analysis_by_channel = true; //true <-> will *also* produce templates/histos/plots for each subchannel (defined below)
     bool use_systematics = true; //true <-> will compute/store systematics selected below
 
@@ -35,7 +35,7 @@ int main(int argc, char **argv)
 
 //------------------------------------
 //Apply choices given via command line, if any
-	Apply_CommandArgs_Choices(argc, argv, template_name, region_choice);
+	Apply_CommandArgs_Choices(argc, argv, luminosity, region_choice);
 
 //-----------------------------------------------------------------------------------------
 //   ######  ##     ## ########  ######
@@ -152,8 +152,6 @@ int main(int argc, char **argv)
     thevarlist.push_back("dEtaFwdJetBJet");
     thevarlist.push_back("dEtaFwdJetClosestLep");
     thevarlist.push_back("mHT");
-
-    thevarlist.push_back("metEt");
     thevarlist.push_back("mTW");
     thevarlist.push_back("Mass_3l");
     thevarlist.push_back("forwardJetAbsEta");
@@ -163,8 +161,6 @@ int main(int argc, char **argv)
     thevarlist.push_back("lAsymmetry");
     thevarlist.push_back("maxDijetMass");
     thevarlist.push_back("maxDelPhiLL");
-    thevarlist.push_back("maxDelRbL");
-    thevarlist.push_back("cosThetaStar");
 
 
 
@@ -183,6 +179,7 @@ int main(int argc, char **argv)
     vector<TString> set_v_add_var_names;
     // set_v_add_var_names.push_back("nMediumBJets");
 
+    set_v_add_var_names.push_back("metEt");
     set_v_add_var_names.push_back("recoZ_Mass");
     set_v_add_var_names.push_back("Mass_tZ"); //NaN?
     set_v_add_var_names.push_back("cosThetaStarPol"); //NaN?
@@ -191,6 +188,9 @@ int main(int argc, char **argv)
     set_v_add_var_names.push_back("minDelRbL");
     set_v_add_var_names.push_back("Top_delRbl");
     set_v_add_var_names.push_back("Top_delRbW");
+    set_v_add_var_names.push_back("cosThetaStar");
+
+    // set_v_add_var_names.push_back("maxDelRbL");
 
 //---------------------------------------------------------------------------
 //  ######  ##    ##  ######  ######## ######## ##     ##    ###    ######## ####  ######   ######
@@ -259,11 +259,11 @@ int main(int argc, char **argv)
 //-----------------    PLOTS
     TString plotChannel = ""; //Can choose to plot particular subchannel //uu, ue, ee, ...
 
-    bool draw_templates = false; //Plot templates of selected BDT, in selected region
+    bool draw_templates = true; //Plot templates of selected BDT, in selected region
         bool prefit = true; //true <-> plot prefit templates ; else postfit (requires combine output file)
         bool use_combine_file = false; //true <-> use MLF output file from Combine (can get postfit plots, total error, etc.)
 
-    bool draw_input_vars = true; //Plot input variables
+    bool draw_input_vars = false; //Plot input variables
         bool draw_input_allChannels = false; //true <-> also draw for eachs split channel
 
     bool compare_template_shapes = false;

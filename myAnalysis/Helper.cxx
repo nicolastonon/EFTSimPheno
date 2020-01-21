@@ -630,29 +630,36 @@ void Set_Custom_ColorPalette(vector<TColor*> &v_custom_colors, vector<int> &v, v
 //--------------------------------------------
 
 //Modifies arguments passed by reference according to command args
-bool Apply_CommandArgs_Choices(int argc, char **argv, TString& template_name, TString& region_choice)
+bool Apply_CommandArgs_Choices(int argc, char **argv, TString& lumiYear, TString& region_choice)
 {
 	if(argc >= 2)
 	{
-		if(argc > 2)
+        if(!strcmp(argv[1],"2016") ) {lumiYear = "2016";}
+        else if(!strcmp(argv[1],"2017") ) {lumiYear = "2017";}
+        else if(!strcmp(argv[1],"2018") ) {lumiYear = "2018";}
+        else if(!strcmp(argv[1],"Run2") ) {lumiYear = "Run2";}
+
+        else if(!strcmp(argv[1],"SR")) {region_choice = "SR";}
+
+        else
+        {
+            cout<<BOLD(FRED("Error : wrong arguments at execution !"))<<endl;
+            cout<<"argc = "<<argc<<endl;
+            cout<<"argv[1] = '"<<argv[1]<<"'"<<endl;
+            if(argc >= 3) {cout<<"argv[2] = '"<<argv[2]<<"'"<<endl;}
+            cout<<UNDL("--> Syntax : ./analysis_main.exe [2016,2017,2018,Run2] [SR]")<<endl;
+
+            return 0;
+        }
+
+		if(argc >= 3)
 		{
-			if(!strcmp(argv[2],"ttbar") || !strcmp(argv[2],"tt")) {template_name = "ttbar";}
-			else if(!strcmp(argv[2],"ttv") || !strcmp(argv[2],"ttV") ) {template_name = "ttV";}
-			else if(!strcmp(argv[2],"2Dlin")) {template_name = "2Dlin";}
-			else if(!strcmp(argv[2],"2D")) {template_name = "2D";}
-			else if(!strcmp(argv[2],"categ")) {template_name = "categ";}
+            if(!strcmp(argv[2],"2016") ) {lumiYear = "2016";}
+            else if(!strcmp(argv[2],"2017") ) {lumiYear = "2017";}
+            else if(!strcmp(argv[2],"2018") ) {lumiYear = "2018";}
+            else if(!strcmp(argv[2],"Run2") ) {lumiYear = "Run2";}
 
 			else if(!strcmp(argv[2],"SR")) {region_choice = "SR";}
-			else if(!strcmp(argv[2],"SRtHq")) {region_choice = "SRtHq";}
-			else if(!strcmp(argv[2],"SRttH")) {region_choice = "SRttH";}
-            else if(!strcmp(argv[2],"FCNC")) {region_choice = "FCNC";}
-            else if(!strcmp(argv[2],"Fake")) {region_choice = "CR_Fake";}
-			else if(!strcmp(argv[2],"CR_ttW") || !strcmp(argv[2],"ttW")) {region_choice = "CR_ttW";}
-			else if(!strcmp(argv[2],"CR_ttWttH") || !strcmp(argv[2],"ttWttH")) {region_choice = "CR_ttWttH";}
-			else if(!strcmp(argv[2],"CR_ttZ") || !strcmp(argv[2],"ttZ")) {region_choice = "CR_ttZ";}
-			else if(!strcmp(argv[2],"CR_WZ") || !strcmp(argv[2],"WZ")) {region_choice = "CR_WZ";}
-			else if(!strcmp(argv[2],"CR_Z") || !strcmp(argv[2],"Z")) {region_choice = "CR_Z";}
-			// else if(!strcmp(argv[2],"Training") || !strcmp(argv[2],"Train")) {region_choice = "Training";}
 
 			else
 			{
@@ -660,47 +667,12 @@ bool Apply_CommandArgs_Choices(int argc, char **argv, TString& template_name, TS
 				cout<<"argc = "<<argc<<endl;
 				cout<<"argv[1] = '"<<argv[1]<<"'"<<endl;
 				cout<<"argv[2] = '"<<argv[2]<<"'"<<endl;
-				if(argc > 3) {cout<<"argv[3] = '"<<argv[3]<<"'"<<endl;}
-				cout<<UNDL("--> Syntax : ./analysis_main.exe [3l or 2l] [Region or template name] [Region or template name]")<<endl;
-
-				return 0;
-			}
-		}
-
-		if(argc > 3)
-		{
-			if(!strcmp(argv[3],"ttbar") || !strcmp(argv[3],"tt")) {template_name = "ttbar";}
-			else if(!strcmp(argv[3],"ttv") || !strcmp(argv[3],"ttV") ) {template_name = "ttV";}
-			else if(!strcmp(argv[3],"2Dlin")) {template_name = "2Dlin";}
-			else if(!strcmp(argv[3],"2D")) {template_name = "2D";}
-			else if(!strcmp(argv[3],"categ")) {template_name = "categ";}
-
-			else if(!strcmp(argv[3],"SR")) {region_choice = "SR";}
-			else if(!strcmp(argv[3],"SRtHq")) {region_choice = "SRtHq";}
-			else if(!strcmp(argv[3],"SRttH")) {region_choice = "SRttH";}
-			else if(!strcmp(argv[3],"FCNC")) {region_choice = "FCNC";}
-			else if(!strcmp(argv[3],"Fake")) {region_choice = "CR_Fake";}
-			else if(!strcmp(argv[3],"CR_ttW") || !strcmp(argv[3],"ttW")) {region_choice = "CR_ttW";}
-			else if(!strcmp(argv[3],"CR_ttWttH") || !strcmp(argv[3],"ttWttH")) {region_choice = "CR_ttWttH";}
-			else if(!strcmp(argv[3],"CR_ttZ") || !strcmp(argv[3],"ttZ")) {region_choice = "CR_ttZ";}
-			else if(!strcmp(argv[3],"CR_WZ") || !strcmp(argv[3],"WZ")) {region_choice = "CR_WZ";}
-			else if(!strcmp(argv[3],"CR_Z") || !strcmp(argv[3],"Z")) {region_choice = "CR_Z";}
-			// else if(!strcmp(argv[3],"Training") || !strcmp(argv[2],"Train")) {region_choice = "Training";}
-
-			else
-			{
-				cout<<BOLD(FRED("Error : wrong arguments at execution !"))<<endl;
-				cout<<"argc = "<<argc<<endl;
-				cout<<"argv[1] = '"<<argv[1]<<"'"<<endl;
-				cout<<"argv[2] = '"<<argv[2]<<"'"<<endl;
-				cout<<"argv[3] = '"<<argv[3]<<"'"<<endl;
-				cout<<UNDL("--> Syntax : ./analysis_main.exe [3l or 2l] [Region or template name] [Region or template name]")<<endl;
+				cout<<UNDL("--> Syntax : ./analysis_main.exe [2016,2017,2018,Run2] [SR]")<<endl;
 
 				return 0;
 			}
 		}
 	}
-
 
 	return 1;
 }
@@ -766,9 +738,9 @@ bool Get_Variable_Range(TString var, int& nbins, double& xmin, double& xmax)
     //Categories are either 0 or 1 (NB : encoded in Char_t!)
     if(var.BeginsWith("is_") || var.BeginsWith("passed") ) {nbins = 2; xmin = 0; xmax = 2;}
 
-    else if(var == "metEt") {nbins = 20; xmin = 0; xmax = 300;}
-	else if(var == "dEtaFwdJetBJet") {nbins = 15; xmin = 0; xmax = 5;}
-	else if(var == "dEtaFwdJetClosestLep") {nbins = 15; xmin = 0; xmax = 5;}
+    else if(var == "metEt") {nbins = 20; xmin = 0; xmax = 250;}
+	else if(var == "dEtaFwdJetBJet") {nbins = 20; xmin = 0; xmax = 4;}
+	else if(var == "dEtaFwdJetClosestLep") {nbins = 20; xmin = 0; xmax = 4;}
 	else if(var == "minDRll") {nbins = 15; xmin = 0; xmax = 3.5;}
     else if(var == "maxEtaJet") {nbins = 10; xmin = 0; xmax = 5;}
     else if(var == "forwardJetAbsEta") {nbins = 10; xmin = 0; xmax = 5;}
@@ -783,16 +755,23 @@ bool Get_Variable_Range(TString var, int& nbins, double& xmin, double& xmax)
     else if(var == "mHT") {nbins = 10; xmin = 200; xmax = 1200;}
     else if(var == "top_mass") {nbins = 15; xmin = 100; xmax = 300;}
     else if(var == "dPhijj_max") {nbins = 10; xmin = 0; xmax = 3;}
-    else if(var == "maxDijetMass") {nbins = 10; xmin = 0; xmax = 400;}
-    else if(var == "maxDelPhiLL") {nbins = 10; xmin = 0; xmax = 3;}
+    else if(var == "maxDijetMass") {nbins = 10; xmin = 0; xmax = 1000;}
+    else if(var == "maxDijetPt") {nbins = 20; xmin = 0; xmax = 400;}
+    else if(var == "maxDelPhiLL") {nbins = 10; xmin = 0; xmax = 3.5;}
     else if(var == "m3l" || var == "Mass_3l") {nbins = 20; xmin = 100; xmax = 500;}
     else if(var == "leptonCharge") {nbins = 3; xmin = -1.5; xmax = 1.5;}
-    else if(var == "mTW") {nbins = 20; xmin = 0.; xmax = 250;}
-    else if(var == "recoZ_Mass") {nbins = 20; xmin = 70.; xmax = 120;}
+    else if(var == "mTW") {nbins = 20; xmin = 0.; xmax = 200;}
+    else if(var == "recoZ_Mass") {nbins = 20; xmin = 75.; xmax = 110;}
+    else if(var == "lAsymmetry") {nbins = 20; xmin = -3.; xmax = 3.;}
+    else if(var == "Mass_tZ") {nbins = 10; xmin = 200; xmax = 1000;}
+    else if(var == "maxDeepCSV") {nbins = 20; xmin = 0.3; xmax = 1.1;}
+    else if(var == "maxDijetDelPhi") {nbins = 20; xmin = 0.; xmax = 3.5;}
+    else if(var == "maxDelRbL") {nbins = 20; xmin = 1.; xmax = 5;}
+    else if(var == "Top_delRbl" || var == "Top_delRbW") {nbins = 20; xmin = 0.; xmax = 4.5;}
 
-    else if(var.Contains("CSV")) {nbins = 20; xmin = 0.; xmax = 1.1;}
-    else if(var.Contains("dR") || var.Contains("DelR") ) {nbins = 20; xmin = 0; xmax = 7.;}
-    else if(var.BeginsWith("cos")) {nbins = 20; xmin = -1.; xmax = 1.;}
+    else if(var.Contains("CSV", TString::kIgnoreCase)) {nbins = 20; xmin = 0.; xmax = 1.1;}
+    else if(var.Contains("dR") || var.Contains("DelR", TString::kIgnoreCase) ) {nbins = 20; xmin = 0; xmax = 7.;}
+    else if(var.BeginsWith("cos", TString::kIgnoreCase)) {nbins = 20; xmin = -1.; xmax = 1.;}
 
     // else if(var == "Lep3Pt") {nbins = 20; xmin = 0; xmax = 80;}
 

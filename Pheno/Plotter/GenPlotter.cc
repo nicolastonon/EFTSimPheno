@@ -553,7 +553,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
         TLegend* legend_proc = 0;
         if(v_process.size() > 1)
         {
-            legend_proc = new TLegend(x_left - 0.08,0.86,x_left - 0.01,0.99);
+            legend_proc = new TLegend(x_left - 0.10,0.88,x_left - 0.01,0.99);
             legend_proc->SetTextSize(0.03);
         }
 
@@ -624,7 +624,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
                 //Compare ratio EFT/SM
                 if(v_reweight_names.size() > 1)
                 {
-                    subplot_y_title = "BSM/SM [%]";
+                    subplot_y_title = "BSM/SM"; // [%]
                     if(v_reweight_names[iweight] != "sm")
                     {
                         v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight] = (TH1F*) v3_histos_var_proc_reweight[ivar][iproc][iweight]->Clone(); //Copy histo
@@ -634,7 +634,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
                 }
                 else if(v_reweight_names.size() == 1 && v_process.size() > 1) //Compare ratio of processes
                 {
-                    subplot_y_title = "Process ratio [%]";
+                    subplot_y_title = "Process ratio"; // [%]
                     if(iproc > 0)
                     {
                         v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight] = (TH1F*) v3_histos_var_proc_reweight[ivar][iproc][iweight]->Clone(); //Copy histo
@@ -736,9 +736,9 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
 int main()
 {
     vector<TString> v_process;
-    // v_process.push_back("ttz");
-    // v_process.push_back("tzq");
-    v_process.push_back("tllq");
+    v_process.push_back("ttz");
+    v_process.push_back("tzq");
+    // v_process.push_back("tllq");
     // v_process.push_back("ttll");
 
     vector<TString> v_var; vector<pair<float, float>> v_min_max;
@@ -746,11 +746,11 @@ int main()
     // v_var.push_back("Z_eta"); v_min_max.push_back(std::make_pair(-5, 5));
     // v_var.push_back("Z_m"); v_min_max.push_back(std::make_pair(70, 110));
     // v_var.push_back("Zreco_m"); v_min_max.push_back(std::make_pair(50, 110));
-    // v_var.push_back("Top_pt"); v_min_max.push_back(std::make_pair(0, 500));
+    v_var.push_back("Top_pt"); v_min_max.push_back(std::make_pair(0, 500));
     // v_var.push_back("Top_eta"); v_min_max.push_back(std::make_pair(-5, 5));
     // v_var.push_back("Top_m"); v_min_max.push_back(std::make_pair(0, 300));
     // v_var.push_back("TopZsystem_m"); v_min_max.push_back(std::make_pair(250, 1000));
-    // v_var.push_back("LeadingTop_pt"); v_min_max.push_back(std::make_pair(0, 500));
+    v_var.push_back("LeadingTop_pt"); v_min_max.push_back(std::make_pair(0, 500));
     // v_var.push_back("LeadingTop_eta"); v_min_max.push_back(std::make_pair(-5, 5));
     // v_var.push_back("Zreco_dPhill"); v_min_max.push_back(std::make_pair(0, 6));
     // v_var.push_back("cosThetaStarPol_Z"); v_min_max.push_back(std::make_pair(-1, 1));
@@ -775,7 +775,7 @@ int main()
     // v_reweight_names.push_back("ctw_0p5");
     // v_reweight_names.push_back("ctw_1p0");
     // v_reweight_names.push_back("ctw_1p5");
-    // v_reweight_names.push_back("ctw_2p0");
+    v_reweight_names.push_back("ctw_2p0");
     // v_reweight_names.push_back("ctw_2p5");
     // v_reweight_names.push_back("ctw_3p0");
     // v_reweight_names.push_back("ctw_4p0");

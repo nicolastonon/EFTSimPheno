@@ -613,11 +613,14 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
     //~ttH2017
     // method_options= "!H:!V:NTrees=200:BoostType=Grad:Shrinkage=0.10:!UseBaggedGrad:nCuts=200:MinNodeSize=5%:NNodesMax=5:MaxDepth=8:NegWeightTreatment=PairNegWeightsGlobal:CreateMVAPdfs:DoBoostMonitor=True";
 
-    //~tZq2017
-    method_options = "!H:!V:NTrees=1000:nCuts=200:MaxDepth=4:MinNodeSize=5%:UseBaggedGrad=True:BaggedSampleFraction=0.5:BoostType=Grad:Shrinkage=0.10:!UseBaggedGrad:NegWeightTreatment=PairNegWeightsGlobal:CreateMVAPdfs";
-
     //~tHq2017
     // method_options = "!H:!V:NTrees=200:nCuts=40:MaxDepth=4:BoostType=Grad:Shrinkage=0.10:MinNodeSize=5%:!UseBaggedGrad:NegWeightTreatment=PairNegWeightsGlobal:CreateMVAPdfs";
+
+    //Testing
+    method_options = "!H:!V:NTrees=800:nCuts=200:MaxDepth=4:MinNodeSize=5%:UseBaggedGrad=True:BaggedSampleFraction=0.5:BoostType=Grad:Shrinkage=0.10:NegWeightTreatment=PairNegWeightsGlobal";
+
+    //Quick test //FIXME
+    // method_options = "!H:!V:NTrees=20:nCuts=5:MaxDepth=1:MinNodeSize=10%:UseBaggedGrad=True:BaggedSampleFraction=0.5:BoostType=Grad:Shrinkage=0.10";
 
 
 //--------------------------------------------
@@ -814,6 +817,16 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
 		MVA_method_name1 = template_name_MVA + " method";
 		weightfile = dir + "/" + classifier_name + "_" + signal_process + ".weights.xml";
+
+        //If weightfile not found for a specific year, try to use instead the weightfile of a BDT training with full Run 2 samples
+        if(!Check_File_Existence(weightfile) )
+        {
+            dir = "weights/" + classifier_name + "/Run2";
+            weightfile = dir + "/" + classifier_name + "_" + signal_process + ".weights.xml";
+
+            cout<<BOLD(FRED("Warning : Weight file not found for '"<<lumiYear<<"' ! Using '"<<weightfile<<"' (trained on full Run 2) instead..."))<<endl;
+            usleep(2000000); //Pause
+        }
 
 		if(!Check_File_Existence(weightfile) ) {cout<<BOLD(FRED("Weight file "<<weightfile<<" not found ! Abort"))<<endl; return;}
 
@@ -1051,8 +1064,9 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 			{
 				// cout<<"ientry "<<ientry<<endl;
 
-                // ibar++; //-- only count events which pass the cuts...
-                if(draw_progress_bar && ibar%50000==0) {timer.DrawProgressBar(ibar, ""); cout<<ibar<<" / "<<total_nentries_toProcess<<endl; }
+                //-- moved : only count events which pass the cuts !
+                // ibar++;
+                // if(draw_progress_bar && ibar%50000==0) {timer.DrawProgressBar(ibar, ""); cout<<ibar<<" / "<<total_nentries_toProcess<<endl; }
 
 				weight_SF = 1;
 
@@ -1084,6 +1098,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 //--------------------------------------------
 
                 ibar++;
+                if(draw_progress_bar && ibar%50000==0) {timer.DrawProgressBar(ibar, ""); cout<<ibar<<" / "<<total_nentries_toProcess<<endl; }
 
                 // cout<<"eventWeight "<<eventWeight<<endl;
                 // cout<<"eventMCFactor "<<eventMCFactor<<endl;
@@ -1303,7 +1318,7 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 //--------------------------------------------
 	// bool doNot_stack_signal = false;
 
-	bool draw_errors = false; //true <-> superimpose error bands on plot/ratio plot
+	bool draw_errors = true; //true <-> superimpose error bands on plot/ratio plot
 
 	bool draw_logarithm = false;
 //--------------------------------------------
