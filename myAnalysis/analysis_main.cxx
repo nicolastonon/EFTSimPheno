@@ -16,7 +16,6 @@ int main(int argc, char **argv)
 
     //-- MAIN OPTIONS --
     TString signal_process = "tZq";
-    TString luminosity = "Run2"; //'2016','2017','2018', 'Run2' -- DECIDES WHICH NTUPLES ARE READ !
     bool split_analysis_by_channel = true; //true <-> will *also* produce templates/histos/plots for each subchannel (defined below)
     bool use_systematics = true; //true <-> will compute/store systematics selected below
 
@@ -33,9 +32,25 @@ int main(int argc, char **argv)
     TString plot_extension = ".png"; //extension of plots
     bool use_custom_colorPalette = true; //true <-> user-defined sample colors
 
-//------------------------------------
-//Apply choices given via command line, if any
-	Apply_CommandArgs_Choices(argc, argv, luminosity, region_choice);
+
+
+//-----------------------------------------------------------------------------------------
+// ##       ##     ## ##     ## #### ##    ##  #######   ######  #### ######## ##    ##
+// ##       ##     ## ###   ###  ##  ###   ## ##     ## ##    ##  ##     ##     ##  ##
+// ##       ##     ## #### ####  ##  ####  ## ##     ## ##        ##     ##      ####
+// ##       ##     ## ## ### ##  ##  ## ## ## ##     ##  ######   ##     ##       ##
+// ##       ##     ## ##     ##  ##  ##  #### ##     ##       ##  ##     ##       ##
+// ##       ##     ## ##     ##  ##  ##   ### ##     ## ##    ##  ##     ##       ##
+// ########  #######  ##     ## #### ##    ##  #######   ######  ####    ##       ##
+//-----------------------------------------------------------------------------------------
+//-- Choose here what data you want to consider (separate ntuples, templates, ... per year)
+//Naming convention enforced : 2016+2017 <-> "201617" ; etc.; 2016+2017+2018 <-> "Run2"
+//NB : years must be placed in the right order !
+
+	vector<TString> set_lumi_years;
+    set_lumi_years.push_back("2016");
+    set_lumi_years.push_back("2017");
+    set_lumi_years.push_back("2018");
 
 //-----------------------------------------------------------------------------------------
 //   ######  ##     ## ########  ######
@@ -55,7 +70,7 @@ int main(int argc, char **argv)
 
     // set_v_cut_name.push_back("nJets");  set_v_cut_def.push_back("==3 || ==4"); set_v_cut_IsUsedForBDT.push_back(false);
 
-    set_v_cut_name.push_back("passedBJets");  set_v_cut_def.push_back("==1"); set_v_cut_IsUsedForBDT.push_back(false);
+    set_v_cut_name.push_back("passedBJets");  set_v_cut_def.push_back("==1"); set_v_cut_IsUsedForBDT.push_back(false); //enforce final tZq 3l selection
 
 //---------------------------------------------------------------------------
 //  ######  ##     ##    ###    ##    ## ##    ## ######## ##        ######
@@ -259,7 +274,7 @@ int main(int argc, char **argv)
 //-----------------    PLOTS
     TString plotChannel = ""; //Can choose to plot particular subchannel //uu, ue, ee, ...
 
-    bool draw_templates = true; //Plot templates of selected BDT, in selected region
+    bool draw_templates = false; //Plot templates of selected BDT, in selected region
         bool prefit = true; //true <-> plot prefit templates ; else postfit (requires combine output file)
         bool use_combine_file = false; //true <-> use MLF output file from Combine (can get postfit plots, total error, etc.)
 
@@ -297,6 +312,10 @@ int main(int argc, char **argv)
 // ##     ##  #######     ##     #######  ##     ## ##     ##    ##    ####  ######
 //--------------------------------------------
 
+//Apply choices given via command line, if any
+	Apply_CommandArgs_Choices(argc, argv, set_lumi_years, region_choice);
+
+//------------------------------------
 //--------------------------------------------
 //---> AUTOMATIZED FUNCTION CALLS FROM BOOLEANS
 
@@ -304,7 +323,7 @@ int main(int argc, char **argv)
     //  CREATE INSTANCE OF CLASS & INITIALIZE
     //#############################################
 
-    TopEFT_analysis* theAnalysis = new TopEFT_analysis(thesamplelist, thesamplegroups, theSystWeights, theSystTree, thechannellist, thevarlist, set_v_cut_name, set_v_cut_def, set_v_cut_IsUsedForBDT, set_v_add_var_names, plot_extension, luminosity, show_pulls_ratio, region_choice, signal_process, classifier_name, DNN_type, use_custom_colorPalette);
+    TopEFT_analysis* theAnalysis = new TopEFT_analysis(thesamplelist, thesamplegroups, theSystWeights, theSystTree, thechannellist, thevarlist, set_v_cut_name, set_v_cut_def, set_v_cut_IsUsedForBDT, set_v_add_var_names, plot_extension, set_lumi_years, show_pulls_ratio, region_choice, signal_process, classifier_name, DNN_type, use_custom_colorPalette);
     if(theAnalysis->stop_program) {return 1;}
 
     //#############################################

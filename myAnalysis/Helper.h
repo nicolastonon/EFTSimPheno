@@ -77,15 +77,15 @@
     void Extract_Ranking_Info(TString, TString);
     void Get_Ranking_Vectors(TString, std::vector<TString>&, std::vector<double>&);
     void Compare_Histograms(TString, TString, TString, TString);
-    void Set_Custom_ColorPalette(std::vector<TColor*>&, std::vector<int>&, std::vector<TString>); //Set custom color palette
 
 //-- Analysis-specific helper functions
-    bool Apply_CommandArgs_Choices(int, char **, TString&, TString&);
-    void Get_Samples_Colors(std::vector<int>&, std::vector<TString>, int);
+    bool Apply_CommandArgs_Choices(int, char **, std::vector<TString>&, TString&);
+    void Get_Samples_Colors(std::vector<int>&, std::vector<TColor*>&, std::vector<TString>, int, bool);
+    // void Set_Custom_ColorPalette(std::vector<TColor*>&, std::vector<int>&, std::vector<TString>); //Set custom color palette
     bool Get_Variable_Range(TString, int&, double&, double&);
     TString Get_Category_Boolean_Name();
-    float Count_Total_Nof_Entries(TString, TString, std::vector<TString>, std::vector<TString>, std::vector<TString>, std::vector<TString>, bool);
-    // void SetBranchAddress_SystVariationArray(TTree*, TString, double*);
+    float Count_Total_Nof_Entries(TString, TString, std::vector<TString>, std::vector<TString>, std::vector<TString>, std::vector<TString>, std::vector<TString>, bool, bool);
+    TString Get_Modified_SystName(TString, TString);
 
 //--------------------------------------------
 	//Increment weight of first bin by 'weight'

@@ -11,13 +11,16 @@ import os
 total = len(sys.argv)
 cmdargs = str(sys.argv)
 
-channel = str(sys.argv[1])
-theVar = str(sys.argv[2])
-theFiletoRead= sys.argv[3]
-systChoice = str(sys.argv[4])
-statChoice = str(sys.argv[5])
-datacard_dir = str(sys.argv[6])
-region = str(sys.argv[7]) #'SR', 'ttZ' (CR), etc.
+theVar = str(sys.argv[1])
+channel = str(sys.argv[2])
+year = str(sys.argv[3])
+theFiletoRead= sys.argv[4]
+systChoice = str(sys.argv[5])
+statChoice = str(sys.argv[6])
+datacard_dir = str(sys.argv[7])
+# region = str(sys.argv[8]) #'SR', 'ttZ' (CR), etc.
+
+print('\n * Creating datacard for year : '+year+' / channel : '+channel+' / variable : '+theVar)
 
 fileToSearch = "Template_Datacard.txt" #TEMPLATE to parse
 
@@ -27,12 +30,11 @@ fileToSearch = "Template_Datacard.txt" #TEMPLATE to parse
 #     print("channel should be '', 'all', 'uuu', 'uue', 'eeu' or 'uuu' or 'ee' or 'uu' or 'ue'")
 #     exit()
 
-#Use the channel='all' keyword because parser needs to read some arg ! But don't want to appear in datacards
-varchan="var_chan"
-if channel=="all":
+if channel=="all": #Use the channel='all' keyword because parser needs to read some arg ! But don't want to appear in datacards. Also remove the "_" in front
     channel=""
-    varchan = "varchan" #if no subcategorization, want to remove the "_" between 'var' and 'chan' !
-
+else:
+    channel = "_" + channel #Keep the "_" in front
+    # varchan="varchan" #if no subcategorization, want to remove the "_" between 'var' and 'chan' !
 
 #If don't want shape systematics, will comment them out
 if systChoice=="withShape":
@@ -52,6 +54,9 @@ else:
     print("Wrong statChoice value ! should be 'withStat' or 'noStat'")
     exit()
 
+is201617=""
+if year=="2018":
+    is201617="#"
 
 #--------------------------------------------
 # ele_sys = "" #Ele systematics only in ele channels
@@ -67,16 +72,17 @@ rateVal = "1" #or '2' to double the rate of the process ? (verify)
 
 
 #--------------------------------------------
-print('\n *Creating datacard for channel : '+channel+' / variable : '+theVar)
 s = open( fileToSearch).read()
 
 #-- REPLACE KEYWORDS
 s = s.replace("[SHAPE]", shape)
 s = s.replace("[STAT]", stat)
+s = s.replace("[YEAR]", year)
+s = s.replace("[201617]", is201617)
 s = s.replace("filetoread", theFiletoRead)
-s = s.replace("var_chan", varchan)
-s = s.replace("chan", channel)
-s = s.replace("var",theVar)
+# s = s.replace("var_chan", varchan)
+s = s.replace("[VAR]",theVar)
+s = s.replace("_[CHAN]", channel)
 
 # s = s.replace("[ele_sys]",ele_sys)
 # s = s.replace("sigPar", sigPar)
@@ -98,10 +104,10 @@ s = s.replace("var",theVar)
 #--------------------------------------------
 print('==> Datacard created...')
 
-outname = datacard_dir+"/datacard_";
+outname = datacard_dir+"/datacard_"+theVar;
 if channel != "":
-    outname=outname+channel+"_";
-outname=outname+theVar+".txt"
+    outname=outname+channel;
+outname=outname+".txt"
 
 f = open(outname, 'w')
 f.write(s)

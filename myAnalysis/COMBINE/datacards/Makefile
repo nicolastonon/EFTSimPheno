@@ -13,7 +13,7 @@ CFLAGS = -c  $(DEBUG) #Compilation options
 LFLAGS = $(DEBUG) -lTMVA
 ROOTFLAGS = `root-config --glibs --cflags`
 
-SCRIPT_PRODUCER = ScriptProducer_GenAllDatacards.exe
+SCRIPT_PRODUCER = ScriptProducer_GenerateAllDatacards.exe
 GENERATE_DATACARDS = Generate_Datacard_Template.exe
 
 #Instructions
@@ -23,10 +23,11 @@ $(GENERATE_DATACARDS):	Generate_Datacard_Template.cxx
 	@g++ $< -o $@ $(ROOTFLAGS) $(LFLAGS)
 	@echo "-- Created executable ./$(GENERATE_DATACARDS) --"
 
-$(SCRIPT_PRODUCER):	ScriptProducer_GenAllDatacards.cxx
+$(SCRIPT_PRODUCER):	ScriptProducer_GenerateAllDatacards.cxx
 	@g++ $< -o $@ $(ROOTFLAGS) $(LFLAGS)
 	@echo "-- Created executable ./$(SCRIPT_PRODUCER) --"
 
 #Erase all objects and executable
 clean:
-	rm $(GENERATE_DATACARDS) $(SCRIPT_PRODUCER) *.sh
+	rm *.exe *.sh *~ Template_Datacard.txt
+	rm -r datacards_TemplateFit

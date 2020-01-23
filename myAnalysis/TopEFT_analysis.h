@@ -67,7 +67,7 @@ class TopEFT_analysis
 	public :
 
 	TopEFT_analysis(); //Default constructor
-    TopEFT_analysis(vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<bool>, vector<TString>, TString, TString, bool, TString, TString, TString, TString, bool);
+    TopEFT_analysis(vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<bool>, vector<TString>, TString, vector<TString>, bool, TString, TString, TString, TString, bool);
 	~TopEFT_analysis(); //Default destructor
 
 //--- METHODS
@@ -121,8 +121,10 @@ class TopEFT_analysis
     TString dir_ntuples; //Path to base dir. containing Ntuples
     TString t_name;
 	TString plot_extension;
-	double lumiValue;
-    TString lumiYear;
+    // TString lumiYear;
+    vector<TString> v_lumiYears;
+    TString lumiName;
+    double lumiValue;
 	int nbins; //nbin_templates
 	TString filename_suffix;
 	bool show_pulls_ratio;

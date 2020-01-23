@@ -195,8 +195,10 @@ If you are processing >10K events, or are chaining several processing steps, you
 gfal-ls -l srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/$USER/
 ```
 
-
 # Pheno studies
+
+The GenAnalyzer must be run under CMSSW (see [Setup](https://github.com/nicolastonon/EFT-Simu-Pheno#Setup) ; I am using CMSSW_10_2_18).
+The GenPlotter is a standalone code (I run it locally).
 
 ## GenAnalyzer
 
@@ -218,14 +220,13 @@ g++ GenPlotter.cc -o GenPlotter.exe `root-config --cflags --glibs`
 ./GenPlotter.exe
 ```
 
-
 # Ntuple analysis
 
-See the dedicated [README](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis/README.md).
+See the README in the [dedicated directory](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis).
 
 # COMBINE
 
-See the dedicated [README](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis/COMBINE/README.md).
+See the README in the [dedicated directory](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis/COMBINE).
 
 
 _____________________________________________________________________________

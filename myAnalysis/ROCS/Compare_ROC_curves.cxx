@@ -496,8 +496,8 @@ bool Produce_Efficiency_TGraph(TGraph* &g, TH1F* h_sig, TH1F* h_bkg)
 		// eff_sig_tmp = eff_bkg_tmp; //set for xcheck, so that auc = 0.5
 
 		//Fill efficiency graph
-        g->SetPoint(ibin-1, 1-eff_sig_tmp, eff_bkg_tmp);
-        // g->SetPoint(ibin-1, eff_sig_tmp, 1-eff_bkg_tmp);
+        // g->SetPoint(ibin-1, 1-eff_sig_tmp, eff_bkg_tmp);
+        g->SetPoint(ibin-1, eff_sig_tmp, 1-eff_bkg_tmp);
 
 		// if(ibin > 70 && ibin < 75)
 		// {
@@ -822,7 +822,7 @@ int main(int argc, char **argv)
 //--------------------------------------------
 	TString signal = "tZq";
 	TString region = "SR";
-    TString lumiYear = "2016";
+    TString lumiYear = "Run2";
     // TString channel = "";
 
 	TString cuts = "1"; //1 <-> No cut

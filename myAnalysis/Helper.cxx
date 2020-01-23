@@ -559,42 +559,6 @@ void Compare_Histograms(TString filepath1, TString filepath2, TString histname1,
 	return;
 }
 
-//Use custom color palette
-//-- //-- Idea : take good-looking/efficient color palettes from web and apply it manually
-void Set_Custom_ColorPalette(vector<TColor*> &v_custom_colors, vector<int> &v, vector<TString> v_sampleGroups)
-{
-    // TColor* col = new TColor(1700, 141./255., 211./255., 199./255.);
-    // col.SetRGB(141./255., 211./255., 199./255.);
-    // cout<<col->GetNumber()<<endl;
-
-    // Int_t dark   = TColor::GetColorDark(color_index);
-    // Int_t bright = TColor::GetColorBright(color_index);
-
-    // Int_t ci = TColor::GetFreeColorIndex(); //returns a free color index which can be used to define a user custom color.
-    // TColor *color = new TColor(ci, 0.1, 0.2, 0.3);
-
-	v.resize(10);
-	v_custom_colors.resize(10, 0);
-
-	//-- Colors definition : Number + RGB value, from 0 to 1
-    v_custom_colors[0] = 0; //FIXME
-    v_custom_colors[1] = new TColor(9002, 31./255., 120./255., 180./255.);
-    v_custom_colors[2] = new TColor(9001, 166./255., 206./255., 227./255.);
-    v_custom_colors[3] = new TColor(9004, 51./255., 160./255., 44./255.);
-    v_custom_colors[4] = new TColor(9003, 178./255., 223./255., 138./255.);
-    // v_custom_colors[5] = new TColor(9005, 251./255., 251./255., 153./255.);
-	// v_custom_colors[6] = new TColor(9006, 227./255., 26./255., 28./255.);
-
-    int index_customColor = 0;
-    for(int isample=0; isample<v_sampleGroups.size(); isample++)
-    {
-        if(isample >=1 && v_sampleGroups[isample] != v_sampleGroups[isample-1]) {index_customColor++;}
-
-        if(v_custom_colors[index_customColor] != 0) {v[isample] = v_custom_colors[index_customColor]->GetNumber();}
-    }
-
-    return;
-}
 
 
 
@@ -630,14 +594,19 @@ void Set_Custom_ColorPalette(vector<TColor*> &v_custom_colors, vector<int> &v, v
 //--------------------------------------------
 
 //Modifies arguments passed by reference according to command args
-bool Apply_CommandArgs_Choices(int argc, char **argv, TString& lumiYear, TString& region_choice)
+bool Apply_CommandArgs_Choices(int argc, char **argv, vector<TString>& v_lumiYear, TString& region_choice)
 {
 	if(argc >= 2)
 	{
-        if(!strcmp(argv[1],"2016") ) {lumiYear = "2016";}
-        else if(!strcmp(argv[1],"2017") ) {lumiYear = "2017";}
-        else if(!strcmp(argv[1],"2018") ) {lumiYear = "2018";}
-        else if(!strcmp(argv[1],"Run2") ) {lumiYear = "Run2";}
+        v_lumiYear.resize(0);
+
+        if(!strcmp(argv[1],"2016") ) {v_lumiYear.push_back("2016");}
+        else if(!strcmp(argv[1],"2017") ) {v_lumiYear.push_back("2017");}
+        else if(!strcmp(argv[1],"2018") ) {v_lumiYear.push_back("2018");}
+        else if(!strcmp(argv[1],"201617") ) {v_lumiYear.push_back("2016"); v_lumiYear.push_back("2017");}
+        else if(!strcmp(argv[1],"201618") ) {v_lumiYear.push_back("2016"); v_lumiYear.push_back("2018");}
+        else if(!strcmp(argv[1],"201718") ) {v_lumiYear.push_back("2017"); v_lumiYear.push_back("2018");}
+        else if(!strcmp(argv[1],"Run2") ) {v_lumiYear.push_back("2016"); v_lumiYear.push_back("2017"); v_lumiYear.push_back("2018");}
 
         else if(!strcmp(argv[1],"SR")) {region_choice = "SR";}
 
@@ -647,19 +616,24 @@ bool Apply_CommandArgs_Choices(int argc, char **argv, TString& lumiYear, TString
             cout<<"argc = "<<argc<<endl;
             cout<<"argv[1] = '"<<argv[1]<<"'"<<endl;
             if(argc >= 3) {cout<<"argv[2] = '"<<argv[2]<<"'"<<endl;}
-            cout<<UNDL("--> Syntax : ./analysis_main.exe [2016,2017,2018,Run2] [SR]")<<endl;
+            cout<<UNDL("--> Syntax : ./analysis_main.exe [lumi] [region]")<<endl;
+            cout<<UNDL("(Please check conventions for 'lumi' arg. in code)")<<endl;
 
             return 0;
         }
 
 		if(argc >= 3)
 		{
-            if(!strcmp(argv[2],"2016") ) {lumiYear = "2016";}
-            else if(!strcmp(argv[2],"2017") ) {lumiYear = "2017";}
-            else if(!strcmp(argv[2],"2018") ) {lumiYear = "2018";}
-            else if(!strcmp(argv[2],"Run2") ) {lumiYear = "Run2";}
+            if(!strcmp(argv[2],"SR")) {region_choice = "SR";}
 
-			else if(!strcmp(argv[2],"SR")) {region_choice = "SR";}
+            else if(!strcmp(argv[2],"2016") ) {v_lumiYear.push_back("2016");}
+            else if(!strcmp(argv[2],"2017") ) {v_lumiYear.push_back("2017");}
+            else if(!strcmp(argv[2],"2018") ) {v_lumiYear.push_back("2018");}
+            else if(!strcmp(argv[2],"201617") ) {v_lumiYear.push_back("2016"); v_lumiYear.push_back("2017");}
+            else if(!strcmp(argv[2],"201618") ) {v_lumiYear.push_back("2016"); v_lumiYear.push_back("2018");}
+            else if(!strcmp(argv[2],"201718") ) {v_lumiYear.push_back("2017"); v_lumiYear.push_back("2018");}
+            else if(!strcmp(argv[2],"Run2") ) {v_lumiYear.push_back("2016"); v_lumiYear.push_back("2017"); v_lumiYear.push_back("2018");}
+
 
 			else
 			{
@@ -667,7 +641,8 @@ bool Apply_CommandArgs_Choices(int argc, char **argv, TString& lumiYear, TString
 				cout<<"argc = "<<argc<<endl;
 				cout<<"argv[1] = '"<<argv[1]<<"'"<<endl;
 				cout<<"argv[2] = '"<<argv[2]<<"'"<<endl;
-				cout<<UNDL("--> Syntax : ./analysis_main.exe [2016,2017,2018,Run2] [SR]")<<endl;
+                cout<<UNDL("--> Syntax : ./analysis_main.exe [lumi] [region]")<<endl;
+                cout<<UNDL("(Please check conventions for 'lumi' arg. in code)")<<endl;
 
 				return 0;
 			}
@@ -678,59 +653,153 @@ bool Apply_CommandArgs_Choices(int argc, char **argv, TString& lumiYear, TString
 }
 
 //Select a color for each activated sample
-void Get_Samples_Colors(vector<int>& v_colors, vector<TString> v_samples, int color_scheme)
+//NB : also account for the DATA sample in color vector, but keep its element empty !
+void Get_Samples_Colors(vector<int>& v_colors, std::vector<TColor*>& v_custom_colors, vector<TString> v_samples, int color_scheme, bool use_custom_colorPalette)
 {
-	int i_skipData = 0; //index //include data in color vector for now (empty element)
+	// int i_skipData = 0; //index //include data in color vector for now (empty element)
 
-    TColor test(9001, 166./255., 206./255., 227./255.);
+    //Define some TColors, which we can then use to define the default color vector. NB : must only delete them after all plots have been created.
+    if(use_custom_colorPalette)
+    {
+        v_custom_colors.resize(10, 0);
+
+        //-- Colors definition : Number + RGB value, from 0 to 1
+        v_custom_colors[0] = new TColor(9000, 31./255., 120./255., 180./255.);
+        v_custom_colors[1] = new TColor(9001, 166./255., 206./255., 227./255.);
+        v_custom_colors[2] = new TColor(9003, 51./255., 160./255., 44./255.);
+        v_custom_colors[3] = new TColor(9004, 178./255., 223./255., 138./255.);
+
+    }
 
 //--------------------------------------------
-	if(color_scheme == 0)
+    if(use_custom_colorPalette) //Custom color scheme
+    {
+        for(int isample=0; isample<v_samples.size(); isample++)
+		{
+            //Signals
+            if(v_samples[isample] == "tZq") {v_colors[isample] = v_custom_colors[0]->GetNumber();}
+            else if(v_samples[isample] == "ttZ") {v_colors[isample] = v_custom_colors[1]->GetNumber();}
+
+            //ttX
+            else if(v_samples[isample] == "ttH") {v_colors[isample] = v_custom_colors[2]->GetNumber();}
+            else if(v_samples[isample] == "ttW") {v_colors[isample] = v_custom_colors[2]->GetNumber();}
+            else if(v_samples[isample] == "tttt") {v_colors[isample] = v_custom_colors[2]->GetNumber();}
+            else if(v_samples[isample] == "ttZZ") {v_colors[isample] = v_custom_colors[2]->GetNumber();}
+            else if(v_samples[isample] == "ttWW") {v_colors[isample] = v_custom_colors[2]->GetNumber();}
+            else if(v_samples[isample] == "ttWZ") {v_colors[isample] = v_custom_colors[2]->GetNumber();}
+            else if(v_samples[isample] == "ttZH") {v_colors[isample] = v_custom_colors[2]->GetNumber();}
+            else if(v_samples[isample] == "ttWH") {v_colors[isample] = v_custom_colors[2]->GetNumber();}
+
+            //tX
+            else if(v_samples[isample] == "tHq") {v_colors[isample] = v_custom_colors[3]->GetNumber();}
+            else if(v_samples[isample] == "tHW") {v_colors[isample] = v_custom_colors[3]->GetNumber();}
+            else if(v_samples[isample] == "tGJets") {v_colors[isample] = v_custom_colors[3]->GetNumber();}
+            else if(v_samples[isample] == "ST") {v_colors[isample] = v_custom_colors[3]->GetNumber();}
+
+            //VV(V)
+            else if(v_samples[isample] == "WZ") {v_colors[isample] = kViolet-6;}
+            else if(v_samples[isample] == "ZZ4l") {v_colors[isample] = kViolet-6;}
+            else if(v_samples[isample] == "ZZZ") {v_colors[isample] = kViolet-6;}
+            else if(v_samples[isample] == "WZZ") {v_colors[isample] = kViolet-6;}
+            else if(v_samples[isample] == "WWW") {v_colors[isample] = kViolet-6;}
+            else if(v_samples[isample] == "WWZ") {v_colors[isample] = kViolet-6;}
+            else if(v_samples[isample] == "WZ2l2q") {v_colors[isample] = kViolet-6;}
+            else if(v_samples[isample] == "ZZ2l2q") {v_colors[isample] = kViolet-6;}
+            else if(v_samples[isample] == "ZG2l2g") {v_colors[isample] = kViolet-6;}
+
+            //Fakes
+            else if(v_samples[isample] == "DY") {v_colors[isample] = kGray;} //kAzure-7
+
+            else if(v_samples[isample] == "TTbar_DiLep") {v_colors[isample] = kGray+2;} //kPink-4, kCyan-6;
+            else if(v_samples[isample] == "TTbar_SemiLep") {v_colors[isample] = kGray+2;}
+		}
+    }
+
+	else if(color_scheme == 0) //'Default' color scheme
 	{
 		for(int isample=0; isample<v_samples.size(); isample++)
 		{
             //Signals
-            if(v_samples[isample] == "tZq") {v_colors[isample-i_skipData] = kOrange+10;}
-            if(v_samples[isample] == "tZq") {v_colors[isample-i_skipData] = test.GetNumber();}
-            else if(v_samples[isample] == "ttZ") {v_colors[isample-i_skipData] = kOrange+6;}
+            if(v_samples[isample] == "tZq") {v_colors[isample] = kOrange+10;}
+            // if(v_samples[isample] == "tZq") {v_colors[isample] = test.GetNumber();}
+            else if(v_samples[isample] == "ttZ") {v_colors[isample] = kOrange+6;}
 
             //ttX
-            else if(v_samples[isample] == "ttH") {v_colors[isample-i_skipData] = kGreen-5;}
-            else if(v_samples[isample] == "ttW") {v_colors[isample-i_skipData] = kGreen-5;}
-            else if(v_samples[isample] == "tttt") {v_colors[isample-i_skipData] = kGreen-5;}
-            else if(v_samples[isample] == "ttZZ") {v_colors[isample-i_skipData] = kGreen-5;}
-            else if(v_samples[isample] == "ttWW") {v_colors[isample-i_skipData] = kGreen-5;}
-            else if(v_samples[isample] == "ttWZ") {v_colors[isample-i_skipData] = kGreen-5;}
-            else if(v_samples[isample] == "ttZH") {v_colors[isample-i_skipData] = kGreen-5;}
-            else if(v_samples[isample] == "ttWH") {v_colors[isample-i_skipData] = kGreen-5;}
+            else if(v_samples[isample] == "ttH") {v_colors[isample] = kGreen-5;}
+            else if(v_samples[isample] == "ttW") {v_colors[isample] = kGreen-5;}
+            else if(v_samples[isample] == "tttt") {v_colors[isample] = kGreen-5;}
+            else if(v_samples[isample] == "ttZZ") {v_colors[isample] = kGreen-5;}
+            else if(v_samples[isample] == "ttWW") {v_colors[isample] = kGreen-5;}
+            else if(v_samples[isample] == "ttWZ") {v_colors[isample] = kGreen-5;}
+            else if(v_samples[isample] == "ttZH") {v_colors[isample] = kGreen-5;}
+            else if(v_samples[isample] == "ttWH") {v_colors[isample] = kGreen-5;}
 
             //tX
-            else if(v_samples[isample] == "tHq") {v_colors[isample-i_skipData] = kSpring+2;}
-            else if(v_samples[isample] == "tHW") {v_colors[isample-i_skipData] = kSpring+2;}
-            else if(v_samples[isample] == "tGJets") {v_colors[isample-i_skipData] = kSpring+2;}
-            else if(v_samples[isample] == "ST") {v_colors[isample-i_skipData] = kSpring+2;}
+            else if(v_samples[isample] == "tHq") {v_colors[isample] = kSpring+2;}
+            else if(v_samples[isample] == "tHW") {v_colors[isample] = kSpring+2;}
+            else if(v_samples[isample] == "tGJets") {v_colors[isample] = kSpring+2;}
+            else if(v_samples[isample] == "ST") {v_colors[isample] = kSpring+2;}
 
             //VV(V)
-            else if(v_samples[isample] == "WZ") {v_colors[isample-i_skipData] = kViolet-6;}
-            else if(v_samples[isample] == "ZZ4l") {v_colors[isample-i_skipData] = kViolet-6;}
-            else if(v_samples[isample] == "ZZZ") {v_colors[isample-i_skipData] = kViolet-6;}
-            else if(v_samples[isample] == "WZZ") {v_colors[isample-i_skipData] = kViolet-6;}
-            else if(v_samples[isample] == "WWW") {v_colors[isample-i_skipData] = kViolet-6;}
-            else if(v_samples[isample] == "WWZ") {v_colors[isample-i_skipData] = kViolet-6;}
-            else if(v_samples[isample] == "WZ2l2q") {v_colors[isample-i_skipData] = kViolet-6;}
-            else if(v_samples[isample] == "ZZ2l2q") {v_colors[isample-i_skipData] = kViolet-6;}
-            else if(v_samples[isample] == "ZG2l2g") {v_colors[isample-i_skipData] = kViolet-6;}
+            else if(v_samples[isample] == "WZ") {v_colors[isample] = kViolet-6;}
+            else if(v_samples[isample] == "ZZ4l") {v_colors[isample] = kViolet-6;}
+            else if(v_samples[isample] == "ZZZ") {v_colors[isample] = kViolet-6;}
+            else if(v_samples[isample] == "WZZ") {v_colors[isample] = kViolet-6;}
+            else if(v_samples[isample] == "WWW") {v_colors[isample] = kViolet-6;}
+            else if(v_samples[isample] == "WWZ") {v_colors[isample] = kViolet-6;}
+            else if(v_samples[isample] == "WZ2l2q") {v_colors[isample] = kViolet-6;}
+            else if(v_samples[isample] == "ZZ2l2q") {v_colors[isample] = kViolet-6;}
+            else if(v_samples[isample] == "ZG2l2g") {v_colors[isample] = kViolet-6;}
 
             //Fakes
-            else if(v_samples[isample] == "DY") {v_colors[isample-i_skipData] = kGray;} //kAzure-7
+            else if(v_samples[isample] == "DY") {v_colors[isample] = kGray;} //kAzure-7
 
-            else if(v_samples[isample] == "TTbar_DiLep") {v_colors[isample-i_skipData] = kGray+2;} //kPink-4, kCyan-6;
-            else if(v_samples[isample] == "TTbar_SemiLep") {v_colors[isample-i_skipData] = kGray+2;}
+            else if(v_samples[isample] == "TTbar_DiLep") {v_colors[isample] = kGray+2;} //kPink-4, kCyan-6;
+            else if(v_samples[isample] == "TTbar_SemiLep") {v_colors[isample] = kGray+2;}
 		}
 	}
 
 	return;
 }
+
+
+/*
+//Use custom color palette
+//-- Idea : take good-looking/efficient color palettes from web and apply it manually
+void Set_Custom_ColorPalette(vector<TColor*> &v_custom_colors, vector<int> &v, vector<TString> v_sampleGroups)
+{
+    // TColor* col = new TColor(1700, 141./255., 211./255., 199./255.);
+    // col.SetRGB(141./255., 211./255., 199./255.);
+    // cout<<col->GetNumber()<<endl;
+
+    // Int_t dark   = TColor::GetColorDark(color_index);
+    // Int_t bright = TColor::GetColorBright(color_index);
+
+    // Int_t ci = TColor::GetFreeColorIndex(); //returns a free color index which can be used to define a user custom color.
+    // TColor *color = new TColor(ci, 0.1, 0.2, 0.3);
+
+	v.resize(10);
+	v_custom_colors.resize(10, 0);
+
+	//-- Colors definition : Number + RGB value, from 0 to 1
+    v_custom_colors[0] = 0;
+    v_custom_colors[1] = new TColor(9002, 31./255., 120./255., 180./255.);
+    v_custom_colors[2] = new TColor(9001, 166./255., 206./255., 227./255.);
+    v_custom_colors[3] = new TColor(9004, 51./255., 160./255., 44./255.);
+    v_custom_colors[4] = new TColor(9003, 178./255., 223./255., 138./255.);
+    // v_custom_colors[5] = new TColor(9005, 251./255., 251./255., 153./255.);
+	// v_custom_colors[6] = new TColor(9006, 227./255., 26./255., 28./255.);
+
+    // int index_customColor = 0;
+    // for(int isample=0; isample<v_sampleGroups.size(); isample++)
+    // {
+    //     if(isample >=1 && v_sampleGroups[isample] != v_sampleGroups[isample-1]) {index_customColor++;}
+    //     if(v_custom_colors[index_customColor] != 0) {v[isample] = v_custom_colors[index_customColor]->GetNumber();}
+    // }
+
+    return;
+}
+*/
 
 //Store here the binnings and ranges of all the variables to be plotted via ControlHistograms files
 bool Get_Variable_Range(TString var, int& nbins, double& xmin, double& xmax)
@@ -792,11 +861,11 @@ TString Get_Category_Boolean_Name()
 //Computes total nof entries which will be processed by the Produce_Templates() function, so that the Timebar is correct
 //NB1 : don't account for nof syst weights, since they are computed all at once when reading an event
 //NB2 : this returns the nof entries which will get read, not processed (else, should take cuts into account, etc.)
-float Count_Total_Nof_Entries(TString dir_ntuples, TString t_name, vector<TString> v_samples, vector<TString> v_systTrees, vector<TString> v_cut_name, vector<TString> v_cut_def, bool noSysts_inputVars)
+float Count_Total_Nof_Entries(TString dir_ntuples, TString t_name, vector<TString> v_samples, vector<TString> v_systTrees, vector<TString> v_cut_name, vector<TString> v_cut_def, vector<TString> v_lumiYears, bool makeHisto_inputVars, bool noSysts_inputVars)
 {
     float total_nentries = 0;
 
-    if(noSysts_inputVars) //syst weights not computed
+    if(makeHisto_inputVars && noSysts_inputVars) //syst weights not computed
     {
         v_systTrees.resize(1);
     }
@@ -826,42 +895,73 @@ float Count_Total_Nof_Entries(TString dir_ntuples, TString t_name, vector<TStrin
         }
     }
 
-    for(int isample=0; isample<v_samples.size(); isample++)
+    for(int iyear=0; iyear<v_lumiYears.size(); iyear++)
     {
-        // cout<<"v_samples[isample] "<<v_samples[isample]<<endl;
+        TString dir_tmp = dir_ntuples + v_lumiYears[iyear] + "/";
 
-        //Open input TFile
-        TString inputfile = dir_ntuples + v_samples[isample] + ".root";
-        // cout<<"inputfile "<<inputfile<<endl;
-        if(!Check_File_Existence(inputfile))
+        for(int isample=0; isample<v_samples.size(); isample++)
         {
-            // cout<<endl<<"File "<<inputfile<<FRED(" not found!")<<endl;
-            continue;
-        }
-        TFile* file_input = TFile::Open(inputfile, "READ");
+            // cout<<"v_samples[isample] "<<v_samples[isample]<<endl;
 
-        for(int itree=0; itree<v_systTrees.size(); itree++)
-		{
-			TTree* tree = 0;
-            TString tmp = v_systTrees[itree];
-			if(tmp == "") {tmp = t_name;}
-            tree = (TTree*) file_input->Get(tmp);
-			if(!tree)
-			{
-				// cout<<BOLD(FRED("ERROR : tree '"<<tmp<<"' not found in file : "<<inputfile<<" ! Skip !"))<<endl;
-				continue; //Skip sample
-			}
+            //Open input TFile
+            TString inputfile = dir_tmp + v_samples[isample] + ".root";
+            // cout<<"inputfile "<<inputfile<<endl;
+            if(!Check_File_Existence(inputfile))
+            {
+                // cout<<endl<<"File "<<inputfile<<FRED(" not found!")<<endl;
+                continue;
+            }
+            TFile* file_input = TFile::Open(inputfile, "READ");
 
-            // float nentries_tmp = tree->GetEntries("passedBJets");
-            float nentries_tmp = tree->GetEntries(cuts_chain);
+            for(int itree=0; itree<v_systTrees.size(); itree++)
+    		{
+    			TTree* tree = 0;
+                TString tmp = v_systTrees[itree];
+    			if(tmp == "") {tmp = t_name;}
+                tree = (TTree*) file_input->Get(tmp);
+    			if(!tree)
+    			{
+    				// cout<<BOLD(FRED("ERROR : tree '"<<tmp<<"' not found in file : "<<inputfile<<" ! Skip !"))<<endl;
+    				continue; //Skip sample
+    			}
 
-            total_nentries+= nentries_tmp; //Multiply nof entries by nof loops
+                // float nentries_tmp = tree->GetEntries("passedBJets");
+                float nentries_tmp = tree->GetEntries(cuts_chain);
 
-            // cout<<"total_nentries = "<<total_nentries<<endl;
-        } //trees
-    } //samples
+                total_nentries+= nentries_tmp; //Multiply nof entries by nof loops
+
+                // cout<<"total_nentries = "<<total_nentries<<endl;
+            } //trees
+        } //samples
+    } //years
 
     // cout<<"total_nentries "<<total_nentries<<endl;
 
     return total_nentries;
+}
+
+//For systs uncorrelated between years, need to add the year in the systName (to make it unique)
+TString Get_Modified_SystName(TString systname, TString lumiYear)
+{
+    //Only list the systematics which are *not* to be correlated in-between years (i.e., need to give them a unique name per year)
+    if(systname.BeginsWith("prefiring")
+    || systname.BeginsWith("Btag")
+    || systname.BeginsWith("LepEff")
+    )
+    {
+        if(systname.EndsWith("Up"))
+        {
+            int i = systname.Index("Up"); //Find position of suffix
+            systname.Remove(i); //Remove suffix
+            systname+= lumiYear+"Up"; //Add year + suffix
+        }
+        else if(systname.EndsWith("Down"))
+        {
+            int i = systname.Index("Down"); //Find position of suffix
+            systname.Remove(i); //Remove suffix
+            systname+= lumiYear+"Down"; //Add year + suffix
+        }
+    }
+
+    return systname;
 }
