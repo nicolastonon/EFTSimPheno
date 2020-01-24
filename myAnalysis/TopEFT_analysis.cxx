@@ -431,24 +431,15 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
 	// if there are too many input variables, the creation of correlations plots blows up memory and basically kills the TMVA execution --> avoid above critical number (which can be user defined)
 	(TMVA::gConfig().GetVariablePlotting()).fMaxNumOfAllowedVariablesForScatterPlots = 300;
 
-    //Output rootfile containing TMVAGui infos, ROCS, ...
-    TString output_file_name = "outputs/" + classifier_name + "_" + signal_process;
-    if(classifier_name == "DNN") {output_file_name+= DNN_type;}
-	if(channel != "") {output_file_name+= "_" + channel;}
-    output_file_name+= "_" + lumiName;
-	output_file_name+= this->filename_suffix + ".root";
-
-	TFile* output_file = TFile::Open(output_file_name, "RECREATE");
-
-	// Create the factory object
-	// TMVA::Factory* factory = new TMVA::Factory(type.Data(), output_file, "!V:!Silent:Color:DrawProgressBar:AnalysisType=Classification" );
 	TString weights_dir = "weights";
-	TMVA::DataLoader* dataloader = new TMVA::DataLoader(weights_dir); //If no TString given in arg, path of weightdir *in TTree* will be : default/weights/...
+
+    //The TMVA::DataLoader object will hold the training and test data, and is later passed to the TMVA::Factory
+	TMVA::DataLoader* myDataLoader = new TMVA::DataLoader(weights_dir); //If no TString given in arg, path of weightdir *in TTree* will be : default/weights/...
 
 	//--- Could modify here the name of local dir. storing the BDT weights (default = "weights")
-	//By setting it to "", weight files will be stored directly at the path given to dataloader
+	//By setting it to "", weight files will be stored directly at the path given to myDataLoader
 	//Complete path for weight files is : [path_given_toDataloader]/[fWeightFileDir]
-	//Apparently, TMVAGui can't handle nested repos in path given to dataloader... so split path in 2 here
+	//Apparently, TMVAGui can't handle nested repos in path given to myDataLoader... so split path in 2 here
 	TMVA::gConfig().GetIONames().fWeightFileDir = "BDT/"+lumiName;
 	if(classifier_name == "DNN" && DNN_type == "TMVA") {TMVA::gConfig().GetIONames().fWeightFileDir = "DNN/TMVA/"+lumiName;}
 
@@ -464,7 +455,7 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
 	// Define the input variables that shall be used for the MVA training
 	for(int i=0; i<var_list.size(); i++)
 	{
-		dataloader->AddVariable(var_list[i].Data(), 'F');
+		myDataLoader->AddVariable(var_list[i].Data(), 'F');
 	}
 
 	//Choose if the cut variables are used in BDT or not
@@ -474,13 +465,13 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
 		// cout<<"Is "<<v_cut_name[i]<<" used ? "<<(v_cut_IsUsedForBDT[i] && !v_cut_def[i].Contains("=="))<<endl;
 
 		// if we ask "var == x", all the selected events will be equal to x, so can't use it as discriminant variable !
-		if(v_cut_IsUsedForBDT[i] && !v_cut_def[i].Contains("==")) {dataloader->AddVariable(v_cut_name[i].Data(), 'F');}
-		// else {dataloader->AddSpectator(v_cut_name[i].Data(), v_cut_name[i].Data(), 'F');}
+		if(v_cut_IsUsedForBDT[i] && !v_cut_def[i].Contains("==")) {myDataLoader->AddVariable(v_cut_name[i].Data(), 'F');}
+		// else {myDataLoader->AddSpectator(v_cut_name[i].Data(), v_cut_name[i].Data(), 'F');}
 	}
-	for(int i=0; i<v_add_var_names.size(); i++)
-	{
-		// dataloader->AddSpectator(v_add_var_names[i].Data(), v_add_var_names[i].Data(), 'F');
-	}
+	// for(int i=0; i<v_add_var_names.size(); i++) //Don't add spectator variables anymore ; would allow to get their correlations with training variables, etc.
+	// {
+		// myDataLoader->AddSpectator(v_add_var_names[i].Data(), v_add_var_names[i].Data(), 'F');
+	// }
 
 	double nEvents_sig = 0;
 	double nEvents_bkg = 0;
@@ -495,7 +486,7 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
  // #    # # #    #     #         #    # #   #  #    #
  //  ####  #  ####     #          #####  #    #  ####
 //--------------------------------------------
-	//--- Only use few samples for training
+	//--- Only select few samples for training
 	std::vector<TFile*> files_to_close;
 
     for(int iyear=0; iyear<v_lumiYears.size(); iyear++)
@@ -532,7 +523,8 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
 
             file_input = TFile::Open(inputfile);
             if(!file_input) {cout<<BOLD(FRED(<<inputfile<<" not found!"))<<endl; continue;}
-            files_to_close.push_back(file_input);
+            files_to_close.push_back(file_input); //store pointer to file, to close it after its events will have been read for training
+
             tree = (TTree*) file_input->Get(t_name);
             if(tree==0) {cout<<BOLD(FRED("ERROR :"))<<" file "<<inputfile<<" --> *tree = 0 !"<<endl; continue;}
             else {cout<<FMAG("=== Opened file : ")<<inputfile<<endl<<endl;}
@@ -544,39 +536,39 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
         //-- Choose between absolute/relative weights for training
     		if(samplename_tmp.Contains(signal_process) )
     		{
-                nEvents_sig+= tree->GetEntries(mycuts); dataloader->AddSignalTree(tree, signalWeight);
+                nEvents_sig+= tree->GetEntries(mycuts); myDataLoader->AddSignalTree(tree, signalWeight);
 
     			if(use_relative_weights)
     			{
                     // TString weightExp = "weight";
                     TString weightExp = "eventWeight*eventMCFactor";
-    				dataloader->SetSignalWeightExpression(weightExp);
+    				myDataLoader->SetSignalWeightExpression(weightExp);
     				cout<<"Signal sample : "<<samplename_tmp<<" / Weight expression : "<<weightExp<<endl<<endl;
     			}
     			else
     			{
                     // TString weightExp = "fabs(weight)";
                     TString weightExp = "fabs(eventWeight*eventMCFactor)";
-    				dataloader->SetSignalWeightExpression(weightExp);
+    				myDataLoader->SetSignalWeightExpression(weightExp);
     				cout<<"Signal sample : "<<samplename_tmp<<" / Weight expression : "<<weightExp<<endl<<endl;
     			}
     		}
     		else
     		{
-                nEvents_bkg+= tree->GetEntries(mycutb); dataloader->AddBackgroundTree(tree, backgroundWeight);
+                nEvents_bkg+= tree->GetEntries(mycutb); myDataLoader->AddBackgroundTree(tree, backgroundWeight);
 
                 if(use_relative_weights)
     			{
                     // TString weightExp = "weight";
                     TString weightExp = "eventWeight*eventMCFactor";
-    				dataloader->SetBackgroundWeightExpression(weightExp);
+    				myDataLoader->SetBackgroundWeightExpression(weightExp);
     				cout<<"Background sample : "<<samplename_tmp<<" / Weight expression : "<<weightExp<<endl;
     			}
     			else
     			{
                     // TString weightExp = "fabs(weight)";
                     TString weightExp = "fabs(eventWeight*eventMCFactor)";
-    				dataloader->SetBackgroundWeightExpression(weightExp);
+    				myDataLoader->SetBackgroundWeightExpression(weightExp);
     				cout<<"Background sample : "<<samplename_tmp<<" / Weight expression : "<<weightExp<<endl;
     			}
     		}
@@ -595,8 +587,6 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
 //--------------------------------------------
 
 	if(mycuts != mycutb) {cout<<__LINE__<<FRED("PROBLEM : cuts are different for signal and background ! If this is normal, modify code -- Abort")<<endl; return;}
-
-    // Tell the factory how to use the training and testing events
 
 	// If nTraining_Events=nTesting_Events="0", half of the events in the tree are used for training, and the other half for testing
 	//NB : when converting nEvents to TString, make sure to ask for sufficient precision !
@@ -625,13 +615,21 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
 	cout<<BOLD(FBLU("-- Requesting "<<nTesting_Events_bkg<<" Testing events [BACKGROUND]"))<<endl;
 	cout<<BOLD(FBLU("==================================="))<<endl<<endl<<endl<<endl;
 
-    dataloader->PrepareTrainingAndTestTree(mycuts, mycutb, "nTrain_Signal="+nTraining_Events_sig+":nTrain_Background="+nTraining_Events_bkg+":nTest_Signal="+nTesting_Events_sig+":nTest_Background="+nTesting_Events_bkg+":SplitMode=Random:!V");
+    myDataLoader->PrepareTrainingAndTestTree(mycuts, mycutb, "nTrain_Signal="+nTraining_Events_sig+":nTrain_Background="+nTraining_Events_bkg+":nTest_Signal="+nTesting_Events_sig+":nTest_Background="+nTesting_Events_bkg+":SplitMode=Random:!V");
 
-	//-- for quick testing
-	// dataloader->PrepareTrainingAndTestTree(mycuts, mycutb, "nTrain_Signal=10:nTrain_Background=10:nTest_Signal=10:nTest_Background=10:SplitMode=Random:NormMode=NumEvents:!V");
+	//-- for quick testing -- few events
+	// myDataLoader->PrepareTrainingAndTestTree(mycuts, mycutb, "nTrain_Signal=10:nTrain_Background=10:nTest_Signal=10:nTest_Background=10:SplitMode=Random:NormMode=NumEvents:!V");
 
+    //Output rootfile containing TMVAGui infos, ROCS, ... for control
+    TString output_file_name = "outputs/" + classifier_name + "_" + signal_process;
+    if(classifier_name == "DNN") {output_file_name+= DNN_type;}
+	if(channel != "") {output_file_name+= "_" + channel;}
+    output_file_name+= "_" + lumiName;
+	output_file_name+= this->filename_suffix + ".root";
 
-	//--- Boosted Decision Trees -- Choose method
+	TFile* output_file = TFile::Open(output_file_name, "RECREATE");
+
+    //The TMVA::Factory handles the training/testing/evaluation phases
 	TMVA::Factory* factory = new TMVA::Factory(classifier_name, output_file, "V:!Silent:Color:DrawProgressBar:Correlations=True:AnalysisType=Classification");
 
 	//So that the output weights are labelled differently
@@ -651,11 +649,11 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
     //~ttH2017
     // method_options= "!H:!V:NTrees=200:BoostType=Grad:Shrinkage=0.10:!UseBaggedBoost:nCuts=200:MinNodeSize=5%:NNodesMax=5:MaxDepth=8:NegWeightTreatment=PairNegWeightsGlobal:CreateMVAPdfs:DoBoostMonitor=True";
 
-    //~tHq2017
-    // method_options = "!H:!V:NTrees=200:nCuts=40:MaxDepth=4:BoostType=Grad:Shrinkage=0.10:MinNodeSize=5%:!UseBaggedBoost:NegWeightTreatment=PairNegWeightsGlobal:CreateMVAPdfs";
+    //tHq2017
+    method_options = "!H:!V:NTrees=200:nCuts=40:MaxDepth=4:BoostType=Grad:Shrinkage=0.10:!UseBaggedGrad:NegWeightTreatment=PairNegWeightsGlobal:CreateMVAPdfs";
 
     //Testing
-    method_options = "!H:!V:NTrees=800:nCuts=200:MaxDepth=4:MinNodeSize=5%:UseBaggedBoost=True:BaggedSampleFraction=0.5:BoostType=Grad:Shrinkage=0.10:NegWeightTreatment=PairNegWeightsGlobal";
+    // method_options = "!H:!V:NTrees=800:nCuts=200:MaxDepth=4:MinNodeSize=5%:UseBaggedBoost=True:BaggedSampleFraction=0.5:BoostType=Grad:Shrinkage=0.10:NegWeightTreatment=PairNegWeightsGlobal";
 
     //Quick test
     // method_options = "!H:!V:NTrees=20:nCuts=5:MaxDepth=1:MinNodeSize=10%:UseBaggedBoost=True:BaggedSampleFraction=0.5:BoostType=Grad:Shrinkage=0.10";
@@ -670,8 +668,8 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
  //   #   #    # #    # # #    #         #   ######  ####    #         ######   ##   #    # ######
 //--------------------------------------------
 
-	if(classifier_name == "BDT") {factory->BookMethod(dataloader, TMVA::Types::kBDT, method_title, method_options);} //Book BDT
-	else if(DNN_type == "TMVA") {factory->BookMethod(dataloader, TMVA::Types::kDNN, method_title, method_options);}
+	if(classifier_name == "BDT") {factory->BookMethod(myDataLoader, TMVA::Types::kBDT, method_title, method_options);} //Book BDT -- pass dataLoader and options as arg
+	else if(DNN_type == "TMVA") {factory->BookMethod(myDataLoader, TMVA::Types::kDNN, method_title, method_options);}
 
 	output_file->cd();
 
@@ -714,7 +712,7 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
 
 	for(unsigned int i=0; i<files_to_close.size(); i++) {files_to_close[i]->Close(); delete files_to_close[i];}
 
-	delete dataloader; dataloader = NULL;
+	delete myDataLoader; myDataLoader = NULL;
 	delete factory; factory = NULL;
 	output_file->Close(); output_file = NULL;
 

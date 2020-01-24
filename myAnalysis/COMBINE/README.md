@@ -35,21 +35,19 @@ CODE EXAMPLE
 
 #### Useful links
 
-:link: Combine page (browse the *Running combine* tab): http://cms-analysis.github.io/HiggsAnalysis-CombinedLimit/
+:link: Combine page (browse the *Running combine* tab, or use the *Search* function): http://cms-analysis.github.io/HiggsAnalysis-CombinedLimit/
 
 :link: CMS Combine Hypernews : https://hypernews.cern.ch/HyperNews/CMS/get/higgs-combination.html
 
-:link: CombineHarvester page (external lib) : http://cms-analysis.github.io/CombineHarvester/
+:link: CombineHarvester page (external library) : http://cms-analysis.github.io/CombineHarvester/
 
 _____________________________________________________________________________
 #### Table Of Contents
 
-* [Installation](https://github.com/nicolastonon/tHq-analysis/tree/master/COMBINE#installation)
+* [Setup](https://github.com/nicolastonon/tHq-analysis/tree/master/COMBINE#Setup)
 
-* [Datacards](https://github.com/nicolastonon/tHq-analysis/tree/master/COMBINE#datacards)
-  * [Details and setup](https://github.com/nicolastonon/tHq-analysis/tree/master/COMBINE#details-and-setup)
-  * [Example](https://github.com/nicolastonon/tHq-analysis/tree/master/COMBINE#example)
-  * [MC statistical uncertainty](https://github.com/nicolastonon/tHq-analysis/tree/master/COMBINE#mc-statistical-uncertainty)
+* [Generate datacards](https://github.com/nicolastonon/tHq-analysis/tree/master/COMBINE#Generate-datacards)
+  * [Details](https://github.com/nicolastonon/tHq-analysis/tree/master/COMBINE#details)
 
 * [Combine commands](https://github.com/nicolastonon/tHq-analysis/tree/master/COMBINE#combine-commands)
   * [Expected significance](https://github.com/nicolastonon/tHq-analysis/tree/master/COMBINE#expected-significance-profile-likelihood)
@@ -62,94 +60,83 @@ _____________________________________________________________________________
 _____________________________________________________________________________
 
 
-# Installation
+# Setup
 
-- To install the analysis code & COMBINE code, follow instructions from the main [README](../README.md).
+## Install Combine
 
-- Move to COMBINE dir.
+Combine is a top-level CMSSW Package (i.e. it should be located at `$CMSSW_BASE/src/HiggsAnalysis/CombinedLimit`)
+Follow the official [installation instructions](https://cms-analysis.github.io/HiggsAnalysis-CombinedLimit/#cc7-release-cmssw_10_2_x-recommended-version).
+
+## Install CombineHarvester
+
+CombineHarvester is a top-level CMSSW Package (i.e. it should be located at `$CMSSW_BASE/src/CombineHarvester`) which contains some additional functions and scripts (e.g. to plot systematics impacts or access postfit distributions).
+The CMSSW version that should be used with CombineHarvester is driven by the recommendation for the HiggsAnalysis/CombinedLimit package, which is also required.
+
+To install it, follow the instructions from the [CombineHarvester main page](http://cms-analysis.github.io/CombineHarvester/) or the [CombineHarvester GitHub page](https://github.com/cms-analysis/CombineHarvester) :
 
 ```
-cd tHq-analysis/COMBINE
+cd CMSSW_$RELEASE/src
+
+#git clone via ssh:
+
+bash <(curl -s https://raw.githubusercontent.com/cms-analysis/CombineHarvester/master/CombineTools/scripts/sparse-checkout-ssh.sh)
+
+#git clone via https:
+
+bash <(curl -s https://raw.githubusercontent.com/cms-analysis/CombineHarvester/master/CombineTools/scripts/sparse-checkout-https.sh)
 ```
 
-**The 'templates' dir. must contain a file named `Combine_Input.root`, to which the datacards are pointing.**
+Make sure to recompile the code :
+```
+cd $CMSSW_BASE/src/
+scramv1 b clean
+scramv1 b
+```
 
-:information_source: *Make sure that you're using the right input file (read the main [README](../README.md) to know how to create the templates)*
 
-:information_source: *For Template files, we use the convention : `Combine_Input_SUFFIX.root` (tbc)*
+# Generate datacards
 
+Move to the [datacards](https://github.com/nicolastonon/tHq-analysis/tree/master/COMBINE/datacards) directory to generate the final datacards.
 
-# Datacards
+*TL;DR* :
 
-The logic to create the datacards is the following : first, the user should configure all (3) codes depending on his needs. More details below.
-Once this is done, all you have to do is to execute a code, which will interactively ask you to select options, and will in turn call a python code to parse a template file. This way, it is easy to create as many datacards as needed, based on the same template/conventions.
+```
+make
+./Generate_Datacard_Template.exe
+./ScriptProducer_GenerateAllDatacards.exe
+```
 
-## Details and setup
-- Move to *datacards* dir. This directory contains codes for generating/combining all needed datacards. Compile the codes :
+## Details
+
+- [Generate_Datacard_Template.cxx](Generate_Datacard_Template.cxx) : creates the template to be used to produce all the final datacards.
+Modify directly the *main()* to adapt it to your in needs.
+In particular, you can set there the list of processes, of systematic uncertainties (process normalization, normalization-only systematic, shape systematic).
+
+  Running this code will generate the template datacard 'Template_Datacard.txt' :
 
   ```
-  cd tHq-analysis/COMBINE/datacards
   make
-  ```
-
-- [Generate_Datacard_Template.cxx](Generate_Datacard_Template.cxx) : code creating the datacard template that will be used to produce the final datacards. It is there that you can modify the skeleton of the datacard itself (e.g. the names of processes, the systematics, etc.).
-This code should be configured so that all the needed ingredients for the final datacards are there : e.g. all the processes, all the systematics, etc. /!\ It is better to put more than too little in the template (as it is easy to simply comment out the un-desired lines in the next steps).
-
-  Executing it will generate the template file 'Template_Datacard.txt' :
-
-  ```
   ./Generate_Datacard_Template.exe
   ```
 
-- [Parser_Datacard_Template.py](Parser_Datacard_Template.py)* : code parsing the datacard template, and replacing some key-words by the desired values (e.g. : name of channel, value of systematic, etc.).
-This makes it easy to adapt the template to your needs (e.g. choose in which region/channel you want the datacard, with/without shape systematics, etc.).
-You can either call the script manually by giving it the required arguments, or - as recommended -, call it via 'ScriptProducer_MakeAllDatacards.cxx'.
+- [Parser_Datacard_Template.py](Parser_Datacard_Template.py)* : parses the template datacard (see above), and replaces specific key-words with the desired values (channel name, systematic value, etc.)
+This code is called when running *ScriptProducer_GenerateAllDatacards.exe*.
 
+- [ScriptProducer_GenerateAllDatacards.cxx](ScriptProducer_GenerateAllDatacards.cxx) : asks the user to set options via command-line, and takes care of generating the final combined datacard.
 
-- [ScriptProducer_MakeAllDatacards.cxx](ScriptProducer_MakeAllDatacards.cxx) : at execution, the user can choose here the main options for the generation of datacard. This is the last, higher level of "configurability", where you should configure everything that needs to be modified often (e.g. region, value of a given systematic, etc.).
   ```
-  ./ScriptProducer_MakeAllDatacards.exe
+  make
+  ./ScriptProducer_GenerateAllDatacards.exe
   ```
-
-- This should have a produced a final script, named either 'Script_Make_Datacards_[SUFFIX].sh' depending on what you chose (template fit or postfit input variables). Run this script to generate the final, combined datacard (as well as all the un-combined datacards, placed in a dedicated dir.).
-  ```
-  ./Script_Make_Datacards_[SUFFIX].sh
-  ```
-
-
-
-## Example
-
-Let's say you want to make some study on a systematic, and so as a user you will need to change it's value very often. Then you should probably :
-
-1) Modify [Generate_Datacard_Template.cxx](Generate_Datacard_Template.cxx) (or the template datacard itself) so that the template datacard will contain a special key-word at the place where the value for this systematic should be
-
-2) Modify [Parser_Datacard_Template.py](Parser_Datacard_Template.py) so that it accepts this syst value as an argument, and so that it replaces the special key-word by the value in the template
-
-3) Modify [ScriptProducer_MakeAllDatacards.cxx](ScriptProducer_MakeAllDatacards.cxx) so that it makes it easy for the user to choose the value (either interactively, or in the main for example), and so that this value is given as argument when the python script is called.
-
-:arrow_right: This way, you will only need to configure and compile the codes once. Then, all the user has to do is change the value when he executes 'ScriptProducer_MakeAllDatacards.exe', and the final datacards will contain this value.
-This might need a bit troublesome (modifying 3 codes while you could 'just' mess with a template by youself), but it is meant to ensure scalability and automation of the datacard production. Hopefully, once you are satisfied with your datacards, there is no need to modify these codes anymore.
-
-
-## MC statistical uncertainty
-
-In the past, you had to use the additional CombineHarvester package in order to add bin-per-bin MC stat. uncertainty.
-
-This functionnality was included in recent Combine versions. All you need to do is to add this line at the end of your datacard *(done by default)* :
-```
-[channel] autoMCStats [threshold] [include-signal = 0] [hist-mode = 1]
-```
-See the [doc](https://cms-analysis.github.io/HiggsAnalysis-CombinedLimit/part2/bin-wise-stats/#automatic-statistical-uncertainties) for details.
-
-
 
 
 # Combine commands
 
-*(Make sure you're using the right datacard name in the commands, `COMBINED_datacard.txt` is a dummy name)*
+:information_source: *(Make sure you're using the right datacard name in the commands ; `COMBINED_datacard.txt` is only a dummy name)*
 
-:information_source: *If you will use Combine a lot, you'll find it hepful to set-up a few aliases (for all commands)...*
+:information_source: *(Make sure you have placed the relevant template file in the [templates](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis/COMBINE/templates) directory, following the correct naming convention.)*
+
+:information_source: *(If you will use Combine a lot, you'll find it hepful to set-up a few aliases for these commands...)*
 
 - To derive limits and significance, we use the **Asymptotic likelihood** methods :
   - `AsymptoticLimits`: limits calculated according to the asymptotic formulas in [arxiv:1007.1727](https://arxiv.org/abs/1007.1727)
@@ -332,16 +319,4 @@ You might want to remove the `autoMCStats` lines from the datacard in order to i
   combine -M MultiDimFit --algo grid --points 50 --rMin -1 --rMax 4 -m 125 -n stat higgsCombinebestfit.MultiDimFit.mH125.root --snapshotName MultiDimFit --freezeParameters all --expectSignal=1 -t -1
   plot1DScan.py --others 'higgsCombinestat.MultiDimFit.mH125.root:Freeze all:2' --breakdown syst,stat higgsCombinenominal.MultiDimFit.mH125.root
   ```
-
-
-### Multiple signals
-
-- To compute EXPECTED (cf. '-t -1' options) significance SIMULTANEOUSLY for ttZ & tZq :
-```
-text2workspace.py -P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel  --PO verbose --PO 'map=.*/tZqmcNLO:r_tZqmcNLO[1,0,10]' --PO 'map=.*/ttZ:r_ttZ[1,0,20]' COMBINED_datacard_TemplateFit_tZqANDttZ.txt -o toy-2d.root
-combine toy-2d.root  -M HybridNew --onlyTestStat --testStat=PL --singlePoint r_tZqmcNLO=0 --redefineSignalPOIs r_tZqmcNLO --expectSignal=1 -t -1
-combine toy-2d.root -M ProfileLikelihood --signif --redefineSignalPOIs r_tZqmcNLO --setPhysicsModelParameters r_rZqmcNLO=1,r_ttZ=1 --expectSignal=1 -t -1
-combine workspace.root -M HybridNew --onlyTestStat --testStat=PL --singlePoint r_tZq=1,r_ttZ=1
-combine workspace.root -M HybridNew --onlyTestStat --testStat=PL --singlePoint r_tZq=1,r_ttZ=1 --setPhysicsModelParameters r_rZqmcNLO=1,r_ttZ=1 --expectSignal=1 -t -1
-```
 -------------------------------------------->

@@ -59,9 +59,7 @@ _____________________________________________________________________________
     * [GenAnalyzer](https://github.com/nicolastonon/EFT-Simu-Pheno#GenAnalyzer)
     * [GenPlotter](https://github.com/nicolastonon/EFT-Simu-Pheno#GenPlotter)
 
-* [Ntuple analysis](https://github.com/nicolastonon/EFT-Simu-Pheno#Ntuple-analysis)
-
-* [COMBINE](https://github.com/nicolastonon/EFT-Simu-Pheno#COMBINE)
+* [Ntuple analysis](https://github.com/nicolastonon/EFT-Simu-Pheno#Ntuple-analysis-and-COMBINE)
 
 _____________________________________________________________________________
 
@@ -220,14 +218,9 @@ g++ GenPlotter.cc -o GenPlotter.exe `root-config --cflags --glibs`
 ./GenPlotter.exe
 ```
 
-# Ntuple analysis
+# Ntuple analysis and COMBINE
 
-See the README in the [dedicated directory](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis).
-
-# COMBINE
-
-See the README in the [dedicated directory](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis/COMBINE).
-
+See the READMEs in the [dedicated directory](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis).
 
 _____________________________________________________________________________
 

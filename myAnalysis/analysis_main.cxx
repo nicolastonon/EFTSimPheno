@@ -161,8 +161,6 @@ int main(int argc, char **argv)
 //Variables used in BDT
 
     std::vector<TString > thevarlist;
-    // thevarlist.push_back("maxEtaJet");
-    // thevarlist.push_back("leptonCharge");
     thevarlist.push_back("maxDijetDelR");
     thevarlist.push_back("dEtaFwdJetBJet");
     thevarlist.push_back("dEtaFwdJetClosestLep");
@@ -263,7 +261,7 @@ int main(int argc, char **argv)
 //*** CHOOSE HERE FROM BOOLEANS WHAT YOU WANT TO DO !
 
 //-----------------    TRAINING
-    bool train_BDT = false; //Train selected BDT in selected region (with events in training category)
+    bool train_BDT = true; //Train selected BDT in selected region (with events in training category)
 
 //-----------------    TEMPLATES CREATION
     bool create_templates = false; //Create MVA templates
@@ -295,7 +293,6 @@ int main(int argc, char **argv)
 
 
 
-
 //--------------------------------------------
 //--------------------------------------------
 //--- Automated from here -- no need to modify
@@ -314,6 +311,10 @@ int main(int argc, char **argv)
 
 //Apply choices given via command line, if any
 	Apply_CommandArgs_Choices(argc, argv, set_lumi_years, region_choice);
+
+//Enable multi-threading (I have 8 available threads)
+    // int nthreads = 4;
+    // ROOT::EnableImplicitMT(nthreads);
 
 //------------------------------------
 //--------------------------------------------
