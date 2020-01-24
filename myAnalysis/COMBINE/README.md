@@ -44,17 +44,17 @@ CODE EXAMPLE
 _____________________________________________________________________________
 #### Table Of Contents
 
-* [Setup](https://github.com/nicolastonon/tHq-analysis/tree/master/COMBINE#Setup)
+* [Setup](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis/COMBINE#Setup)
 
-* [Generate datacards](https://github.com/nicolastonon/tHq-analysis/tree/master/COMBINE#Generate-datacards)
-  * [Details](https://github.com/nicolastonon/tHq-analysis/tree/master/COMBINE#details)
+* [Generate datacards](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis/COMBINE#setup)
+  * [Details](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis/COMBINE#details)
 
-* [Combine commands](https://github.com/nicolastonon/tHq-analysis/tree/master/COMBINE#combine-commands)
-  * [Expected significance](https://github.com/nicolastonon/tHq-analysis/tree/master/COMBINE#expected-significance-profile-likelihood)
-  * [Observed significance](https://github.com/nicolastonon/tHq-analysis/tree/master/COMBINE#observed-significance-profile-likelihood)
-  * [Asymptotic frequentist limits](https://github.com/nicolastonon/tHq-analysis/tree/master/COMBINE#asymptotic-frequentist-limits)
-  * [Postfit templates, nuisances, etc.](https://github.com/nicolastonon/tHq-analysis/tree/master/COMBINE#postfit-templates-nuisances-etc-mlf)
-  * [Nuisance parameters](https://github.com/nicolastonon/tHq-analysis/tree/master/COMBINE#nuisance-parameters)
+* [Combine commands](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis/COMBINE#combine-commands)
+  * [Expected significance](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis/COMBINE#expected-significance-profile-likelihood)
+  * [Observed significance](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis/COMBINE#observed-significance-profile-likelihood)
+  * [Asymptotic frequentist limits](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis/COMBINE#asymptotic-frequentist-limits)
+  * [Postfit templates, nuisances, etc.](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis/COMBINE#postfit-templates-nuisances-etc-mlf)
+  * [Nuisance parameters](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis/COMBINE#nuisance-parameters)
 
 
 _____________________________________________________________________________
@@ -96,7 +96,7 @@ scramv1 b
 
 # Generate datacards
 
-Move to the [datacards](https://github.com/nicolastonon/tHq-analysis/tree/master/COMBINE/datacards) directory to generate the final datacards.
+Move to the [datacards](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis/COMBINE/datacards) directory to generate the final datacards.
 
 *TL;DR* :
 
