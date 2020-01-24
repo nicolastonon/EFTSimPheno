@@ -31,9 +31,11 @@ CODE EXAMPLE
 :underage:
 :put_litter_in_its_place:
 :new:
--------------------------------------------->
+
 
 :construction: **README UNDER CONSTRUCTION**
+-------------------------------------------->
+
 
 > Codes and instructions to :
 > * train TMVA BDTs (soon also DNNs)
@@ -45,7 +47,6 @@ CODE EXAMPLE
 #### Table Of Contents
 
 * [Setup](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis#Setup)
-  * [Input Ntuples](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis#Input-Ntuples)
 
 * [Analysis](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis#Analysis)
   * [Configuration](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis#Configuration)
@@ -116,7 +117,7 @@ make
 
 :arrow_right: Output plots are stored in the [plots](https://github.com/nicolastonon/EFT-Simu-Pheno/blob/master/myAnalysis/plots) directory.
 
-#Event yields
+# Event yields
 
 The code [Produce_Cutflow.cxx](https://github.com/nicolastonon/EFT-Simu-Pheno/blob/master/myAnalysis/Produce_Cutflow.cxx) will read the input ntuples, and automatically compute the event yields for all processes.
 Modify the *main()* options to select the data-taking year, processes, etc.
@@ -125,7 +126,7 @@ Modify the *main()* options to select the data-taking year, processes, etc.
 make
 ./Produce_Cutflow.exe
 ```
-#ROCS
+# ROCS
 
 Move to the [ROCS](https://github.com/nicolastonon/EFT-Simu-Pheno/blob/master/myAnalysis/ROCS) directory.
 
