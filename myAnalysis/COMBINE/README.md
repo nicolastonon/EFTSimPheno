@@ -132,11 +132,11 @@ This code is called when running *ScriptProducer_GenerateAllDatacards.exe*.
 
 # Combine commands
 
-:information_source: *(Make sure you're using the right datacard name in the commands ; `COMBINED_datacard.txt` is only a dummy name)*
+:information_source: *Make sure you're using the right datacard name in the commands ; `COMBINED_datacard.txt` is only a dummy name*
 
-:information_source: *(Make sure you have placed the relevant template file in the [templates](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis/COMBINE/templates) directory, following the correct naming convention.)*
+:information_source: *Make sure you have placed the relevant template file in the [templates](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis/COMBINE/templates) directory, following the correct naming convention.*
 
-:information_source: *(If you will use Combine a lot, you'll find it hepful to set-up a few aliases for these commands...)*
+:information_source: *If you will use Combine a lot, you'll find it hepful to set-up a few aliases for these commands...*
 
 - To derive limits and significance, we use the **Asymptotic likelihood** methods :
   - `AsymptoticLimits`: limits calculated according to the asymptotic formulas in [arxiv:1007.1727](https://arxiv.org/abs/1007.1727)
