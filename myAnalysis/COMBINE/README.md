@@ -35,7 +35,7 @@ CODE EXAMPLE
 
 #### Useful links
 
-:link: Combine page (browse the *Running combine* tab, or use the *Search* function): http://cms-analysis.github.io/HiggsAnalysis-CombinedLimit/
+:link: `Combine` page (browse the *Running combine* tab, or use the *Search* function): http://cms-analysis.github.io/HiggsAnalysis-CombinedLimit/
 
 :link: CMS Combine Hypernews : https://hypernews.cern.ch/HyperNews/CMS/get/higgs-combination.html
 
@@ -64,13 +64,13 @@ _____________________________________________________________________________
 
 ## Install Combine
 
-Combine is a top-level CMSSW Package (i.e. it should be located at `$CMSSW_BASE/src/HiggsAnalysis/CombinedLimit`)
+`Combine` is a top-level CMSSW Package (i.e. it should be located at `$CMSSW_BASE/src/HiggsAnalysis/CombinedLimit`)
 Follow the official [installation instructions](https://cms-analysis.github.io/HiggsAnalysis-CombinedLimit/#cc7-release-cmssw_10_2_x-recommended-version).
 
 ## Install CombineHarvester
 
-CombineHarvester is a top-level CMSSW Package (i.e. it should be located at `$CMSSW_BASE/src/CombineHarvester`) which contains some additional functions and scripts (e.g. to plot systematics impacts or access postfit distributions).
-The CMSSW version that should be used with CombineHarvester is driven by the recommendation for the HiggsAnalysis/CombinedLimit package, which is also required.
+`CombineHarvester` is a top-level CMSSW Package (i.e. it should be located at `$CMSSW_BASE/src/CombineHarvester`) which contains some additional functions and scripts (e.g. to plot systematics impacts or access postfit distributions).
+The CMSSW version that should be used with `CombineHarvester` is driven by the recommendation for the HiggsAnalysis/CombinedLimit package, which is also required.
 
 To install it, follow the instructions from the [CombineHarvester main page](http://cms-analysis.github.io/CombineHarvester/) or the [CombineHarvester GitHub page](https://github.com/cms-analysis/CombineHarvester) :
 
@@ -136,7 +136,7 @@ This code is called when running *ScriptProducer_GenerateAllDatacards.exe*.
 
 :information_source: *Make sure you have placed the relevant template file in the [templates](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis/COMBINE/templates) directory, following the correct naming convention.*
 
-:information_source: *If you will use Combine a lot, you'll find it hepful to set-up a few aliases for these commands...*
+:information_source: *If you will use `Combine` a lot, you'll find it hepful to set-up a few aliases for these commands...*
 
 - To derive limits and significance, we use the **Asymptotic likelihood** methods :
   - `AsymptoticLimits`: limits calculated according to the asymptotic formulas in [arxiv:1007.1727](https://arxiv.org/abs/1007.1727)
@@ -259,7 +259,7 @@ This will produce plots and a `fitDiagnostics.root` file in the specified output
 Taking as input a `fitDiagnostics.root` file, the script will by default print out the parameters which have changed significantly w.r.t. their initial estimate. For each of those parameters, it will print out the shift in value and the post-fit uncertainty, both normalized to the input values, and the linear correlation between the parameter and the signal strength.
 The output by default will be the changes in the nuisance parameter values and uncertainties, relative to their initial (pre-fit) values (usually relative to initial values of 0 and 1 for most nuisance types).*
 
-- Run the Combine script from the `Plotting/` dir. :
+- Run the `Combine` script from the `Plotting/` dir. :
   ```
   cd Plotting
   python diffNuisances.py -g nuisances.root ../datacards/outputs/fitDiagnostics.root  --all --abs

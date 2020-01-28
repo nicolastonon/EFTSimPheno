@@ -965,3 +965,18 @@ TString Get_Modified_SystName(TString systname, TString lumiYear)
 
     return systname;
 }
+
+//Get the address of the relevant GEN-level histogram, so that it can be superimposed on data/MC comparison plots
+void Get_Pointer_GENHisto(TH1F*& h, TString variable)
+{
+    TString input_file_name = "../Pheno/Plotter/GENhisto.root";
+    if(!Check_File_Existence(input_file_name)) {cout<<BOLD(FRED("Input histo file "<<input_file_name<<" not found ! Abort"))<<endl; return;}
+
+    TFile* f = TFile::Open(input_file_name);
+
+    TString hname = "Z_pt_tzq_sm"; //FIXME -- hardcoded for testing
+    if(!f->GetListOfKeys()->Contains(hname) ) {cout<<ITAL("Histogram '"<<hname<<"' : not found...")<<endl; return;}
+    h = (TH1F*) f->Get(hname);
+
+    return;
+}

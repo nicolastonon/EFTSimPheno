@@ -86,6 +86,7 @@
     TString Get_Category_Boolean_Name();
     float Count_Total_Nof_Entries(TString, TString, std::vector<TString>, std::vector<TString>, std::vector<TString>, std::vector<TString>, std::vector<TString>, bool, bool);
     TString Get_Modified_SystName(TString, TString);
+    void Get_Pointer_GENHisto(TH1F*&, TString);
 
 //--------------------------------------------
 	//Increment weight of first bin by 'weight'

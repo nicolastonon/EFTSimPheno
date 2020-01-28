@@ -62,9 +62,9 @@ CODE EXAMPLE
 
 The analysis of Ntuples does not require CMSSW, and can be run locally offline.
 
-However, running Combine requires a CMSSW environment *(e.g. CMSSW_10_2_20)*.
+However, running `Combine` requires a CMSSW environment *(e.g. CMSSW_10_2_20)*.
 
-Instructions for setting up Combine properly are given in the dedicated [directory](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis/COMBINE).
+Instructions for setting up `Combine` properly are given in the dedicated [directory](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis/COMBINE).
 
 ## Input ntuples
 

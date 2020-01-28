@@ -1315,7 +1315,6 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
     }
 
 
-
 // #    # ###### #####   ####  ######
 // ##  ## #      #    # #    # #
 // # ## # #####  #    # #      #####
@@ -1369,6 +1368,9 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 	bool draw_errors = true; //true <-> superimpose error bands on plot/ratio plot
 
 	bool draw_logarithm = false;
+
+    bool superimpose_GENhisto = false; //Superimpose corresponding GEN-level EFT histogram, for shape comparison...?
+
 //--------------------------------------------
 
     cout<<endl<<YELBKG("                          ")<<endl<<endl;
@@ -2116,6 +2118,28 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 		qw->Draw("same"); //Draw legend
 
 
+// ###### ###### #####     ####  ###### #    #
+// #      #        #      #    # #      ##   #
+// #####  #####    #      #      #####  # #  #
+// #      #        #      #  ### #      #  # #
+// #      #        #      #    # #      #   ##
+// ###### #        #       ####  ###### #    #
+
+        TH1F* h_GEN = 0;
+        if(superimpose_GENhisto && drawInputVars)
+        {
+            Get_Pointer_GENHisto(h_GEN, var_list[ivar]);
+        }
+
+        if(h_GEN)
+        {
+            h_GEN->Scale(h_sum_data->Integral()/(2*h_GEN->Integral())); //Arbitrary norm (half of data)
+            h_GEN->SetLineColor(1);
+            h_GEN->SetLineWidth(2);
+
+            h_GEN->Draw("hist SAME");
+        }
+
 // ###### #####  #####   ####  #####   ####      ####  #####   ##    ####  #    #
 // #      #    # #    # #    # #    # #         #        #    #  #  #    # #   #
 // #####  #    # #    # #    # #    #  ####      ####    #   #    # #      ####
@@ -2511,7 +2535,7 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 			delete h_line1; h_line1 = NULL;
 			delete h_line2; h_line2 = NULL;
 		}
-
+        if(h_GEN) {delete h_GEN;}
 		if(draw_errors) {delete gr_error; delete gr_ratio_error; gr_error = NULL; gr_ratio_error = NULL;}
 		delete pad_ratio; pad_ratio = NULL;
 

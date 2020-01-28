@@ -261,7 +261,7 @@ int main(int argc, char **argv)
 //*** CHOOSE HERE FROM BOOLEANS WHAT YOU WANT TO DO !
 
 //-----------------    TRAINING
-    bool train_BDT = true; //Train selected BDT in selected region (with events in training category)
+    bool train_BDT = false; //Train selected BDT in selected region (with events in training category)
 
 //-----------------    TEMPLATES CREATION
     bool create_templates = false; //Create MVA templates
@@ -276,7 +276,7 @@ int main(int argc, char **argv)
         bool prefit = true; //true <-> plot prefit templates ; else postfit (requires combine output file)
         bool use_combine_file = false; //true <-> use MLF output file from Combine (can get postfit plots, total error, etc.)
 
-    bool draw_input_vars = false; //Plot input variables
+    bool draw_input_vars = true; //Plot input variables
         bool draw_input_allChannels = false; //true <-> also draw for eachs split channel
 
     bool compare_template_shapes = false;

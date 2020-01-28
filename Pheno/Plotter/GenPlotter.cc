@@ -482,6 +482,38 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
 
 
 
+// #    # #####  # ##### ######    #    # #  ####  #####  ####   ####
+// #    # #    # #   #   #         #    # # #        #   #    # #
+// #    # #    # #   #   #####     ###### #  ####    #   #    #  ####
+// # ## # #####  #   #   #         #    # #      #   #   #    #      #
+// ##  ## #   #  #   #   #         #    # # #    #   #   #    # #    #
+// #    # #    # #   #   ######    #    # #  ####    #    ####   ####
+
+//--- Write histograms to an output rootfile, so that they could later be superimposed on top of data/mc comparison plots (to compare shapes, ...)
+    bool write_histos_toRootfile = true;
+    if(write_histos_toRootfile)
+    {
+        TFile* f_out = new TFile("GENhisto.root", "RECREATE");
+
+        for(int ivar=0; ivar<v_var.size(); ivar++)
+        {
+            for(int iproc=0; iproc<v_process.size(); iproc++)
+            {
+                for(int iweight=0; iweight<v_reweight_names.size(); iweight++)
+                {
+                    TString outhistoname = v_var[ivar]+"_"+v_process[iproc]+"_"+v_reweight_names[iweight];
+
+                    v3_histos_var_proc_reweight[ivar][iproc][iweight]->Write(outhistoname);
+                }
+            }
+        }
+
+        f_out->Close();
+
+        cout<<endl<<FYEL("==> Created root file: ")<<f_out->GetName()<<FYEL(" containing GEN-level histograms")<<endl<<endl;
+    }
+
+
  // #####  #       ####  #####
  // #    # #      #    #   #
  // #    # #      #    #   #
@@ -605,6 +637,13 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
 
         legend_weights->Draw("same");
         if(v_process.size() > 1) {legend_proc->Draw("same");}
+
+//  ####  #    # #####  #####  #       ####  #####
+// #      #    # #    # #    # #      #    #   #
+//  ####  #    # #####  #    # #      #    #   #
+//      # #    # #    # #####  #      #    #   #
+// #    # #    # #    # #      #      #    #   #
+//  ####   ####  #####  #      ######  ####    #
 
         //-- Subplot (for all reweights, not nominal)
         //-- create subpad to plot ratio
