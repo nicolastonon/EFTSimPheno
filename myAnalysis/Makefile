@@ -10,7 +10,7 @@
 CC=g++ -fPIC #Compiler used
 DEBUG = -g
 CFLAGS = -c $(DEBUG) #Compilation options
-CFLAGS += -std=c++14 #Only necessary to use frugally-deep add-on (to read NN trained with Keras in C++) -- Else, can disactivate
+# CFLAGS += -std=c++14
 ROOTFLAGS = `root-config --glibs --cflags`
 
 LFLAGS = $(DEBUG) -lTMVA -lPyMVA

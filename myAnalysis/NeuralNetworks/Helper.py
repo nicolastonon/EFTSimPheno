@@ -12,9 +12,10 @@ import ROOT
 from ROOT import TMVA, TFile, TTree, TCut, gROOT, TH1, TH1F
 import numpy as np
 from root_numpy import root2array, tree2array, array2root, fill_hist
+import tensorflow
 import keras
-from keras.callbacks import LambdaCallback
-
+from tensorflow.keras.callbacks import LambdaCallback
+from matplotlib import pyplot as plt
 
 # //--------------------------------------------
 ##     ## ######## ##       ########  ######## ########
@@ -29,36 +30,6 @@ from keras.callbacks import LambdaCallback
 #Used to automatically close matplotlib plot after some time
 def close_event():
     plt.close() #timer calls this function after 3 seconds and closes the window
-# //--------------------------------------------
-# //--------------------------------------------
-
-
-#NB : if want to use "Training" categ. events, modify here !
-def Get_Boolean_Categ(nLep, region):
-    if nLep == "3l":
-        return "is_tHq_3l_Training"
-    elif nLep == "2l":
-        return "is_tHq_2lSS_Training"
-
-    return ""
-# //--------------------------------------------
-# //--------------------------------------------
-
-
-# Helper function, to replace a string in a file
-# Here, used to bypass TMVA : the trained model location is hard-coded in the xml weight file...
-# I don't want that, so will modify the path the hard way
-def Modify_String_WeightFile(filename, old, new):
-
-    with open(filename, 'r') as file :
-      filedata = file.read()
-
-    # Replace the target string
-    filedata = filedata.replace(old, new)
-
-    # Write the file out again
-    with open(filename, 'w') as file:
-      file.write(filedata)
 # //--------------------------------------------
 # //--------------------------------------------
 
@@ -81,7 +52,7 @@ def Write_Variables_To_TextFile(var_list):
 # //--------------------------------------------
 # //--------------------------------------------
 
-class TimeHistory(keras.callbacks.Callback):
+class TimeHistory(tensorflow.keras.callbacks.Callback):
     def on_train_begin(self, logs={}):
         self.times = []
 

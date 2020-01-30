@@ -1,3 +1,7 @@
+# Nicolas TONON (DESY)
+# Train fully-connected neural networks with Keras (tf back-end)
+# //--------------------------------------------
+
 # //--------------------------------------------
 # //--------------------------------------------
 # //--------------------------------------------
@@ -12,22 +16,16 @@
 # //--------------------------------------------
 # //--------------------------------------------
 
-# DNN model options
+#--- Set here the main training options
 # //--------------------------------------------
-_nepochs = 150
-_batchSize = 0 #If set to 0, automatically set to 64 (3l) or 128 (2l)
-nof_outputs = 2 #can choose single output, or 2 (1 per class), see which is more performant #1 signal, 1 bkg //In PyKeras, 1 output per class (here : 2) -- cf. https://root.cern.ch/doc/v608/MethodPyKeras_8cxx_source.html#l00076
+_nepochs = 3
+_batchSize = 200000
+nof_outputs = 2 #can choose single output, or 2 (1 per class) #FIXME 1
 # //--------------------------------------------
 
 # Analysis options
 # //--------------------------------------------
-bkg_type = "ttV" # Choose "ttV" or "ttbar"
-nLep = "2l" # Choose "3l" or "2l"
-region = "SR" #SR, CR_ttW, CR_ttZ, CR_WZ #NOT RELEVANT : train using the 'training category', regardless of region
-
-apply_SF_testing = True #true <-> reweight testing events by "weight*total_SF" ; else, only by "weight"
-use_ttH_ntuples = False
-include_MEM_variables = False
+bkg_type = ""
 
 cuts = "1" #"1" <-> no cut
 # //--------------------------------------------
@@ -36,122 +34,21 @@ cuts = "1" #"1" <-> no cut
 # Define list of input variables
 # //--------------------------------------------
 var_list = []
-use_old_varList = True
 
-if use_old_varList == True:
-    var_list.append("nJet25")
-    var_list.append("maxEtaJet25")
-    var_list.append("nJetEta1")
-    var_list.append("dEtaFwdJetBJet")
-    var_list.append("dEtaFwdJet2BJet")
-    var_list.append("dEtaFwdJetClosestLep")
-    var_list.append("dPhiHighestPtSSPair")
-    var_list.append("minDRll")
-    # var_list.append("Lep3Pt")
-    var_list.append("max_lep_eta")
-    var_list.append("dRjj")
-    var_list.append("LeadJetEta")
-    var_list.append("mindr_lep1_jet")
-    var_list.append("FwdJetEta")
-
-    if bkg_type == "ttV":
-        var_list.append("dPhijj_max")
-        var_list.append("lep1_conePt")
-        var_list.append("sum_jetPt")
-        var_list.append("mT_lep1")
-
-        if nLep == "3l":
-            var_list.append("deepCSV_2nd")
-            var_list.append("lepCharge")
-
-    elif bkg_type ==  "ttbar":
-        var_list.append("dPhiLepBJet_max")
-        var_list.append("Mjj_max")
-        var_list.append("dPhiLepLep_max")
-        var_list.append("lep2_conePt")
-
-        if nLep == "3l":
-            var_list.append("lepCharge")
-        else:
-            var_list.append("lep1_conePt")
-    else :
-        print("ERROR ! Wrong background type !")
-        exit(1)
-
-else:
-    var_list.append("nJet25")
-    var_list.append("nJetEta1")
-    var_list.append("minDRll")
-    var_list.append("lep1_conePt")
-    var_list.append("lep2_conePt")
-    var_list.append("lep3_conePt")
-    var_list.append("lep1Eta")
-    var_list.append("lep2Eta")
-    var_list.append("lep1Phi")
-    var_list.append("lep2Phi")
-    var_list.append("FwdJetEta")
-    var_list.append("FwdJetPt")
-    var_list.append("max_lep_eta")
-    var_list.append("mindr_lep1_jet")
-    var_list.append("dPhijj_max")
-    var_list.append("sum_jetPt")
-    var_list.append("deepCSV_2nd")
-    var_list.append("lepCharge")
-    var_list.append("Mjj_max")
+if bkg_type == "":
     var_list.append("mTW")
-    var_list.append("metLD")
-    var_list.append("lW_asym")
-    var_list.append("mTW")
-    var_list.append("hardestBjetEta")
-    var_list.append("hardestBjetPt")
-    var_list.append("mTW")
+    var_list.append("forwardJetAbsEta")
 
-    if nLep == "3l":
-        var_list.append("lep3_conePt")
-        var_list.append("lep3Eta")
-        var_list.append("lep3Phi")
+else :
+    print("ERROR ! Wrong background type !")
+    exit(1)
 
 
 
-# //--------------------------------------------
-# //--------------------------------------------
+# --------------------------------------------
+# --------------------------------------------
+# --------------------------------------------
 
-
-
-
-
-
-
-######## ########     ###    #### ##    ## #### ##    ##  ######
-   ##    ##     ##   ## ##    ##  ###   ##  ##  ###   ## ##    ##
-   ##    ##     ##  ##   ##   ##  ####  ##  ##  ####  ## ##
-   ##    ########  ##     ##  ##  ## ## ##  ##  ## ## ## ##   ####
-   ##    ##   ##   #########  ##  ##  ####  ##  ##  #### ##    ##
-   ##    ##    ##  ##     ##  ##  ##   ###  ##  ##   ### ##    ##
-   ##    ##     ## ##     ## #### ##    ## #### ##    ##  ######
-
-
-##    ## ######## ##     ## ########     ###    ##          ##    ## ######## ########
-###   ## ##       ##     ## ##     ##   ## ##   ##          ###   ## ##          ##
-####  ## ##       ##     ## ##     ##  ##   ##  ##          ####  ## ##          ##
-## ## ## ######   ##     ## ########  ##     ## ##          ## ## ## ######      ##
-##  #### ##       ##     ## ##   ##   ######### ##          ##  #### ##          ##
-##   ### ##       ##     ## ##    ##  ##     ## ##          ##   ### ##          ##
-##    ## ########  #######  ##     ## ##     ## ########    ##    ## ########    ##
-
-
-##      ## #### ######## ##     ##    ##    ## ######## ########     ###     ######
-##  ##  ##  ##     ##    ##     ##    ##   ##  ##       ##     ##   ## ##   ##    ##
-##  ##  ##  ##     ##    ##     ##    ##  ##   ##       ##     ##  ##   ##  ##
-##  ##  ##  ##     ##    #########    #####    ######   ########  ##     ##  ######
-##  ##  ##  ##     ##    ##     ##    ##  ##   ##       ##   ##   #########       ##
-##  ##  ##  ##     ##    ##     ##    ##   ##  ##       ##    ##  ##     ## ##    ##
- ###  ###  ####    ##    ##     ##    ##    ## ######## ##     ## ##     ##  ######
-
-# //--------------------------------------------
-# //--------------------------------------------
-# //--------------------------------------------
-# //--------------------------------------------
 
 
 # --------------------------------------------
@@ -173,66 +70,46 @@ from ROOT import TMVA, TFile, TTree, TCut, gROOT, TH1, TH1F
 import numpy as np
 from root_numpy import root2array, tree2array, array2root, fill_hist
 import keras
-from keras.models import Sequential
-from keras.models import load_model
-from keras.layers import Dense, Dropout, AlphaDropout, Activation, BatchNormalization
-from keras.models import model_from_json
-from keras.optimizers import SGD, Adam, rmsprop
-from keras.utils import np_utils
-from keras.regularizers import l2
-from keras.callbacks import TensorBoard
-from keras.utils.vis_utils import plot_model
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.models import load_model
+from tensorflow.keras.layers import Dense, Dropout, AlphaDropout, Activation, BatchNormalization
+from tensorflow.keras.models import model_from_json
+from tensorflow.keras.optimizers import SGD, Adam, RMSprop
+from tensorflow.keras import utils
+# from tensorflow.keras.utils import np_utils
+from tensorflow.keras.regularizers import l2
+from tensorflow.keras.callbacks import TensorBoard, EarlyStopping, LambdaCallback, LearningRateScheduler, ReduceLROnPlateau
+# from tensorflow.keras.utils.vis_utils import plot_model
 from sklearn.model_selection import train_test_split, StratifiedKFold
 from sklearn.preprocessing import MinMaxScaler, Normalizer, StandardScaler
-from keras.layers.advanced_activations import PReLU
-from keras import regularizers
-from keras.layers import LeakyReLU
-import matplotlib.pyplot as plt
+# from tensorflow.keras.layers.advanced_activations import PReLU
+from tensorflow.keras import regularizers
+from tensorflow.keras.layers import LeakyReLU
+from matplotlib import pyplot as plt
+# import matplotlib.pyplot as plt
 from ann_visualizer.visualize import ann_viz;
-from keras.callbacks import LambdaCallback
 from sklearn.metrics import roc_curve, auc, roc_auc_score
 from sklearn.utils import class_weight
-from keras.callbacks import LearningRateScheduler
 from scipy import interp
 from itertools import cycle
 from sklearn.feature_selection import RFE, SelectKBest
 from sklearn.feature_selection import chi2
 from sklearn.decomposition import PCA
 
-from Helper import close_event, Get_Boolean_Categ, Modify_String_WeightFile, batchOutput, Write_Variables_To_TextFile, TimeHistory
+from pathlib import Path
+
+from Helper import close_event, batchOutput, Write_Variables_To_TextFile, TimeHistory
 
 weight_dir = "../weights/DNN/Keras/"
-weight_dir = "../input_ntuples/tHq2017/"
-if use_ttH_ntuples == True:
-    weight_dir = "../input_ntuples/ttH2017/"
-
 os.makedirs(weight_dir, exist_ok=True)
+
+ntuples_dir = "../input_ntuples/2016/"
 
 np.set_printoptions(threshold=np.inf) #If activated, will print full numpy arrays
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 # //--------------------------------------------
 # //--------------------------------------------
-
-
-
-
-
-
-
 
 
 
@@ -266,12 +143,13 @@ def Get_Loss_Optim_Metrics():
 
 
     #Some possible choices of optimizers
-    # optim = keras.optimizers.RMSprop(lr=_lr)
+    # optim = RMSprop(lr=_lr)
 
-    # optim = keras.optimizers.SGD(lr=_lr)
-    # optim = keras.optimizers.SGD(lr=_lr, decay=_decay, momentum=_momentum, nesterov=_nesterov)
+    # optim = SGD(lr=_lr)
+    # optim = SGD(lr=_lr, decay=_decay, momentum=_momentum, nesterov=_nesterov)
 
-    optim = keras.optimizers.Adam(lr=_lr, decay=_decay) #default lr=0.001
+    # optim = tensorflow.keras.optimizers.Adam(lr=_lr, decay=_decay) #default lr=0.001
+    optim = Adam(lr=_lr, decay=_decay) #default lr=0.001
 
     #LOSS -- function used to optimize the model (minimized). Must be differentiable (for gradient method)
     # Examples : binary_crossentropy, categorical_crossentropy, mean_squared_error, , ...
@@ -355,10 +233,9 @@ def Create_Model(outdir, DNN_name, nof_outputs):
     use_batchNorm = True
     use_dropout = True #Necessary to avoid overtraining (for deep or wide NN)
 
-
     #Set some hyperparameters
     # decay_rate = learning_rate / _nepochs
-    droprate = 0.5 #FIXME
+    droprate = 0.5
 
     # Define model
     model = Sequential()
@@ -377,14 +254,12 @@ def Create_Model(outdir, DNN_name, nof_outputs):
     my_regul = regularizers.l2(0.001) #Default 0.001
     # my_regul = regularizers.l1_l2(l1=0.01, l2=0.01)
 
-
     #Examples of advanced activations (should be added as layers, after dense layers)
     # model.add(LeakyReLU(alpha=0.1))
     # model.add(PReLU(alpha_initializer=my_init))
     # model.add(Activation('selu'))
 
-
-    model_choice = 3 #FIXME
+    model_choice = 1
 
     #-- List different models, by order of complexity
 
@@ -578,13 +453,17 @@ def Get_Callbacks():
     #Create logfile for Tensorboard, allowing to get visualization of training/test metrics
     #Usage : tensorboard --logdir=/full_path_to_your_logs --port 0
     dirlog = weight_dir + 'logs'
-    tensorboard = TensorBoard(log_dir=dirlog, histogram_freq=0, batch_size=_batchSize, write_graph=True, write_grads=True, write_images=True)
+    tensorboard = TensorBoard(log_dir=dirlog, histogram_freq=0, write_graph=True, write_images=True)
 
     #Reduce learning rate when reach metrics plateau
-    lrate_plateau = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=10, verbose=1, mode='auto', min_delta=1e-4, cooldown=0, min_lr=1e-6)
+    lrate_plateau = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=10, verbose=1, mode='auto', min_delta=1e-4, cooldown=0, min_lr=1e-6)
+    # lrate_plateau = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=10, verbose=1, mode='auto', min_delta=1e-4, cooldown=0, min_lr=1e-6)
+
+# keras.callbacks.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, verbose=0, mode='auto', min_delta=0.0001, cooldown=0, min_lr=0)
 
     #NB : ES takes place when monitored quantity has not improved **WRT BEST VALUE YET** for a number 'patience' of epochs
-    ES = keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=1e-4, patience=100, verbose=1, restore_best_weights=True, mode='auto') #Try early stopping after N epochs without metrics update # monitor='val_loss'
+    # ES = keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=1e-4, patience=100, verbose=1, restore_best_weights=True, mode='auto') #Try early stopping after N epochs without metrics update # monitor='val_loss'
+    ES = EarlyStopping(monitor='val_loss', min_delta=1e-4, patience=100, verbose=1, restore_best_weights=True, mode='auto') #Try early stopping after N epochs without metrics update # monitor='val_loss'
 
     #Reduce learning rate when a metric has stopped improving
     #NB : Do not manually set learning rate (ex: model.optimizer.lr = 3e-4) when using ReduceLROnPlateau().
@@ -629,22 +508,16 @@ def Get_Callbacks():
 
 
 #Define the model and train it, using Keras only
-def Get_Data_Keras(signal, bkg_type, nLep, region, var_list, include_MEM_variables, cuts, nof_outputs, apply_SF_testing):
+def Get_Data_Keras(signal, bkg_type, var_list, cuts, nof_outputs):
 
     # Sanity checks
-    if bkg_type != "ttbar" and bkg_type != "ttV":
+    if bkg_type != "":
         print("Wrong bkg_type value ! Exit !")
         return None
 
-    if nLep != "3l" and nLep != "2l":
-        print("Wrong nLep value ! Exit !")
-        return None
-
-    if signal != "ttH" and signal != "tHq":
+    if signal != "tZq" and signal != "ttZ":
         print("Wrong signal value ! Exit !")
         return None
-
-
 
 
  #       ####    ##   #####     #####    ##   #####   ##
@@ -654,68 +527,54 @@ def Get_Data_Keras(signal, bkg_type, nLep, region, var_list, include_MEM_variabl
  #      #    # #    # #    #    #    # #    #   #   #    #
  ######  ####  #    # #####     #####  #    #   #   #    #
 
-
-    #Get the data from root files
-    dir_samples = weight_dir + nLep + "/"
-
-    if include_MEM_variables == True:
-        dir_samples = "../MEM/ntuples_interfaced/2016_ttV_3l/"
-
+    testdirpath = Path(ntuples_dir)
+    if not testdirpath.is_dir():
+        print('Ntuple dir. '+ntuples_dir+' not found ! Abort !')
+        exit(1)
 
     #Get the TFiles
-    if signal == "tHq":
-        filepath = dir_samples + 'tHq.root'
-    elif signal == "ttH":
-        filepath = dir_samples + 'ttH_LO.root'
-    else:
-        print("WRONG SIGNAL NAME / FILE !")
+    filepath = ntuples_dir + signal + '.root'
+
+    testfilepath = Path(filepath)
+    if not testfilepath.is_file():
+        print('File '+filepath+' not found ! Abort !')
+        exit(1)
 
     print("\n* Opening file : " + filepath)
     file_signal = TFile.Open(filepath)
 
-
-    if bkg_type == "ttV":
-        suffix = "_LO.root"
-
-        filepath = dir_samples + "ttZ" + suffix
+    if bkg_type == "": #FIXME
+        filepath = ntuples_dir + 'ttZ.root'
+        testfilepath = Path(filepath)
+        if not testfilepath.is_file():
+            print('File '+filepath+' not found ! Abort !')
+            exit(1)
         print("\n* Opening file : " + filepath)
         file_bkg1 = TFile.Open(filepath)
 
-        filepath = dir_samples + "ttW" + suffix
+        filepath = ntuples_dir + 'ttW.root'
+        testfilepath = Path(filepath)
+        if not testfilepath.is_file():
+            print('File '+filepath+' not found ! Abort !')
+            exit(1)
         print("\n* Opening file : " + filepath)
-        file_bkg2 = TFile.Open(filepath)
-
-    else:
-        suffix = ".root"
-
-        filepath = dir_samples + "TTbar_DiLep_PSweights" + suffix
-        print("\n\n\n* Opening file : " + filepath)
-        file_bkg1 = TFile.Open(filepath)
-
-        # filepath = dir_samples + "TTJets" + suffix
-        filepath = dir_samples + "TTbar_SemiLep_PSweights" + suffix
-        print("\n\n\n* Opening file : " + filepath)
         file_bkg2 = TFile.Open(filepath)
 
     print("\n===========")
     print("--- Signal = " + signal)
-    if bkg_type == "ttV":
+    if bkg_type == "":
         print("--- Backgrounds = ttZ, ttW")
     else:
-        # print("--- Backgrounds = TTbar_DiLep, TTJets")
         print("--- Backgrounds = TTbar_DiLep, TTbar_SemiLep")
     print("===========\n\n")
 
-
-
     #Get trees
-    tree_sig = file_signal.Get('Tree')
-    tree_bkg1 = file_bkg1.Get('Tree')
-    tree_bkg2 = file_bkg2.Get('Tree')
+    tree_sig = file_signal.Get('result')
+    tree_bkg1 = file_bkg1.Get('result')
+    tree_bkg2 = file_bkg2.Get('result')
 
     #Define cuts to apply on samples
-    sel = cuts + " && " + Get_Boolean_Categ(nLep, region)+"==1"
-    # sel = "is_tHq_3l_Training==1" #To use "Training" categ. events
+    sel = cuts
 
     #Use 'root_numpy' to get numpy arrays from root files
     x_sig = tree2array(tree_sig, branches=var_list, selection=sel)
@@ -724,27 +583,19 @@ def Get_Data_Keras(signal, bkg_type, nLep, region, var_list, include_MEM_variabl
     # print(x_sig.shape)
 
 
-    sig_weight = tree2array(tree_sig, branches="weight", selection=sel)
-    bkg1_weight = tree2array(tree_bkg1, branches="weight", selection=sel)
-    bkg2_weight = tree2array(tree_bkg2, branches="weight", selection=sel)
+    sig_weight = tree2array(tree_sig, branches="eventWeight", selection=sel)
+    bkg1_weight = tree2array(tree_bkg1, branches="eventWeight", selection=sel)
+    bkg2_weight = tree2array(tree_bkg2, branches="eventWeight", selection=sel)
 
-    #Can apply event SF to test event weights
-    if apply_SF_testing == True:
-        sig_weight_SF = tree2array(tree_sig, branches="weight*total_SF", selection=sel)
-        bkg1_weight_SF = tree2array(tree_bkg1, branches="weight*total_SF", selection=sel)
-        bkg2_weight_SF = tree2array(tree_bkg2, branches="weight*total_SF", selection=sel)
-    else:
-        sig_weight_SF = sig_weight
-        bkg1_weight_SF = bkg1_weight
-        bkg2_weight_SF = bkg2_weight
 
     #Use only positive weights
     sig_weight = np.absolute(sig_weight)
     bkg1_weight = np.absolute(bkg1_weight)
     bkg2_weight = np.absolute(bkg2_weight)
-    sig_weight_SF = np.absolute(sig_weight_SF)
-    bkg1_weight_SF = np.absolute(bkg1_weight_SF)
-    bkg2_weight_SF = np.absolute(bkg2_weight_SF)
+
+    # sig_weight_SF = sig_weight
+    # bkg1_weight_SF = bkg1_weight
+    # bkg2_weight_SF = bkg2_weight
 
     # bkg_total_weight = np.concatenate(bkg1_weight, bkg2_weight)
     # print(sig_weight.shape)
@@ -831,7 +682,7 @@ def Get_Data_Keras(signal, bkg_type, nLep, region, var_list, include_MEM_variabl
 
         #Compute scale factors (so all samples have same yield)
         sf_sig = yield_total / yield_sig
-        if bkg_type == "ttV": #Rescale such that ttW=ttZ  #Correct ?
+        if bkg_type == "": #Rescale such that ttW=ttZ  #Correct ?
             sf_bkg1 = yield_total / yield_bkg1
             sf_bkg2 = yield_total / yield_bkg2
             # print(sf_sig, sf_bkg1, sf_bkg2)
@@ -845,7 +696,7 @@ def Get_Data_Keras(signal, bkg_type, nLep, region, var_list, include_MEM_variabl
         # print(norm_factor)
         sf_sig = sf_sig * norm_factor
 
-        if bkg_type == "ttV": #Also divide bkg weight so that bkg1 and bkg2 have equal yields
+        if bkg_type == "": #Also divide bkg weight so that bkg1 and bkg2 have equal yields
             sf_bkg1 = (sf_bkg1 * norm_factor) / 2.
             sf_bkg2 = (sf_bkg2 * norm_factor) / 2.
         else:
@@ -858,8 +709,8 @@ def Get_Data_Keras(signal, bkg_type, nLep, region, var_list, include_MEM_variabl
         # print(sf_sig, sf_bkg1, sf_bkg2)
 
         #Create set of "physical weights" (real event weights), and "learning" weights (to ensure equal learning)
-        bkg_total_weightPHY = np.concatenate((bkg1_weight_SF, bkg2_weight_SF), 0)
-        weightPHY = np.concatenate((sig_weight_SF, bkg_total_weightPHY), 0)
+        bkg_total_weightPHY = np.concatenate((bkg1_weight, bkg2_weight), 0)
+        weightPHY = np.concatenate((sig_weight, bkg_total_weightPHY), 0)
         # weightPHY = weightPHY[:, 0] #necessary trick to get 1D vector instead of 2D array (different 'view' of same data)  #not needed anymore ?
 
         bkg_total_weightLEARN = np.concatenate((bkg1_weight*sf_bkg1, bkg2_weight*sf_bkg2), 0)
@@ -890,9 +741,11 @@ def Get_Data_Keras(signal, bkg_type, nLep, region, var_list, include_MEM_variabl
     # print(y_integer)
     # exit(1)
 
+    #FIXME -- limit here the nof train/test events ?
 
     if nof_outputs == 2:
-        y = np_utils.to_categorical(y_integer, 2) #One-hot encode the integers => Use 2 classes (sig, bkg) #Convert class vector to binary class matrix, for use with categorical_crossentropy.
+        # y = np_utils.to_categorical(y_integer, 2) #One-hot encode the integers => Use 2 classes (sig, bkg) #Convert class vector to binary class matrix, for use with categorical_crossentropy.
+        y = utils.to_categorical(y_integer, 2) #One-hot encode the integers => Use 2 classes (sig, bkg) #Convert class vector to binary class matrix, for use with categorical_crossentropy.
     elif nof_outputs == 1:
         y = y_integer #Use simple column instead (*not* one-hot encoded)
     else:
@@ -1027,22 +880,15 @@ def Get_Data_Keras(signal, bkg_type, nLep, region, var_list, include_MEM_variabl
    ##    ##     ## ##     ## #### ##    ##    ##             ##    ########  ######     ##
 # //--------------------------------------------
 
-def Train_Test_Eval_PureKeras(bkg_type, nLep, region, var_list, include_MEM_variables, cuts, _nepochs, _batchSize, nof_outputs, apply_SF_testing):
+def Train_Test_Eval_PureKeras(bkg_type, var_list, cuts, _nepochs, _batchSize, nof_outputs):
 
-    signal = "tHq"
-
-    #Auto batch sizes
-    if _batchSize == 0:
-        if nLep == "3l":
-            _batchSize = 64
-        else:
-            _batchSize=128
+    signal = "tZq"
 
     #Get data
-    x_train, y_train, x_test, y_test, weightPHY_train, weightPHY_test, weightLEARN_train, weightLEARN_test, x, y, weightPHY, weightLEARN = Get_Data_Keras(signal, bkg_type, nLep, region, var_list, include_MEM_variables, cuts, nof_outputs, apply_SF_testing)
+    x_train, y_train, x_test, y_test, weightPHY_train, weightPHY_test, weightLEARN_train, weightLEARN_test, x, y, weightPHY, weightLEARN = Get_Data_Keras(signal, bkg_type, var_list, cuts, nof_outputs)
 
     #Get model, compile
-    model = Create_Model(weight_dir, "DNN"+bkg_type+"_"+nLep, nof_outputs)
+    model = Create_Model(weight_dir, "DNN"+bkg_type, nof_outputs)
 
     #-- Can access weights and biases of any layer (debug, ...) #Print before training
     # weights_layer, biases_layer = model.layers[0].get_weights()
@@ -1062,7 +908,7 @@ def Train_Test_Eval_PureKeras(bkg_type, nLep, region, var_list, include_MEM_vari
     # cvscores = []
     # for train, test in kfold.split(x, y):
     #     model = None
-    #     model = Create_Model(outdir, "DNN"+bkg_type+"_"+nLep, nof_outputs)
+    #     model = Create_Model(outdir, "DNN"+bkg_type, nof_outputs)
     #     model.compile(loss=_loss, optimizer=_optim, metrics=[_metrics])
     #     model.fit(x[train], y[train], validation_data=(x[test], y[test]), epochs=_nepochs, batch_size=_batchSize, callbacks=callbacks_list)
     #     score = model.evaluate(x[test], y[test], batch_size=_batchSize)
@@ -1082,36 +928,29 @@ def Train_Test_Eval_PureKeras(bkg_type, nLep, region, var_list, include_MEM_vari
     # print(score)
 
 
+####    ##   #    # ######    #    #  ####  #####  ###### #
+#       #  #  #    # #         ##  ## #    # #    # #      #
+####  #    # #    # #####     # ## # #    # #    # #####  #
+  # ###### #    # #         #    # #    # #    # #      #
+#    # #    #  #  #  #         #    # #    # #    # #      #
+####  #    #   ##   ######    #    #  ####  #####  ###### ######
 
-
-
-
-  ####    ##   #    # ######    #    #  ####  #####  ###### #
- #       #  #  #    # #         ##  ## #    # #    # #      #
-  ####  #    # #    # #####     # ## # #    # #    # #####  #
-      # ###### #    # #         #    # #    # #    # #      #
- #    # #    #  #  #  #         #    # #    # #    # #      #
-  ####  #    #   ##   ######    #    #  ####  #####  ###### ######
-
-    outname = outdir + '/model_DNN'+bkg_type+'_'+nLep+'_all'
+    outname = weight_dir + 'model_DNN'+bkg_type
 
     #Serialize model to HDF5
     model.save(outname+'.h5')
     # model.save_weights(outname+'.h5')
     # print("Saved model to disk")
 
-    #NEW -- save in json, for fdeep add-on later
-    os.system("./frugally-deep/keras_export/convert_model.py "+ outname+'.h5' + " " + outname+'.json')
-
     # Save the model architecture
-    with open(outdir + 'arch_DNN'+bkg_type+'_'+nLep+'_all.json', 'w') as json_file:
+    with open(weight_dir + 'arch_DNN'+bkg_type+'_all.json', 'w') as json_file:
         json_file.write(model.to_json())
 
 
     # export_model(model, outname+'.model') # Use 'kerasify' add-on to export model in specific format #obsolete
 
     #Save list of variables
-    Write_Variables_To_TextFile(var_list)
+    # Write_Variables_To_TextFile(var_list)
 
 
  #####  ######  ####  #    # #      #####  ####
@@ -1141,10 +980,10 @@ def Train_Test_Eval_PureKeras(bkg_type, nLep, region, var_list, include_MEM_vari
     print("-- TEST SAMPLE  \t(" + str(nEvents_test) + " events) \t\t==> " + str(auc_score) )
     print("-- Train sample \t(" + str(nEvents_train) + " events) \t\t==> " + str(auc_score_train) + "\n\n")
 
-    predictions_train_sig, predictions_train_bkg, predictions_test_sig, predictions_test_bkg, weightLEARN_sig, weightLEARN_bkg, weight_test_sig, weight_test_bkg = Apply_Model(bkg_type, nLep, region, var_list, include_MEM_variables, cuts, _nepochs, _batchSize, nof_outputs, x_train, y_train, x_test, y_test, weightPHY_train, weightPHY_test)
+    predictions_train_sig, predictions_train_bkg, predictions_test_sig, predictions_test_bkg, weightLEARN_sig, weightLEARN_bkg, weight_test_sig, weight_test_bkg = Apply_Model(bkg_type, var_list, cuts, _nepochs, _batchSize, nof_outputs, x_train, y_train, x_test, y_test, weightPHY_train, weightPHY_test)
 
     # Fill a ROOT histogram from a NumPy array
-    rootfile_outname = "outputs/PredictKeras_DNN"+bkg_type+"_"+nLep+".root"
+    rootfile_outname = "../outputs/PredictKeras_DNN"+bkg_type+".root"
     fout = ROOT.TFile(rootfile_outname, "RECREATE")
 
     # print("last : ")
@@ -1295,7 +1134,7 @@ def Train_Test_Eval_PureKeras(bkg_type, nLep, region, var_list, include_MEM_vari
         plt.legend(loc="lower left")
         timer.start()
         plt.show()
-        plotname = weight_dir + 'ROC_DNN'+bkg_type+'_'+nLep+'.png'
+        plotname = weight_dir + 'ROC_DNN'+bkg_type+'.png'
         fig1.savefig(plotname)
         print("Saved ROC plot as : " + plotname)
 
@@ -1313,7 +1152,7 @@ def Train_Test_Eval_PureKeras(bkg_type, nLep, region, var_list, include_MEM_vari
     plt.legend(['Train', 'Test'], loc='upper right')
     timer.start()
     plt.show()
-    plotname = weight_dir + 'Loss_DNN'+bkg_type+'_'+nLep+'.png'
+    plotname = weight_dir + 'Loss_DNN'+bkg_type+'.png'
     fig2.savefig(plotname)
     print("Saved Loss plot as : " + plotname)
 
@@ -1331,7 +1170,7 @@ def Train_Test_Eval_PureKeras(bkg_type, nLep, region, var_list, include_MEM_vari
     plt.legend(['Train', 'Test'], loc='lower right')
     timer.start()
     plt.show()
-    plotname = weight_dir + 'Accuracy_DNN'+bkg_type+'_'+nLep+'.png'
+    plotname = weight_dir + 'Accuracy_DNN'+bkg_type+'.png'
     fig3.savefig(plotname)
     print("Saved Accuracy plot as : " + plotname)
 
@@ -1371,20 +1210,12 @@ def Train_Test_Eval_PureKeras(bkg_type, nLep, region, var_list, include_MEM_vari
 ##     ## ##        ##        ######## ####  ######  ##     ##    ##    ####  #######  ##    ##
 # //--------------------------------------------
 
-def Apply_Model(bkg_type, nLep, region, var_list, include_MEM_variables, cuts, _nepochs, _batchSize, nof_outputs, x_train, y_train, x_test, y_test, weightLEARN, weight_test):
+def Apply_Model(bkg_type, var_list, cuts, _nepochs, _batchSize, nof_outputs, x_train, y_train, x_test, y_test, weightLEARN, weight_test):
 
-    signal = "tHq"
-
-    #Auto batch sizes
-    # if _batchSize == 0:
-    #     if nLep == "3l":
-    #         _batchSize = 64
-    #     else:
-    #         _batchSize=128
-
+    signal = "tZq"
 
     #Get data #CHANGED -- directly taken as arg
-    # x_train, y_train, x_test, y_test, weightLEARN, weight_test = Get_Data_Keras(signal, bkg_type, nLep, region, var_list, include_MEM_variables, cuts, nof_outputs, apply_SF_testing)
+    # x_train, y_train, x_test, y_test, weightLEARN, weight_test = Get_Data_Keras(signal, bkg_type, var_list, cuts, nof_outputs)
 
     #Split test & train sample between "true signal" & "true background" (must be separated for plotting)
     x_test_sig = x_test[y_test[:, 0]==1]
@@ -1416,8 +1247,7 @@ def Apply_Model(bkg_type, nLep, region, var_list, include_MEM_variables, cuts, _
     # print(weight_test_bkg.shape)
 
     #Load model
-    model = load_model(weight_dir + "model_DNN"+bkg_type+"_"+nLep+"_all.h5")
-
+    model = load_model(weight_dir + "model_DNN"+bkg_type+".h5")
 
 
  #####  #####  ###### #####  #  ####  #####
@@ -1469,7 +1299,6 @@ def Apply_Model(bkg_type, nLep, region, var_list, include_MEM_variables, cuts, _
 
     #--- COSMETICS
     #grey=#E6E6E6 #white=#FFFFFF
-
 
     #grey=#E6E6E6 #white=#FFFFFF
     fig4 = plt.figure(4)
@@ -1555,7 +1384,7 @@ def Apply_Model(bkg_type, nLep, region, var_list, include_MEM_variables, cuts, _
     timer.start()
     plt.show()
 
-    plotname = weight_dir + 'Overtraining_DNN'+bkg_type+'_'+nLep+'.png'
+    plotname = weight_dir + 'Overtraining_DNN'+bkg_type+'.png'
     fig4.savefig(plotname)
     print("Saved Overtraining plot as : " + plotname)
 
@@ -1609,16 +1438,15 @@ def Apply_Model(bkg_type, nLep, region, var_list, include_MEM_variables, cuts, _
 
 
 #-------- Call from external script (e.g. main C++ analysis code) --> Read command line args
-if len(sys.argv) == 2:
-    # DNN_type = sys.argv[1]
-    if sys.argv[1] == True:
-        nLep = "3l"
-    else:
-        nLep = "2l"
+# if len(sys.argv) == 2:
+#     if sys.argv[1] == True:
+#         nLep = "3l"
+#     else:
+#         nLep = "2l"
 
-    Train_Test_Eval_PureKeras(bkg_type, nLep, region, var_list, include_MEM_variables, cuts, _nepochs, _batchSize, nof_outputs, apply_SF_testing)
+    Train_Test_Eval_PureKeras(bkg_type, var_list, cuts, _nepochs, _batchSize, nof_outputs)
     exit(1)
 
 
 #----------  Manual call to DNN training function
-Train_Test_Eval_PureKeras(bkg_type, nLep, region, var_list, include_MEM_variables, cuts, _nepochs, _batchSize, nof_outputs, apply_SF_testing)
+Train_Test_Eval_PureKeras(bkg_type, var_list, cuts, _nepochs, _batchSize, nof_outputs)
