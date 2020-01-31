@@ -18,9 +18,9 @@
 
 #--- Set here the main training options
 # //--------------------------------------------
-_nepochs = 3
-_batchSize = 200000
-nof_outputs = 2 #can choose single output, or 2 (1 per class) #FIXME 1
+_nepochs = 2
+_batchSize = 50000
+nof_outputs = 2 #single output not supported (e.g. for validation steps)
 # //--------------------------------------------
 
 # Analysis options
@@ -69,6 +69,9 @@ import ROOT
 from ROOT import TMVA, TFile, TTree, TCut, gROOT, TH1, TH1F
 import numpy as np
 from root_numpy import root2array, tree2array, array2root, fill_hist
+
+import pandas as pd
+import tensorflow
 import keras
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.models import load_model
@@ -85,7 +88,7 @@ from sklearn.preprocessing import MinMaxScaler, Normalizer, StandardScaler
 # from tensorflow.keras.layers.advanced_activations import PReLU
 from tensorflow.keras import regularizers
 from tensorflow.keras.layers import LeakyReLU
-from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
 # import matplotlib.pyplot as plt
 from ann_visualizer.visualize import ann_viz;
 from sklearn.metrics import roc_curve, auc, roc_auc_score
@@ -95,10 +98,12 @@ from itertools import cycle
 from sklearn.feature_selection import RFE, SelectKBest
 from sklearn.feature_selection import chi2
 from sklearn.decomposition import PCA
-
 from pathlib import Path
+import argparse
 
-from Helper import close_event, batchOutput, Write_Variables_To_TextFile, TimeHistory
+
+from Utils.kerasToTensorflow import freeze_session
+from Utils.Helper import close_event, batchOutput, Write_Variables_To_TextFile, TimeHistory
 
 weight_dir = "../weights/DNN/Keras/"
 os.makedirs(weight_dir, exist_ok=True)
@@ -141,7 +146,6 @@ def Get_Loss_Optim_Metrics():
     _decay = 0.0 #Decreases the _lr by specified amount after each epoch. Used in similar way as LearningRateScheduler
     _nesterov = True #improved momentum, stronger theoretical converge guarantees for convex functions
 
-
     #Some possible choices of optimizers
     # optim = RMSprop(lr=_lr)
 
@@ -164,19 +168,19 @@ def Get_Loss_Optim_Metrics():
     # metrics = 'binary_crossentropy' #Calculates the cross-entropy value for binary classification problems.
 
 
-    # if nof_outputs > 1:
-    #     loss = 'categorical_crossentropy'
-    #     metrics = 'categorical_accuracy'
-    # elif nof_outputs == 1:
-    #     loss = 'binary_crossentropy'
-    #     metrics = 'binary_accuracy'
-    # else:
-    #     print("Wrong value for nof_outputs!")
-    #     exit(1)
+    if nof_outputs > 1:
+        loss = 'categorical_crossentropy'
+        metrics = 'categorical_accuracy'
+    elif nof_outputs == 1:
+        loss = 'binary_crossentropy'
+        metrics = 'binary_accuracy'
+    else:
+        print("Wrong value for nof_outputs!")
+        exit(1)
 
     #Automatically set within Keras
     # loss = 'mean_squared_error'
-    loss = 'categorical_crossentropy'
+    # loss = 'categorical_crossentropy'
     metrics = 'accuracy'
 
     #Return the one you want to use
@@ -266,17 +270,17 @@ def Create_Model(outdir, DNN_name, nof_outputs):
     #Model 1 -- simple
     if model_choice == 1:
        # //--------------------------------------------
-        model.add(Dense(64, kernel_initializer=my_init, activation='tanh', input_dim=num_input_variables))
-        model.add(Dropout(droprate))
+        model.add(Dense(64, kernel_initializer=my_init, activation='tanh', input_dim=num_input_variables)) #, name="myInputs"
+        # model.add(Dropout(droprate))
         model.add(Dense(64, kernel_initializer=my_init, activation='relu'))
-        model.add(Dropout(droprate))
-        model.add(Dense(64, kernel_initializer=my_init, activation='relu'))
-        model.add(Dropout(droprate))
+        # model.add(Dropout(droprate))
+        # model.add(Dense(64, kernel_initializer=my_init, activation='relu'))
+        # model.add(Dropout(droprate))
 
         if nof_outputs == 1 :
             model.add(Dense(nof_outputs, kernel_initializer=my_init, activation='sigmoid'))
         elif nof_outputs == 2:
-            model.add(Dense(nof_outputs, kernel_initializer=my_init, activation='softmax'))
+            model.add(Dense(nof_outputs, kernel_initializer=my_init, activation='softmax')) #, name="myOutput"
        # //--------------------------------------------
 
     #Model 2 -- more elaborate, overtrained
@@ -459,7 +463,7 @@ def Get_Callbacks():
     lrate_plateau = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=10, verbose=1, mode='auto', min_delta=1e-4, cooldown=0, min_lr=1e-6)
     # lrate_plateau = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=10, verbose=1, mode='auto', min_delta=1e-4, cooldown=0, min_lr=1e-6)
 
-# keras.callbacks.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, verbose=0, mode='auto', min_delta=0.0001, cooldown=0, min_lr=0)
+    # keras.callbacks.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, verbose=0, mode='auto', min_delta=0.0001, cooldown=0, min_lr=0)
 
     #NB : ES takes place when monitored quantity has not improved **WRT BEST VALUE YET** for a number 'patience' of epochs
     # ES = keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=1e-4, patience=100, verbose=1, restore_best_weights=True, mode='auto') #Try early stopping after N epochs without metrics update # monitor='val_loss'
@@ -741,8 +745,6 @@ def Get_Data_Keras(signal, bkg_type, var_list, cuts, nof_outputs):
     # print(y_integer)
     # exit(1)
 
-    #FIXME -- limit here the nof train/test events ?
-
     if nof_outputs == 2:
         # y = np_utils.to_categorical(y_integer, 2) #One-hot encode the integers => Use 2 classes (sig, bkg) #Convert class vector to binary class matrix, for use with categorical_crossentropy.
         y = utils.to_categorical(y_integer, 2) #One-hot encode the integers => Use 2 classes (sig, bkg) #Convert class vector to binary class matrix, for use with categorical_crossentropy.
@@ -750,8 +752,6 @@ def Get_Data_Keras(signal, bkg_type, var_list, cuts, nof_outputs):
         y = y_integer #Use simple column instead (*not* one-hot encoded)
     else:
         print("Wrong value of nof_outputs")
-
-
 
     #-- INPUT VARIABLES transformations
     np.set_printoptions(precision=4)
@@ -813,6 +813,8 @@ def Get_Data_Keras(signal, bkg_type, var_list, cuts, nof_outputs):
     # print(x_train[0:5], "\n")
     # print(y_train[0:5], "\n")
 
+    #FIXME -- limit here the nof train/test events ?
+
     #PCA -- could reduce number of components -- problem : can't reduce in TMVA...
     # pca = PCA()
     # x_train = pca.fit_transform(x_train)
@@ -839,7 +841,6 @@ def Get_Data_Keras(signal, bkg_type, var_list, cuts, nof_outputs):
     # print(x_train.shape)
     # print(pca_std)
     # exit(1)
-
 
     print("\n===========")
     print("-- Will use " + str(x_train.shape[0]) + " training events !")
@@ -889,6 +890,20 @@ def Train_Test_Eval_PureKeras(bkg_type, var_list, cuts, _nepochs, _batchSize, no
 
     #Get model, compile
     model = Create_Model(weight_dir, "DNN"+bkg_type, nof_outputs)
+
+    # --- convert model to estimator and save model as frozen graph for c++
+    tensorflow.keras.backend.clear_session()
+    tensorflow.keras.backend.set_learning_phase(0) # has to be done to get a working frozen graph in c++
+    model = load_model(weight_dir + "model_DNN"+bkg_type+".h5") # model has to be re-loaded
+
+    sess = tensorflow.compat.v1.keras.backend.get_session()
+    print('inputs: ', [input.op.name for input in model.inputs])
+    print('outputs: ', [output.op.name for output in model.outputs])
+    output_names = [out.op.name for out in model.outputs]
+    # print('output_names : ', output_names)
+    frozen_graph = freeze_session(sess, output_names)
+    tensorflow.compat.v1.train.write_graph(frozen_graph, './mymodel', 'model.pbtxt', as_text=True)
+    tensorflow.compat.v1.train.write_graph(frozen_graph, './mymodel', 'model.pb', as_text=False)
 
     #-- Can access weights and biases of any layer (debug, ...) #Print before training
     # weights_layer, biases_layer = model.layers[0].get_weights()
@@ -960,219 +975,220 @@ def Train_Test_Eval_PureKeras(bkg_type, var_list, cuts, _nepochs, _batchSize, no
  #   #  #      #    # #    # #        #   #    #
  #    # ######  ####   ####  ######   #    ####
 
-    nEvents_train, tmp = y_train.shape
-    nEvents_test, tmp = y_test.shape
+    show_control_plots = False
 
-    #Create some more control plots for quick checking
-    print("\n\n\n\n########################")
-    print("########################")
-    print("## Results & Control Plots ##")
-    print("########################")
-    print("########################")
-
-    accuracy = score[1]
-    print("\n\n*** Accuracy ***")
-    print(str(accuracy) + "\n\n")
-
-    auc_score = roc_auc_score(y_test, model.predict(x_test))
-    auc_score_train = roc_auc_score(y_train, model.predict(x_train))
-    print("\n*** AUC scores ***")
-    print("-- TEST SAMPLE  \t(" + str(nEvents_test) + " events) \t\t==> " + str(auc_score) )
-    print("-- Train sample \t(" + str(nEvents_train) + " events) \t\t==> " + str(auc_score_train) + "\n\n")
-
-    predictions_train_sig, predictions_train_bkg, predictions_test_sig, predictions_test_bkg, weightLEARN_sig, weightLEARN_bkg, weight_test_sig, weight_test_bkg = Apply_Model(bkg_type, var_list, cuts, _nepochs, _batchSize, nof_outputs, x_train, y_train, x_test, y_test, weightPHY_train, weightPHY_test)
-
-    # Fill a ROOT histogram from a NumPy array
-    rootfile_outname = "../outputs/PredictKeras_DNN"+bkg_type+".root"
-    fout = ROOT.TFile(rootfile_outname, "RECREATE")
-
-    # print("last : ")
-    # print(weightLEARN_sig[0:5])
-
-    #Write histograms with reweighting
-    hist_train_sig = TH1F('hist_train_sig', '', 100, -1, 1)
-    fill_hist(hist_train_sig, predictions_train_sig, weights=weightLEARN_sig)
-    # hist_test_sig.Draw('hist')
-    hist_train_sig.Write()
-
-    hist_train_bkg = TH1F('hist_train_bkg', '', 100, -1, 1)
-    fill_hist(hist_train_bkg, predictions_train_bkg, weights=weightLEARN_bkg)
-    # hist_train_bkg.Draw('hist')
-    hist_train_bkg.Write()
-
-    hist_test_sig = TH1F('hist_test_sig', '', 100, -1, 1)
-    fill_hist(hist_test_sig, predictions_test_sig, weights=weight_test_sig)
-    # hist_test_sig.Draw('hist')
-    hist_test_sig.Write()
-
-    hist_test_bkg = TH1F('hist_test_bkg', '', 100, -1, 1)
-    fill_hist(hist_test_bkg, predictions_test_bkg, weights=weight_test_bkg)
-    # hist_test_bkg.Draw('hist')
-    hist_test_bkg.Write()
-
-    #Also write histos witought reweighting
-    hist_train_sig_noReweight = TH1F('hist_train_sig_noReweight', '', 100, -1, 1)
-    fill_hist(hist_train_sig_noReweight, predictions_train_sig)
-    # hist_train_sig_noReweight.Draw('hist')
-    hist_train_sig_noReweight.Write()
-
-    hist_train_bkg_noReweight = TH1F('hist_train_bkg_noReweight', '', 100, -1, 1)
-    fill_hist(hist_train_bkg_noReweight, predictions_train_bkg)
-    # hist_train_bkg_noReweight.Draw('hist')
-    hist_train_bkg_noReweight.Write()
-
-    hist_test_sig_noReweight = TH1F('hist_test_sig_noReweight', '', 100, -1, 1)
-    fill_hist(hist_test_sig_noReweight, predictions_test_sig)
-    # hist_test_sig_noReweight.Draw('hist')
-    hist_test_sig_noReweight.Write()
-
-    hist_test_bkg_noReweight = TH1F('hist_test_bkg_noReweight', '', 100, -1, 1)
-    fill_hist(hist_test_bkg_noReweight, predictions_test_bkg)
-    # hist_test_bkg_noReweight.Draw('hist')
-    hist_test_bkg_noReweight.Write()
-
-    fout.Close()
-    print("Saved output ROOT file containing Keras Predictions as histograms : " + rootfile_outname)
+    if show_control_plots==True:
+        #Create some more control plots for quick checking
+        print("\n\n\n\n########################")
+        print("########################")
+        print("## Results & Control Plots ##")
+        print("########################")
+        print("########################")
 
 
-    #Get ROC curve using test data -- different for nof_outputs>1, should fix it
-    #Uses predict() function, which generates (output) given (input + model)
-    if nof_outputs == 1:
-        fpr, tpr, _ = roc_curve(y_test, model.predict(x_test))
-        roc_auc = auc(fpr, tpr)
-        plt.plot(fpr, tpr,color='darkorange',label='ROC curve (area = %0.2f)' % roc_auc)
-        # plt.plot(tpr, 1-fpr,color='darkorange',label='ROC curve (area = %0.2f)' % roc_auc)
-        plt.legend(loc="lower right")
-        plt.xlabel('True Positive Rate')
-        plt.ylabel('False Positive Rate')
-        plt.show()
-    else: #different for multiclass
-        # Plot linewidth.
-        lw = 2
-        n_classes = 2
+        nEvents_train = y_train.shape
+        nEvents_test = y_test.shape
+        # nEvents_train, tmp = y_train.shape
+        # nEvents_test, tmp = y_test.shape
 
-        # Compute ROC curve and ROC area for each class
-        fpr = dict()
-        tpr = dict()
-        roc_auc = dict()
-        fpr_train = dict()
-        tpr_train = dict()
-        roc_auc_train = dict()
-        for i in range(n_classes):
-            fpr[i], tpr[i], _ = roc_curve(y_test[:, i], model.predict(x_test)[:, i])
-            roc_auc[i] = auc(fpr[i], tpr[i])
+        accuracy = score[1]
+        print("\n\n*** Accuracy ***")
+        print(str(accuracy) + "\n\n")
 
-            #NEW -- try to also show ROC on training sample for comparison
-            fpr_train[i], tpr_train[i], _ = roc_curve(y_train[:, i], model.predict(x_train)[:, i])
-            roc_auc_train[i] = auc(fpr_train[i], tpr_train[i])
+        auc_score = roc_auc_score(y_test, model.predict(x_test))
+        auc_score_train = roc_auc_score(y_train, model.predict(x_train))
+        print("\n*** AUC scores ***")
+        print("-- TEST SAMPLE  \t(" + str(nEvents_test) + " events) \t\t==> " + str(auc_score) )
+        print("-- TRAIN SAMPLE \t(" + str(nEvents_train) + " events) \t\t==> " + str(auc_score_train) + "\n\n")
+
+        predictions_train_sig, predictions_train_bkg, predictions_test_sig, predictions_test_bkg, weightLEARN_sig, weightLEARN_bkg, weight_test_sig, weight_test_bkg = Apply_Model(bkg_type, var_list, cuts, _nepochs, _batchSize, nof_outputs, x_train, y_train, x_test, y_test, weightPHY_train, weightPHY_test)
+
+        # Fill a ROOT histogram from a NumPy array
+        rootfile_outname = "../outputs/PredictKeras_DNN"+bkg_type+".root"
+        fout = ROOT.TFile(rootfile_outname, "RECREATE")
+
+        # print("last : ")
+        # print(weightLEARN_sig[0:5])
+
+        #Write histograms with reweighting
+        hist_train_sig = TH1F('hist_train_sig', '', 100, -1, 1)
+        fill_hist(hist_train_sig, predictions_train_sig, weights=weightLEARN_sig)
+        # hist_test_sig.Draw('hist')
+        hist_train_sig.Write()
+
+        hist_train_bkg = TH1F('hist_train_bkg', '', 100, -1, 1)
+        fill_hist(hist_train_bkg, predictions_train_bkg, weights=weightLEARN_bkg)
+        # hist_train_bkg.Draw('hist')
+        hist_train_bkg.Write()
+
+        hist_test_sig = TH1F('hist_test_sig', '', 100, -1, 1)
+        fill_hist(hist_test_sig, predictions_test_sig, weights=weight_test_sig)
+        # hist_test_sig.Draw('hist')
+        hist_test_sig.Write()
+
+        hist_test_bkg = TH1F('hist_test_bkg', '', 100, -1, 1)
+        fill_hist(hist_test_bkg, predictions_test_bkg, weights=weight_test_bkg)
+        # hist_test_bkg.Draw('hist')
+        hist_test_bkg.Write()
+
+        #Also write histos witought reweighting
+        hist_train_sig_noReweight = TH1F('hist_train_sig_noReweight', '', 100, -1, 1)
+        fill_hist(hist_train_sig_noReweight, predictions_train_sig)
+        # hist_train_sig_noReweight.Draw('hist')
+        hist_train_sig_noReweight.Write()
+
+        hist_train_bkg_noReweight = TH1F('hist_train_bkg_noReweight', '', 100, -1, 1)
+        fill_hist(hist_train_bkg_noReweight, predictions_train_bkg)
+        # hist_train_bkg_noReweight.Draw('hist')
+        hist_train_bkg_noReweight.Write()
+
+        hist_test_sig_noReweight = TH1F('hist_test_sig_noReweight', '', 100, -1, 1)
+        fill_hist(hist_test_sig_noReweight, predictions_test_sig)
+        # hist_test_sig_noReweight.Draw('hist')
+        hist_test_sig_noReweight.Write()
+
+        hist_test_bkg_noReweight = TH1F('hist_test_bkg_noReweight', '', 100, -1, 1)
+        fill_hist(hist_test_bkg_noReweight, predictions_test_bkg)
+        # hist_test_bkg_noReweight.Draw('hist')
+        hist_test_bkg_noReweight.Write()
+
+        fout.Close()
+        print("Saved output ROOT file containing Keras Predictions as histograms : " + rootfile_outname)
 
 
-        # Compute micro-average ROC curve and ROC area
-        # fpr["micro"], tpr["micro"], _ = roc_curve(y_test.ravel(), model.predict(x_test).ravel())
-        # roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
+        #Get ROC curve using test data -- different for nof_outputs>1, should fix it
+        #Uses predict() function, which generates (output) given (input + model)
+        if nof_outputs == 1:
+            fpr, tpr, _ = roc_curve(y_test, model.predict(x_test))
+            roc_auc = auc(fpr, tpr)
+            plt.plot(fpr, tpr,color='darkorange',label='ROC curve (area = %0.2f)' % roc_auc)
+            # plt.plot(tpr, 1-fpr,color='darkorange',label='ROC curve (area = %0.2f)' % roc_auc)
+            plt.legend(loc="lower right")
+            plt.xlabel('True Positive Rate')
+            plt.ylabel('False Positive Rate')
+            plt.show()
+        else: #different for multiclass
+            # Plot linewidth.
+            lw = 2
+            n_classes = 2
 
-        # Compute macro-average ROC curve and ROC area
+            # Compute ROC curve and ROC area for each class
+            fpr = dict()
+            tpr = dict()
+            roc_auc = dict()
+            fpr_train = dict()
+            tpr_train = dict()
+            roc_auc_train = dict()
+            for i in range(n_classes):
+                fpr[i], tpr[i], _ = roc_curve(y_test[:, i], model.predict(x_test)[:, i])
+                roc_auc[i] = auc(fpr[i], tpr[i])
 
-        # First aggregate all false positive rates
-        # all_fpr = np.unique(np.concatenate([fpr[i] for i in range(n_classes)]))
+                #NEW -- try to also show ROC on training sample for comparison
+                fpr_train[i], tpr_train[i], _ = roc_curve(y_train[:, i], model.predict(x_train)[:, i])
+                roc_auc_train[i] = auc(fpr_train[i], tpr_train[i])
 
-        # Then interpolate all ROC curves at this points
-        # mean_tpr = np.zeros_like(all_fpr)
-        # for i in range(n_classes):
-        #     mean_tpr += interp(all_fpr, fpr[i], tpr[i])
 
-        # Finally average it and compute AUC
-        # mean_tpr /= n_classes
+            # Compute micro-average ROC curve and ROC area
+            # fpr["micro"], tpr["micro"], _ = roc_curve(y_test.ravel(), model.predict(x_test).ravel())
+            # roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
 
-        # fpr["macro"] = all_fpr
-        # tpr["macro"] = mean_tpr
-        # roc_auc["macro"] = auc(fpr["macro"], tpr["macro"])
+            # Compute macro-average ROC curve and ROC area
 
-        # Plot all ROC curves
-        fig1 = plt.figure(1)
-        timer = fig1.canvas.new_timer(interval = 3000) #creating a timer object and setting an interval of N milliseconds
+            # First aggregate all false positive rates
+            # all_fpr = np.unique(np.concatenate([fpr[i] for i in range(n_classes)]))
+
+            # Then interpolate all ROC curves at this points
+            # mean_tpr = np.zeros_like(all_fpr)
+            # for i in range(n_classes):
+            #     mean_tpr += interp(all_fpr, fpr[i], tpr[i])
+
+            # Finally average it and compute AUC
+            # mean_tpr /= n_classes
+
+            # fpr["macro"] = all_fpr
+            # tpr["macro"] = mean_tpr
+            # roc_auc["macro"] = auc(fpr["macro"], tpr["macro"])
+
+            # Plot all ROC curves
+            fig1 = plt.figure(1)
+            timer = fig1.canvas.new_timer(interval = 3000) #creating a timer object and setting an interval of N milliseconds
+            timer.add_callback(close_event)
+
+            ax = fig1.gca()
+            ax.set_xticks(np.arange(0, 1, 0.1))
+            ax.set_yticks(np.arange(0, 1., 0.1))
+            plt.grid()
+
+            # plt.plot(fpr["micro"], tpr["micro"],
+            #  label='micro-average ROC curve (area = {0:0.2f})'
+            #        ''.format(roc_auc["micro"]),
+            #  color='deeppink', linestyle=':', linewidth=4)
+
+            # plt.plot(fpr["macro"], tpr["macro"],
+            #  label='macro-average ROC curve (area = {0:0.2f})'
+            #        ''.format(roc_auc["macro"]),
+            #  color='navy', linestyle=':', linewidth=4)
+
+            #--- To plot several classes, micro/macro, etc -- commented out !
+            # colors = cycle(['darkorange', 'aqua', 'cornflowerblue'])
+            # for i, color in zip(range(1), colors): #replaced 'n_classes' by 1 => only plot signal ROC
+                # plt.plot(fpr[i], tpr[i], color=color, lw=lw,
+                #      label='ROC curve of class {0} (area = {1:0.2f})'
+                #      ''.format(i, roc_auc[i]))
+                # plt.plot(tpr[0], 1-fpr[0], color='darkorange', lw=lw,
+                #      label='ROC DNN (test) (AUC = {1:0.2f})'
+                #      ''.format(i, roc_auc[i]))
+
+            plt.plot(tpr[0], 1-fpr[0], color='darkorange', lw=lw, label='ROC DNN (test) (AUC = {1:0.2f})' ''.format(i, roc_auc[i]))
+            plt.plot(tpr_train[0], 1-fpr_train[0], color='cornflowerblue', lw=lw, label='ROC DNN (train) (AUC = {1:0.2f})' ''.format(i, roc_auc_train[i]))
+
+            plt.plot([1, 0], [0, 1], 'k--', lw=lw)
+            plt.xlim([0.0, 1.0])
+            plt.ylim([0.0, 1.0])
+            plt.xlabel('Signal efficiency')
+            plt.ylabel('Background rejection')
+            plt.title('')
+            plt.legend(loc="lower left")
+            timer.start()
+            plt.show()
+            plotname = weight_dir + 'ROC_DNN'+bkg_type+'.png'
+            fig1.savefig(plotname)
+            print("Saved ROC plot as : " + plotname)
+
+        # Plotting the loss with the number of iterations
+        fig2 = plt.figure(2)
+        timer = fig2.canvas.new_timer(interval = 3000) #creating a timer object and setting an interval of N milliseconds
         timer.add_callback(close_event)
-
-        ax = fig1.gca()
-        ax.set_xticks(np.arange(0, 1, 0.1))
-        ax.set_yticks(np.arange(0, 1., 0.1))
-        plt.grid()
-
-        # plt.plot(fpr["micro"], tpr["micro"],
-        #  label='micro-average ROC curve (area = {0:0.2f})'
-        #        ''.format(roc_auc["micro"]),
-        #  color='deeppink', linestyle=':', linewidth=4)
-
-        # plt.plot(fpr["macro"], tpr["macro"],
-        #  label='macro-average ROC curve (area = {0:0.2f})'
-        #        ''.format(roc_auc["macro"]),
-        #  color='navy', linestyle=':', linewidth=4)
-
-        #--- To plot several classes, micro/macro, etc -- commented out !
-        # colors = cycle(['darkorange', 'aqua', 'cornflowerblue'])
-        # for i, color in zip(range(1), colors): #replaced 'n_classes' by 1 => only plot signal ROC
-            # plt.plot(fpr[i], tpr[i], color=color, lw=lw,
-            #      label='ROC curve of class {0} (area = {1:0.2f})'
-            #      ''.format(i, roc_auc[i]))
-            # plt.plot(tpr[0], 1-fpr[0], color='darkorange', lw=lw,
-            #      label='ROC DNN (test) (AUC = {1:0.2f})'
-            #      ''.format(i, roc_auc[i]))
-
-        plt.plot(tpr[0], 1-fpr[0], color='darkorange', lw=lw,
-             label='ROC DNN (test) (AUC = {1:0.2f})'
-             ''.format(i, roc_auc[i]))
-        plt.plot(tpr_train[0], 1-fpr_train[0], color='cornflowerblue', lw=lw,
-             label='ROC DNN (train) (AUC = {1:0.2f})'
-             ''.format(i, roc_auc_train[i]))
-
-        plt.plot([1, 0], [0, 1], 'k--', lw=lw)
-        plt.xlim([0.0, 1.0])
-        plt.ylim([0.0, 1.0])
-        plt.xlabel('Signal efficiency')
-        plt.ylabel('Background rejection')
-        plt.title('')
-        plt.legend(loc="lower left")
+        plt.plot(history.history['loss'])
+        plt.plot(history.history['val_loss'])
+        plt.title('Loss VS Epoch')
+        plt.ylabel('Loss')
+        plt.xlabel('Epoch')
+        plt.legend(['Train', 'Test'], loc='upper right')
         timer.start()
         plt.show()
-        plotname = weight_dir + 'ROC_DNN'+bkg_type+'.png'
-        fig1.savefig(plotname)
-        print("Saved ROC plot as : " + plotname)
+        plotname = weight_dir + 'Loss_DNN'+bkg_type+'.png'
+        fig2.savefig(plotname)
+        print("Saved Loss plot as : " + plotname)
 
-
-
-    # Plotting the loss with the number of iterations
-    fig2 = plt.figure(2)
-    timer = fig2.canvas.new_timer(interval = 3000) #creating a timer object and setting an interval of N milliseconds
-    timer.add_callback(close_event)
-    plt.plot(history.history['loss'])
-    plt.plot(history.history['val_loss'])
-    plt.title('Loss VS Epoch')
-    plt.ylabel('Loss')
-    plt.xlabel('Epoch')
-    plt.legend(['Train', 'Test'], loc='upper right')
-    timer.start()
-    plt.show()
-    plotname = weight_dir + 'Loss_DNN'+bkg_type+'.png'
-    fig2.savefig(plotname)
-    print("Saved Loss plot as : " + plotname)
-
-
-    # Plotting the error with the number of iterations
-    fig3 = plt.figure(3)
-    timer = fig3.canvas.new_timer(interval = 3000) #creating a timer object and setting an interval of N milliseconds
-    timer.add_callback(close_event)
-    # plt.plot(history.history[_metrics]) #metrics name
-    plt.plot(history.history['acc'])
-    plt.plot(history.history['val_acc'])
-    plt.title('Accuracy VS Epoch')
-    plt.ylabel('Accuracy')
-    plt.xlabel('Epoch')
-    plt.legend(['Train', 'Test'], loc='lower right')
-    timer.start()
-    plt.show()
-    plotname = weight_dir + 'Accuracy_DNN'+bkg_type+'.png'
-    fig3.savefig(plotname)
-    print("Saved Accuracy plot as : " + plotname)
+        # Plotting the error with the number of iterations
+        fig3 = plt.figure(3)
+        timer = fig3.canvas.new_timer(interval = 3000) #creating a timer object and setting an interval of N milliseconds
+        timer.add_callback(close_event)
+        plt.plot(history.history[_metrics]) #metrics name
+        plt.plot(history.history['val_'+_metrics])
+        # plt.plot(history.history['acc'])
+        # plt.plot(history.history['val_acc'])
+        plt.title('Accuracy VS Epoch')
+        plt.ylabel('Accuracy')
+        plt.xlabel('Epoch')
+        plt.legend(['Train', 'Test'], loc='lower right')
+        timer.start()
+        plt.show()
+        plotname = weight_dir + 'Accuracy_DNN'+bkg_type+'.png'
+        fig3.savefig(plotname)
+        print("Saved Accuracy plot as : " + plotname)
+    #--- End if show_control_plots==True
 
 # //--------------------------------------------
 # //--------------------------------------------
@@ -1444,8 +1460,8 @@ def Apply_Model(bkg_type, var_list, cuts, _nepochs, _batchSize, nof_outputs, x_t
 #     else:
 #         nLep = "2l"
 
-    Train_Test_Eval_PureKeras(bkg_type, var_list, cuts, _nepochs, _batchSize, nof_outputs)
-    exit(1)
+    # Train_Test_Eval_PureKeras(bkg_type, var_list, cuts, _nepochs, _batchSize, nof_outputs)
+    # exit(1)
 
 
 #----------  Manual call to DNN training function
