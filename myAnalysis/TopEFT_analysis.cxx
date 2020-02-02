@@ -33,7 +33,7 @@ using namespace std;
 /////////////////////////////////////////////////////////
 
 //Overloaded constructor
-TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> thesamplegroups, vector<TString> thesystlist, vector<TString> thesystTreelist, vector<TString> thechannellist, vector<TString> thevarlist, vector<TString> set_v_cut_name, vector<TString> set_v_cut_def, vector<bool> set_v_cut_IsUsedForBDT, vector<TString> set_v_add_var_names, TString theplotextension, vector<TString> set_lumi_years, bool show_pulls, TString region, TString signal_process, TString classifier_name, TString DNN_type, bool use_custom_colorPalette)
+TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> thesamplegroups, vector<TString> thesystlist, vector<TString> thesystTreelist, vector<TString> thechannellist, vector<TString> thevarlist, vector<TString> set_v_cut_name, vector<TString> set_v_cut_def, vector<bool> set_v_cut_IsUsedForBDT, vector<TString> set_v_add_var_names, TString theplotextension, vector<TString> set_lumi_years, bool show_pulls, TString region, TString signal_process, TString classifier_name, bool use_custom_colorPalette)
 {
     //Canvas definition
     Load_Canvas_Style();
@@ -115,13 +115,6 @@ TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> 
     // if(use_custom_colorPalette) {Set_Custom_ColorPalette(v_custom_colors, color_list, sample_groups);} //Replace colors with custom color list
 
 	this->classifier_name = classifier_name;
-	if(classifier_name == "DNN")
-	{
-		if(DNN_type.Contains("TMVA", TString::kIgnoreCase)) {this->DNN_type = "TMVA";}
-		else if(DNN_type.Contains("PyKeras", TString::kIgnoreCase)) {this->DNN_type = "PyKeras";}
-		else if(DNN_type.Contains("Keras", TString::kIgnoreCase)) {this->DNN_type = "Keras";}
-		else {cout<<BOLD(FRED("Wrong value of DNN_type !"))<<endl; stop_program = true;}
-	}
 
     t_name = "result";
 
@@ -340,16 +333,20 @@ void TopEFT_analysis::Set_Luminosity(TString luminame)
  */
 void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
 {
-//--- Options
+//--- Options ---------------------------------
+
 	bool use_relative_weights = false; //false <-> use abs(weight), much faster if there are many negative weights
 
 //--------------------------------------------
+
     cout<<endl<<YELBKG("                          ")<<endl<<endl;
     cout<<FYEL("--- TRAINING ---")<<endl;
     cout<<endl<<YELBKG("                          ")<<endl<<endl;
 
 	if(use_relative_weights) {cout<<"-- Using "<<BOLD(FGRN("*RELATIVE weights*"))<<" --"<<endl<<endl<<endl;}
 	else {cout<<"-- Using "<<BOLD(FGRN("*ABSOLUTE weights*"))<<" --"<<endl<<endl<<endl;}
+
+    if(classifier_name != "BDT") {cout<<BOLD(FRED("ERROR ! Can only train BDTs within TMVA for now... Abort ! (classifier_name = "<<classifier_name<<")"))<<endl; return;}
 
 	mkdir("weights", 0777);
     mkdir("weights/BDT", 0777);
@@ -441,7 +438,7 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
 	//Complete path for weight files is : [path_given_toDataloader]/[fWeightFileDir]
 	//Apparently, TMVAGui can't handle nested repos in path given to myDataLoader... so split path in 2 here
 	TMVA::gConfig().GetIONames().fWeightFileDir = "BDT/"+lumiName;
-	if(classifier_name == "DNN" && DNN_type == "TMVA") {TMVA::gConfig().GetIONames().fWeightFileDir = "DNN/TMVA/"+lumiName;}
+	// if(classifier_name == "DNN" && DNN_type == "TMVA") {TMVA::gConfig().GetIONames().fWeightFileDir = "DNN/TMVA/"+lumiName;}
 
 //--------------------------------------------
  // #    #   ##   #####  #   ##   #####  #      ######  ####
@@ -622,7 +619,6 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
 
     //Output rootfile containing TMVAGui infos, ROCS, ... for control
     TString output_file_name = "outputs/" + classifier_name + "_" + signal_process;
-    if(classifier_name == "DNN") {output_file_name+= DNN_type;}
 	if(channel != "") {output_file_name+= "_" + channel;}
     output_file_name+= "_" + lumiName;
 	output_file_name+= this->filename_suffix + ".root";
@@ -669,7 +665,6 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
 //--------------------------------------------
 
 	if(classifier_name == "BDT") {factory->BookMethod(myDataLoader, TMVA::Types::kBDT, method_title, method_options);} //Book BDT -- pass dataLoader and options as arg
-	else if(DNN_type == "TMVA") {factory->BookMethod(myDataLoader, TMVA::Types::kDNN, method_title, method_options);}
 
 	output_file->cd();
 
@@ -708,7 +703,7 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
 		MoveFile("./ranking_info_tmp.txt", ranking_file_path);
 		Extract_Ranking_Info(ranking_file_path, channel); //Extract only ranking info from TMVA output
 	}
-	else {system("rm ./ranking_info_tmp.txt");} //Else remove the temporary ranking file
+	else {int tmp = system("rm ./ranking_info_tmp.txt");} //Else remove the temporary ranking file
 
 	for(unsigned int i=0; i<files_to_close.size(); i++) {files_to_close[i]->Close(); delete files_to_close[i];}
 
@@ -775,7 +770,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 	else {cout<<BOLD(FRED("--- ERROR : invalid arguments ! Exit !"))<<endl; cout<<"Valid template names are : ttbar / ttV / 2D / 2Dlin !"<<endl; return;}
     cout<<endl<<YELBKG("                          ")<<endl<<endl;
 
-	if(classifier_name != "BDT") {cout<<BOLD(FRED("Error : DNNs are not supported !"))<<endl; return;}
+	if(classifier_name != "BDT" && classifier_name != "DNN") {cout<<BOLD(FRED("Error : classifier_name value not supported !"))<<endl; return;}
 
     TString restore_classifier_name = classifier_name;
 	if(makeHisto_inputVars) {classifier_name = "";} //For naming conventions
@@ -821,26 +816,72 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
     //Create output file
 	TFile* file_output = TFile::Open(output_file_name, "RECREATE");
 
-    //NB : TMVA requires floats, and nothing else, to ensure reproducibility of results (training done with floats) => Need to recast e.g. doubles as flots
-    //See : https://sourceforge.net/p/tmva/mailman/message/836453/
-    reader = new TMVA::Reader("!Color:!Silent");
+    if(!makeHisto_inputVars && classifier_name == "BDT")
+    {
+        //NB : TMVA requires floats, and nothing else, to ensure reproducibility of results (training done with floats) => Need to recast e.g. doubles as flots
+        //See : https://sourceforge.net/p/tmva/mailman/message/836453/
+        reader = new TMVA::Reader("!Color:!Silent");
 
-	// Name & adress of local variables which carry the updated input values during the event loop
-	// NB : the variable names MUST corresponds in name and type to those given in the weight file(s) used -- same order
-	// NB : if booking 2 BDTs, must make sure that they use the same input variables... or else, find some way to make it work in the code)
-	for(int i=0; i<var_list.size(); i++)
-	{
-        //cout<<"Added variable "<<var_list[i]<<endl;
-        reader->AddVariable(var_list[i].Data(), &var_list_floats[i]);
-	}
+        // Name & adress of local variables which carry the updated input values during the event loop
+        // NB : the variable names MUST corresponds in name and type to those given in the weight file(s) used -- same order
+        // NB : if booking 2 BDTs, must make sure that they use the same input variables... or else, find some way to make it work in the code)
+        for(int i=0; i<var_list.size(); i++)
+        {
+            //cout<<"Added variable "<<var_list[i]<<endl;
+            reader->AddVariable(var_list[i].Data(), &var_list_floats[i]);
+        }
 
-	for(int i=0; i<v_cut_name.size(); i++)
-	{
-		if(v_cut_IsUsedForBDT[i] && !v_cut_def[i].Contains("=="))
-		{
-            reader->AddVariable(v_cut_name[i].Data(), &v_cut_float[i]);
-		}
-	}
+        for(int i=0; i<v_cut_name.size(); i++)
+        {
+            if(v_cut_IsUsedForBDT[i] && !v_cut_def[i].Contains("=="))
+            {
+                reader->AddVariable(v_cut_name[i].Data(), &v_cut_float[i]);
+            }
+        }
+    }
+    else if (!makeHisto_inputVars && classifier_name == "DNN") //DNN
+    {
+        //Load DNN model
+        TString DNNmodel_path = "./weights/DNN/model.pb";
+        if(!Check_File_Existence(DNNmodel_path) ) {cout<<BOLD(FRED("Model "<<DNNmodel_path<<" not found ! Abort"))<<endl; return;}
+        clfy1 = new TFModel(DNNmodel_path.Data(), 2, "myInputs_input", 2, "myOutput/Identity"); //Specify names of I/O layers, and nof I/O nodes
+
+        //Read the list of input variables directly from .txt file generated at DNN training
+        var_list.resize(0);
+        TString file_var_path = "./weights/DNN/ListVariables.txt";
+        if(!Check_File_Existence(file_var_path) ) {cout<<BOLD(FRED("Error ! List of DNN variables not found ("<<file_var_path<<")"))<<endl; return;}
+        else{cout<<"Reading list of DNN input variables from : "<<file_var_path<<endl; }
+        ifstream file_in(file_var_path);
+        string line;
+        while(!file_in.eof( ))
+    	{
+    		getline(file_in, line);
+            TString ts_line(line);
+            if(ts_line != "") //Last line is empty
+            {
+                var_list.push_back(ts_line);
+                cout<<"-->  "<<ts_line<<endl;
+            }
+        }
+
+        // for(int ivar=0; ivar<var_list.size(); ivar++)
+        // {
+        //     getline(file_in, line);
+        //     TString ts_line(line);
+        //     cout<<"ts_line "<<ts_line<<endl;
+        //     cout<<"var_list "<<var_list[ivar]<<endl;
+        //     if(ts_line != var_list[ivar])
+        //     {
+        //         cout<<BOLD(FRED("Error : different variables used for DNN training and application ! Abort"))<<endl;
+        //         cout<<"Train var = "<<ts_line<<endl;
+        //         cout<<"Application var = "<<var_list[ivar]<<endl;
+        //         return;
+        //     }
+        //     cout<<"Train var = "<<ts_line<<endl;
+        //     cout<<"Application var = "<<var_list[ivar]<<endl;
+        // }
+        // cout<<endl<<"--- Verify that training/application variables are the same... OK ---"<<endl;
+    }
 
 	//Input TFile and TTree, called for each sample
 	TFile* file_input;
@@ -913,7 +954,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
     	TString MVA_method_name = "";
     	TString weightfile = "";
     	TString template_name_MVA = "";
-    	if(!makeHisto_inputVars)
+    	if(!makeHisto_inputVars && classifier_name == "BDT")
     	{
             //Method name does not matter, it is just a way to identify a given method from a given weight file, to be able to call it later
             if(use_specificMVA_eachYear) {template_name_MVA = "BDT_"+signal_process+"_"+v_lumiYears[iyear];} //1 method for each year
@@ -1147,9 +1188,31 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
     				//Get MVA value to make template
     				double mva_value1 = -9, mva_value2 = -9;
-                    if(!makeHisto_inputVars) //FIXME -- SLOW
+                    if(!makeHisto_inputVars)
                     {
-                        mva_value1 = reader->EvaluateMVA(MVA_method_name);
+                        if(classifier_name == "BDT") {mva_value1 = reader->EvaluateMVA(MVA_method_name);}
+
+                        else //DNN
+                        {
+                            // double test1=50, test2 = 35;
+                            // double clfy1_inputs[2] = {test1, test2};
+
+                            //Convert my vector storing input values into array
+                            float clfy1_inputs[var_list_floats.size()];
+                            std::copy(var_list_floats.begin(), var_list_floats.end(), clfy1_inputs);
+                            for(int i=0; i<var_list_floats.size(); i++) {cout<<clfy1_inputs[i]<<std::endl;}
+
+                            //Evaluate output nodes values
+                            std::vector<float> clfy1_outputs = clfy1->evaluate(clfy1_inputs);
+
+                            for(unsigned i=0; i< clfy1_outputs.size(); i++)
+                            {
+                                cout<<"clfy1_outputs["<<i<<"] "<<clfy1_outputs[i]<<endl;
+                            }
+
+                            // mva_value1 = clfy1_outputs[0];
+                            mva_value1 = 0;
+                        }
                     }
 
     				// cout<<"//--------------------------------------------"<<endl;
@@ -1294,7 +1357,11 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
 	file_output->Close(); file_output = NULL;
 
-    delete reader; reader = NULL;
+    if(!makeHisto_inputVars)
+    {
+        if(classifier_name == "BDT")  {delete reader; reader = NULL;}
+        else {delete clfy1; clfy1 = NULL;}
+    }
 
     //-- Can verify that the total nof processed entries computed from Count_Total_Nof_Entries() was effectively the nof processed entries
     // cout<<"total_nentries_toProcess --> "<<total_nentries_toProcess<<endl;
@@ -1313,7 +1380,6 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
         delete array_LepEff_mu; array_LepEff_mu = NULL;
         delete array_LepEff_el; array_LepEff_el = NULL;
     }
-
 
 // #    # ###### #####   ####  ######
 // ##  ## #      #    # #    # #
@@ -1416,9 +1482,7 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 	{
         //TRY 1 : look for Combine file
 		input_name = "./outputs/fitDiagnostics_";
-		input_name+= classifier_name + template_name + "_" + region + filename_suffix;
-		if(classifier_name == "DNN") {input_name+= "_" + DNN_type;}
-		input_name+= ".root";
+		input_name+= classifier_name + template_name + "_" + region + filename_suffix + ".root";
 		if(!Check_File_Existence(input_name)) {input_name = "./outputs/fitDiagnostics.root";} //Try another name
 
         //Combine file not found !
@@ -1432,18 +1496,14 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 			if(drawInputVars) {input_name = "outputs/ControlHistograms_" + region + "_" + lumiName + filename_suffix + ".root";}
 			else //Templates
 			{
-				input_name = "outputs/Templates_" + classifier_name + template_name + "_" + region + "_" + lumiName + filename_suffix;
-				if(classifier_name == "DNN") {input_name+= "_" + DNN_type;}
-				input_name+= ".root";
+				input_name = "outputs/Templates_" + classifier_name + template_name + "_" + region + "_" + lumiName + filename_suffix + ".root";
 			}
             if(!Check_File_Existence(input_name) && lumiName != "Run2") //If did not find year-specific file, also try to look for full Run 2 file (contains contributions from each year)
             {
                 if(drawInputVars) {input_name = "outputs/ControlHistograms_" + region + "_Run2" + filename_suffix + ".root";}
     			else //Templates
     			{
-    				input_name = "outputs/Templates_" + classifier_name + template_name + "_" + region + "_Run2" + filename_suffix;
-    				if(classifier_name == "DNN") {input_name+= "_" + DNN_type;}
-    				input_name+= ".root";
+    				input_name = "outputs/Templates_" + classifier_name + template_name + "_" + region + "_Run2" + filename_suffix + ".root";
     			}
             }
 
@@ -1463,9 +1523,7 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 		if(drawInputVars) {input_name = "outputs/ControlHistograms_" + region + "_" + lumiName + filename_suffix + ".root";}
 		else //Templates
 		{
-			input_name = "outputs/Templates_" + classifier_name + template_name + "_" + region + "_" + lumiName + filename_suffix;
-			if(classifier_name == "DNN") {input_name+= "_" + DNN_type;}
-			input_name+= ".root";
+			input_name = "outputs/Templates_" + classifier_name + template_name + "_" + region + "_" + lumiName + filename_suffix + ".root";
 		}
 
         if(!Check_File_Existence(input_name) && lumiName != "Run2") //If did not find year-specific file, also try to look for full Run 2 file (contains contributions from each year)
@@ -1473,9 +1531,7 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
             if(drawInputVars) {input_name = "outputs/ControlHistograms_" + region + "_Run2" + filename_suffix + ".root";}
             else //Templates
             {
-                input_name = "outputs/Templates_" + classifier_name + template_name + "_" + region + "_Run2" + filename_suffix;
-                if(classifier_name == "DNN") {input_name+= "_" + DNN_type;}
-                input_name+= ".root";
+                input_name = "outputs/Templates_" + classifier_name + template_name + "_" + region + "_Run2" + filename_suffix + ".root";
             }
         }
 
@@ -2623,9 +2679,7 @@ void TopEFT_analysis::Compare_TemplateShapes_Processes(TString template_name, TS
 	}
 	else
 	{
-		input_name = "outputs/Templates_" + classifier_name + template_name + "_" + region + filename_suffix;
-		if(classifier_name == "DNN") {input_name+= "_" + DNN_type;}
-		input_name+= ".root";
+		input_name = "outputs/Templates_" + classifier_name + template_name + "_" + region + filename_suffix + ".root";
 	}
 
 	if(!Check_File_Existence(input_name))

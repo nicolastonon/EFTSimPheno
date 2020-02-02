@@ -1,3 +1,9 @@
+#TODO#
+'''
+- Allow to choose which years to train on (change namings, open multiple ntuples)
+- 
+'''
+
 # Nicolas TONON (DESY)
 # Train fully-connected neural networks with Keras (tf back-end)
 # //--------------------------------------------
@@ -18,9 +24,11 @@
 
 #--- Set here the main training options
 # //--------------------------------------------
-_nepochs = 2
-_batchSize = 50000
-nof_outputs = 2 #single output not supported (e.g. for validation steps)
+_nepochs = 10
+_batchSize = 500
+_nof_outputs = 2 #single output not supported (e.g. for validation steps)
+_maxEvents = 100000 #max total nof events to be used #FIXME
+_splitTrainEventFrac = 0.8 #Fraction of events to be used for training (1 <-> use all requested events for training)
 # //--------------------------------------------
 
 # Analysis options
@@ -105,7 +113,7 @@ import argparse
 from Utils.kerasToTensorflow import freeze_session
 from Utils.Helper import close_event, batchOutput, Write_Variables_To_TextFile, TimeHistory
 
-weight_dir = "../weights/DNN/Keras/"
+weight_dir = "../weights/DNN/"
 os.makedirs(weight_dir, exist_ok=True)
 
 ntuples_dir = "../input_ntuples/2016/"
@@ -168,14 +176,14 @@ def Get_Loss_Optim_Metrics():
     # metrics = 'binary_crossentropy' #Calculates the cross-entropy value for binary classification problems.
 
 
-    if nof_outputs > 1:
+    if _nof_outputs > 1:
         loss = 'categorical_crossentropy'
         metrics = 'categorical_accuracy'
-    elif nof_outputs == 1:
+    elif _nof_outputs == 1:
         loss = 'binary_crossentropy'
         metrics = 'binary_accuracy'
     else:
-        print("Wrong value for nof_outputs!")
+        print("Wrong value for _nof_outputs!")
         exit(1)
 
     #Automatically set within Keras
@@ -229,10 +237,10 @@ def step_decay(epoch):
 
 #Sigmoid/tanh/softmax work fine for classifiers, but can have problems of vanishing gradients
 #ReLu activations should only be used for hidden layers, avoids vanishing gradient issue
-#Should use sigmoid (binary) of softmax (multiclass) for output layer, to get class probabilities ? NB : if nof_outputs=1, softmax doesn't seem to work
+#Should use sigmoid (binary) of softmax (multiclass) for output layer, to get class probabilities ? NB : if _nof_outputs=1, softmax doesn't seem to work
 
 #Define here the Keras DNN model
-def Create_Model(outdir, DNN_name, nof_outputs):
+def Create_Model(outdir, DNN_name, _nof_outputs):
 
     use_batchNorm = True
     use_dropout = True #Necessary to avoid overtraining (for deep or wide NN)
@@ -274,13 +282,13 @@ def Create_Model(outdir, DNN_name, nof_outputs):
         # model.add(Dropout(droprate))
         model.add(Dense(64, kernel_initializer=my_init, activation='relu'))
         # model.add(Dropout(droprate))
-        # model.add(Dense(64, kernel_initializer=my_init, activation='relu'))
+        model.add(Dense(64, kernel_initializer=my_init, activation='relu'))
         # model.add(Dropout(droprate))
 
-        if nof_outputs == 1 :
-            model.add(Dense(nof_outputs, kernel_initializer=my_init, activation='sigmoid'))
-        elif nof_outputs == 2:
-            model.add(Dense(nof_outputs, kernel_initializer=my_init, activation='softmax')) #, name="myOutput"
+        if _nof_outputs == 1 :
+            model.add(Dense(_nof_outputs, kernel_initializer=my_init, activation='sigmoid'))
+        elif _nof_outputs == 2:
+            model.add(Dense(_nof_outputs, kernel_initializer=my_init, activation='softmax')) #, name="myOutput"
        # //--------------------------------------------
 
     #Model 2 -- more elaborate, overtrained
@@ -305,7 +313,7 @@ def Create_Model(outdir, DNN_name, nof_outputs):
        # model.add(LeakyReLU(alpha=0.1))
        model.add(Dropout(droprate))
 
-       model.add(Dense(nof_outputs, activation='softmax', kernel_initializer=my_init) ) #output layer
+       model.add(Dense(_nof_outputs, activation='softmax', kernel_initializer=my_init) ) #output layer
        # //--------------------------------------------
 
     #Model 2 -- more elaborate, overtrained
@@ -350,7 +358,7 @@ def Create_Model(outdir, DNN_name, nof_outputs):
         # if use_dropout==True:
         #     model.add(Dropout(droprate))
 
-        model.add(Dense(nof_outputs, activation='softmax', kernel_initializer=my_init) ) #output layer
+        model.add(Dense(_nof_outputs, activation='softmax', kernel_initializer=my_init) ) #output layer
 # //--------------------------------------------
 
 
@@ -403,7 +411,7 @@ def Create_Model(outdir, DNN_name, nof_outputs):
         if use_dropout==True:
             model.add(Dropout(droprate))
 
-        model.add(Dense(nof_outputs, activation='softmax', kernel_initializer=my_init) ) #output layer
+        model.add(Dense(_nof_outputs, activation='softmax', kernel_initializer=my_init) ) #output layer
        # //--------------------------------------------
 
     else:
@@ -512,7 +520,7 @@ def Get_Callbacks():
 
 
 #Define the model and train it, using Keras only
-def Get_Data_Keras(signal, bkg_type, var_list, cuts, nof_outputs):
+def Get_Data_Keras(signal, bkg_type, var_list, cuts, _nof_outputs):
 
     # Sanity checks
     if bkg_type != "":
@@ -637,11 +645,12 @@ def Get_Data_Keras(signal, bkg_type, var_list, cuts, nof_outputs):
     # print(rows_bkg)
     # print(col_bkg)
 
-    use_same_nof_events_sig_bkg = False #FIXME
+#--- Max nof events for train.test phases
+    use_same_nof_events_sig_bkg = False
+    use_fixed_nof_events = True
+    nmax = _maxEvents
 
-    if use_same_nof_events_sig_bkg == True: #Wrong ?
-
-        # nmax = 30000
+    if use_same_nof_events_sig_bkg == True:
         if rows_sig > rows_bkg:
             nmax = rows_bkg
             print("Background sample has lowest stat. --> Chose nmax = ", nmax)
@@ -654,11 +663,18 @@ def Get_Data_Keras(signal, bkg_type, var_list, cuts, nof_outputs):
             print("Error : 1 of the backgrounds statistics is too low, it can not constitute half of the background sample with nmax = " + str(nmax) + " ! Abort")
             exit(1)
 
+    if use_same_nof_events_sig_bkg or use_fixed_nof_events:
         x_sig_array = x_sig_array[0:nmax]
         x_bkg_total = np.concatenate((x_bkg1_array[0:int(nmax/2.)], x_bkg2_array[0:int(nmax/2.)]), 0)
 
         #If equal amounts of signal and bkg, should use weights of 1 for all events ?
         weight = np.ones((x_sig_array.shape[0]+x_bkg_total.shape[0]), dtype = int)
+
+        #Both 'real' and 'learning' weights taken as 1*** ac
+
+        weightPHY=weight
+        weightLEARN=weight
+
         # print(weight.shape)
         # print(weight)
         # exit(1)
@@ -673,9 +689,7 @@ def Get_Data_Keras(signal, bkg_type, var_list, cuts, nof_outputs):
         # print(x_sig_array.shape)
         # print(x_bkg_total.shape)
 
-
     else: #Reweight each class such that they all have same total yield
-
         #Compute yields
         yield_sig = rows_sig * sig_weight[0]
         yield_bkg1 = rows_bkg1 * bkg1_weight[0]
@@ -723,7 +737,6 @@ def Get_Data_Keras(signal, bkg_type, var_list, cuts, nof_outputs):
         # print(weightPHY[0:10])
         # print(weightLEARN[0:10])
 
-
     #Recompute yields, make sure they are equal for sig and bkg_total
     # yield_sig = rows_sig * sig_weight[0] * sf_sig
     # yield_bkg1 = rows_bkg1 * bkg1_weight[0] * sf_bkg1
@@ -745,13 +758,13 @@ def Get_Data_Keras(signal, bkg_type, var_list, cuts, nof_outputs):
     # print(y_integer)
     # exit(1)
 
-    if nof_outputs == 2:
+    if _nof_outputs == 2:
         # y = np_utils.to_categorical(y_integer, 2) #One-hot encode the integers => Use 2 classes (sig, bkg) #Convert class vector to binary class matrix, for use with categorical_crossentropy.
         y = utils.to_categorical(y_integer, 2) #One-hot encode the integers => Use 2 classes (sig, bkg) #Convert class vector to binary class matrix, for use with categorical_crossentropy.
-    elif nof_outputs == 1:
+    elif _nof_outputs == 1:
         y = y_integer #Use simple column instead (*not* one-hot encoded)
     else:
-        print("Wrong value of nof_outputs")
+        print("Wrong value of _nof_outputs")
 
     #-- INPUT VARIABLES transformations
     np.set_printoptions(precision=4)
@@ -793,9 +806,9 @@ def Get_Data_Keras(signal, bkg_type, var_list, cuts, nof_outputs):
     #     my_classweights = {0: 1., 1: 1.} #Same proportions, don't need class reweighting
 
     # else: #Reweight according to nof entries
-        # if nof_outputs == 1:
+        # if _nof_outputs == 1:
         #     y_weight = y_train
-        # elif nof_outputs > 1:
+        # elif _nof_outputs > 1:
         #     y_weight = [y.argmax() for y in y_train]
 
         # my_classweights = class_weight.compute_class_weight('balanced', np.unique(y_weight), y_weight) #Rescale according to nof entries
@@ -808,7 +821,7 @@ def Get_Data_Keras(signal, bkg_type, var_list, cuts, nof_outputs):
     #Define training & testing subsamples -- Takes care of splitting & shuffling
     # http://scikit-learn.org/stable/modules/generated/sklearn.model_selection.train_test_split.html
 
-    x_train, x_test, y_train, y_test, weightPHY_train, weightPHY_test, weightLEARN_train, weightLEARN_test = train_test_split(x, y, weightPHY, weightLEARN, test_size=0.20, random_state=0) #80% train, 20% test
+    x_train, x_test, y_train, y_test, weightPHY_train, weightPHY_test, weightLEARN_train, weightLEARN_test = train_test_split(x, y, weightPHY, weightLEARN, test_size=1-_splitTrainEventFrac, random_state=0) #80% train, 20% test
     # x_train, x_test, y_train, y_test = train_test_split(x, y, train_size=50000, random_state=0) #50K train
     # print(x_train[0:5], "\n")
     # print(y_train[0:5], "\n")
@@ -881,29 +894,29 @@ def Get_Data_Keras(signal, bkg_type, var_list, cuts, nof_outputs):
    ##    ##     ## ##     ## #### ##    ##    ##             ##    ########  ######     ##
 # //--------------------------------------------
 
-def Train_Test_Eval_PureKeras(bkg_type, var_list, cuts, _nepochs, _batchSize, nof_outputs):
+def Train_Test_Eval_PureKeras(bkg_type, var_list, cuts, _nepochs, _batchSize, _nof_outputs, _maxEvents, _splitTrainEventFrac):
 
     signal = "tZq"
 
     #Get data
-    x_train, y_train, x_test, y_test, weightPHY_train, weightPHY_test, weightLEARN_train, weightLEARN_test, x, y, weightPHY, weightLEARN = Get_Data_Keras(signal, bkg_type, var_list, cuts, nof_outputs)
+    x_train, y_train, x_test, y_test, weightPHY_train, weightPHY_test, weightLEARN_train, weightLEARN_test, x, y, weightPHY, weightLEARN = Get_Data_Keras(signal, bkg_type, var_list, cuts, _nof_outputs)
 
     #Get model, compile
-    model = Create_Model(weight_dir, "DNN"+bkg_type, nof_outputs)
+    model = Create_Model(weight_dir, "DNN"+bkg_type, _nof_outputs)
 
     # --- convert model to estimator and save model as frozen graph for c++
     tensorflow.keras.backend.clear_session()
     tensorflow.keras.backend.set_learning_phase(0) # has to be done to get a working frozen graph in c++
     model = load_model(weight_dir + "model_DNN"+bkg_type+".h5") # model has to be re-loaded
 
-    sess = tensorflow.compat.v1.keras.backend.get_session()
     print('inputs: ', [input.op.name for input in model.inputs])
     print('outputs: ', [output.op.name for output in model.outputs])
     output_names = [out.op.name for out in model.outputs]
-    # print('output_names : ', output_names)
+    print('output_names : ', output_names)
+    sess = tensorflow.compat.v1.keras.backend.get_session()
     frozen_graph = freeze_session(sess, output_names)
-    tensorflow.compat.v1.train.write_graph(frozen_graph, './mymodel', 'model.pbtxt', as_text=True)
-    tensorflow.compat.v1.train.write_graph(frozen_graph, './mymodel', 'model.pb', as_text=False)
+    tensorflow.compat.v1.train.write_graph(frozen_graph, '../weights/DNN', 'model.pbtxt', as_text=True)
+    tensorflow.compat.v1.train.write_graph(frozen_graph, '../weights/DNN', 'model.pb', as_text=False)
 
     #-- Can access weights and biases of any layer (debug, ...) #Print before training
     # weights_layer, biases_layer = model.layers[0].get_weights()
@@ -923,7 +936,7 @@ def Train_Test_Eval_PureKeras(bkg_type, var_list, cuts, _nepochs, _batchSize, no
     # cvscores = []
     # for train, test in kfold.split(x, y):
     #     model = None
-    #     model = Create_Model(outdir, "DNN"+bkg_type, nof_outputs)
+    #     model = Create_Model(outdir, "DNN"+bkg_type, _nof_outputs)
     #     model.compile(loss=_loss, optimizer=_optim, metrics=[_metrics])
     #     model.fit(x[train], y[train], validation_data=(x[test], y[test]), epochs=_nepochs, batch_size=_batchSize, callbacks=callbacks_list)
     #     score = model.evaluate(x[test], y[test], batch_size=_batchSize)
@@ -961,11 +974,8 @@ def Train_Test_Eval_PureKeras(bkg_type, var_list, cuts, _nepochs, _batchSize, no
     with open(weight_dir + 'arch_DNN'+bkg_type+'_all.json', 'w') as json_file:
         json_file.write(model.to_json())
 
-
-    # export_model(model, outname+'.model') # Use 'kerasify' add-on to export model in specific format #obsolete
-
     #Save list of variables
-    # Write_Variables_To_TextFile(var_list)
+    Write_Variables_To_TextFile(weight_dir, var_list)
 
 
  #####  ######  ####  #    # #      #####  ####
@@ -975,25 +985,23 @@ def Train_Test_Eval_PureKeras(bkg_type, var_list, cuts, _nepochs, _batchSize, no
  #   #  #      #    # #    # #        #   #    #
  #    # ######  ####   ####  ######   #    ####
 
+    loss = score[0]
+    accuracy = score[1]
+    print("\n Accuracy :", str(accuracy) + "\n")
+    print("\n Loss :", str(loss) + "\n")
+
     show_control_plots = False
 
     if show_control_plots==True:
         #Create some more control plots for quick checking
         print("\n\n\n\n########################")
-        print("########################")
         print("## Results & Control Plots ##")
         print("########################")
-        print("########################")
-
 
         nEvents_train = y_train.shape
         nEvents_test = y_test.shape
         # nEvents_train, tmp = y_train.shape
         # nEvents_test, tmp = y_test.shape
-
-        accuracy = score[1]
-        print("\n\n*** Accuracy ***")
-        print(str(accuracy) + "\n\n")
 
         auc_score = roc_auc_score(y_test, model.predict(x_test))
         auc_score_train = roc_auc_score(y_train, model.predict(x_train))
@@ -1001,7 +1009,7 @@ def Train_Test_Eval_PureKeras(bkg_type, var_list, cuts, _nepochs, _batchSize, no
         print("-- TEST SAMPLE  \t(" + str(nEvents_test) + " events) \t\t==> " + str(auc_score) )
         print("-- TRAIN SAMPLE \t(" + str(nEvents_train) + " events) \t\t==> " + str(auc_score_train) + "\n\n")
 
-        predictions_train_sig, predictions_train_bkg, predictions_test_sig, predictions_test_bkg, weightLEARN_sig, weightLEARN_bkg, weight_test_sig, weight_test_bkg = Apply_Model(bkg_type, var_list, cuts, _nepochs, _batchSize, nof_outputs, x_train, y_train, x_test, y_test, weightPHY_train, weightPHY_test)
+        predictions_train_sig, predictions_train_bkg, predictions_test_sig, predictions_test_bkg, weightLEARN_sig, weightLEARN_bkg, weight_test_sig, weight_test_bkg = Apply_Model(bkg_type, var_list, cuts, _nepochs, _batchSize, _nof_outputs, x_train, y_train, x_test, y_test, weightPHY_train, weightPHY_test)
 
         # Fill a ROOT histogram from a NumPy array
         rootfile_outname = "../outputs/PredictKeras_DNN"+bkg_type+".root"
@@ -1055,10 +1063,9 @@ def Train_Test_Eval_PureKeras(bkg_type, var_list, cuts, _nepochs, _batchSize, no
         fout.Close()
         print("Saved output ROOT file containing Keras Predictions as histograms : " + rootfile_outname)
 
-
-        #Get ROC curve using test data -- different for nof_outputs>1, should fix it
+        #Get ROC curve using test data -- different for _nof_outputs>1, should fix it
         #Uses predict() function, which generates (output) given (input + model)
-        if nof_outputs == 1:
+        if _nof_outputs == 1:
             fpr, tpr, _ = roc_curve(y_test, model.predict(x_test))
             roc_auc = auc(fpr, tpr)
             plt.plot(fpr, tpr,color='darkorange',label='ROC curve (area = %0.2f)' % roc_auc)
@@ -1226,12 +1233,12 @@ def Train_Test_Eval_PureKeras(bkg_type, var_list, cuts, _nepochs, _batchSize, no
 ##     ## ##        ##        ######## ####  ######  ##     ##    ##    ####  #######  ##    ##
 # //--------------------------------------------
 
-def Apply_Model(bkg_type, var_list, cuts, _nepochs, _batchSize, nof_outputs, x_train, y_train, x_test, y_test, weightLEARN, weight_test):
+def Apply_Model(bkg_type, var_list, cuts, _nepochs, _batchSize, _nof_outputs, x_train, y_train, x_test, y_test, weightLEARN, weight_test):
 
     signal = "tZq"
 
     #Get data #CHANGED -- directly taken as arg
-    # x_train, y_train, x_test, y_test, weightLEARN, weight_test = Get_Data_Keras(signal, bkg_type, var_list, cuts, nof_outputs)
+    # x_train, y_train, x_test, y_test, weightLEARN, weight_test = Get_Data_Keras(signal, bkg_type, var_list, cuts, _nof_outputs)
 
     #Split test & train sample between "true signal" & "true background" (must be separated for plotting)
     x_test_sig = x_test[y_test[:, 0]==1]
@@ -1279,25 +1286,21 @@ def Apply_Model(bkg_type, var_list, cuts, _nepochs, _batchSize, nof_outputs, x_t
     predictions_train_sig = model.predict(x_train_sig)
     predictions_train_bkg = model.predict(x_train_bkg)
 
+    #-- Printout of some results
+    for i in range(5):
+        if y_test[i][0]==1:
+            true_label = "Signal"
+        else:
+            true_label = "Background"
+        print("\n--------------")
+        print("X=%s\n\n=====> Predicted : %s (True label : %s)" % (x_test[i], predictions_test_sig[i,0], true_label))
+        print("--------------\n")
+
     #Only keep signal proba (redundant info)
     predictions_test_sig = predictions_test_sig[:, 0]
     predictions_test_bkg = predictions_test_bkg[:, 0]
     predictions_train_sig = predictions_train_sig[:, 0]
     predictions_train_bkg = predictions_train_bkg[:, 0]
-
-    #-- Printout of some results
-    # for i in range(5):
-    #     if y_test[i][0]==1:
-    #         true_label = "Signal"
-    #     else:
-    #         true_label = "Background"
-    #     print("\n--------------")
-    #     print("X=%s\n\n=====> Predicted : %s (True label : %s)" % (x_test[i], predictions[i][0], true_label))
-    #     print("--------------\n")
-
-
-
-
 
 
   ####   ####  #    # ##### #####   ####  #         #####  #       ####  #####  ####
@@ -1460,9 +1463,9 @@ def Apply_Model(bkg_type, var_list, cuts, _nepochs, _batchSize, nof_outputs, x_t
 #     else:
 #         nLep = "2l"
 
-    # Train_Test_Eval_PureKeras(bkg_type, var_list, cuts, _nepochs, _batchSize, nof_outputs)
+    # Train_Test_Eval_PureKeras(bkg_type, var_list, cuts, _nepochs, _batchSize, _nof_outputs)
     # exit(1)
 
 
 #----------  Manual call to DNN training function
-Train_Test_Eval_PureKeras(bkg_type, var_list, cuts, _nepochs, _batchSize, nof_outputs)
+Train_Test_Eval_PureKeras(bkg_type, var_list, cuts, _nepochs, _batchSize, _nof_outputs, _maxEvents, _splitTrainEventFrac)

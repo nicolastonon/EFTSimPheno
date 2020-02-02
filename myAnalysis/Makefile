@@ -1,22 +1,24 @@
-# Makefile for BDT codes
-
 # $< = name of first dependancy
 # $@ = name of target ("main")
-# -c ask the compiler not to link
+# -c asks the compiler not to link. Allows to get a compiled "object file" which does not contain
 # -o specify target
-#
 
 #Define variables
-CC=g++ -fPIC #Compiler used
-DEBUG = -g
-CFLAGS = -c $(DEBUG) #Compilation options
-# CFLAGS += -std=c++14
+CC=g++ -fPIC #Compiler used #fPIC useful to get debug messages
+DEBUG = -g -Wl,--allow-multiple-definition -Wl,--allow-multiple-definition -Wl,--whole-archive -Os #flags for TF linking (see https://github.com/tensorflow/tensorflow/issues/4242)
+CFLAGS = -c #Compilation options
 ROOTFLAGS = `root-config --glibs --cflags`
 
 LFLAGS = $(DEBUG) -lTMVA -lPyMVA
+LFLAGS += -L/home/ntonon/Documents/Programmes/tensorflow/bazel-bin/tensorflow/ -ltensorflow_framework -ltensorflow_all
 
-INCFLAGS = -I.
-# INCFLAGS = -I./pocket-tensor/lib/include -I./pocket-tensor/3rd_party/libsimdpp #Add-on for reading NN in C++
+INCFLAGS = -I./include
+INCFLAGS += -I/home/ntonon/Documents/Programmes/tensorflow
+INCFLAGS += -I/home/ntonon/Documents/Programmes/tensorflow/bazel-genfiles
+INCFLAGS += -I/home/ntonon/Documents/Programmes/tensorflow/bazel-tensorflow/external/eigen_archive
+INCFLAGS += -I/home/ntonon/Documents/Programmes/tensorflow/bazel-tensorflow/external/com_google_absl
+INCFLAGS += -I/usr/local/include/google/protobuf/
+INCFLAGS += -I/usr/local/include/google/tensorflow/
 
 SRCS = $(wildcard *.cxx) #Source files are all files with .cxx extension
 HDRS = $(wildcard *.h) #Header files are all files with .h extension
@@ -32,37 +34,42 @@ PRODUCE_CUTFLOW = Produce_Cutflow.exe
 all: $(MY_ANALYSIS) $(ROCS) $(PRODUCE_CUTFLOW)
 
 #Obtain executables from object files
-$(MY_ANALYSIS): analysis_main.o Helper.o TopEFT_analysis.o
+$(MY_ANALYSIS): Utils/CMSSW_TensorFlow.o Utils/TFModel.o Utils/Helper.o analysis_main.o TopEFT_analysis.o
 	@echo "###################################"
 	@echo "-- Creating executable ./$(MY_ANALYSIS) --"
-	@$(CC) analysis_main.o Helper.o TopEFT_analysis.o -o $@ $(ROOTFLAGS) $(LFLAGS) $(INCFLAGS)
+	@$(CC) Utils/CMSSW_TensorFlow.o Utils/TFModel.o Utils/Helper.o analysis_main.o TopEFT_analysis.o -o $@ $(ROOTFLAGS) $(LFLAGS) $(INCFLAGS)
 	@echo "-- Done --"
 	@echo "###################################""#"
 	@echo ""
 
-$(ROCS): ROCS/Compare_ROC_curves.o Helper.o
+$(ROCS): ROCS/Compare_ROC_curves.o Utils/Helper.o
 	@echo "###################################"
 	@echo "-- Creating executable $(ROCS) --"
-	@$(CC) ROCS/Compare_ROC_curves.o Helper.o -o $@ $(ROOTFLAGS) $(LFLAGS)
+	@$(CC) ROCS/Compare_ROC_curves.o Utils/Helper.o -o $@ $(ROOTFLAGS) $(LFLAGS)
 	@echo "-- Done --"
 	@echo "###################################"
 	@echo ""
 
-$(PRODUCE_CUTFLOW):	Produce_Cutflow.o Helper.o
+$(PRODUCE_CUTFLOW):	Utils/Produce_Cutflow.o Utils/Helper.o
 	@echo "###################################""#"
 	@echo "-- Creating executable ./$(PRODUCE_CUTFLOW) --"
-	@$(CC) Produce_Cutflow.o Helper.o -o $@ $(ROOTFLAGS) $(LFLAGS) $(INCFLAGS)
+	@$(CC) Utils/Produce_Cutflow.o Utils/Helper.o -o $@ $(ROOTFLAGS) $(LFLAGS) $(INCFLAGS)
 	@echo "-- Done --"
 	@echo "###################################""#"
 	@echo ""
 
 #Obtain objects from source and header files
+#WARNING : only works for .cxx files ! e.g. for .cpp, would need a specific rule
 %.o: %.cxx $(HDRS)
 	@echo "-- Compiling : "$@"--"
+# @echo "-- INCFLAGS : "$(INCFLAGS)" --"
+# @echo "-- LFLAGS : "$(LFLAGS)" --"
+# @echo "-- ROOTFLAGS : "$(ROOTFLAGS)" --"
+# @echo "-- CFLAGS : "$(CFLAGS)" --"
 	@$(CC) $(ROOTFLAGS) $(CFLAGS) $(LFLAGS) $(INCFLAGS) $< -o $@
 	@echo ""
-	@#Example :  g++ `root-config --glibs --cflags` -fPIC -c -g Helper.cxx -o Helper.o
+# @Example :  g++ `root-config --glibs --cflags` -fPIC -c -g Utils/Helper.cxx -o Utils/Helper.o
 
 #Erase all objects and executable
 clean:
-	@-rm -f *.o *.exe ROCS/*.o ROCS/*.exe
+	@-rm -f *.o *.exe Utils/*.o ROCS/*.o ROCS/*.exe

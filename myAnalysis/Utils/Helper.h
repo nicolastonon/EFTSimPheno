@@ -57,8 +57,8 @@
 
 //-- Basic helper functions
     bool Check_File_Existence(const TString&);
-    void MoveFile(TString, TString);
-    void CopyFile(TString, TString);
+    int MoveFile(TString, TString);
+    int CopyFile(TString, TString);
 	TString Convert_Number_To_TString(double, int=3);
 	float Convert_TString_To_Number(TString);
 	float Find_Number_In_TString(TString);

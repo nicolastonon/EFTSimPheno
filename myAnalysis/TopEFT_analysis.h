@@ -57,7 +57,8 @@
 #include <cassert> 	//Can be used to terminate program if argument is not true. Ex : assert(test > 0 && "Error message");
 #include <sys/stat.h> //for mkdir
 
-#include "Helper.h" //Helper functions
+#include "Utils/Helper.h" //Helper functions
+#include "Utils/TFModel.h" //Tensorflow functions
 
 using namespace std;
 
@@ -67,7 +68,7 @@ class TopEFT_analysis
 	public :
 
 	TopEFT_analysis(); //Default constructor
-    TopEFT_analysis(vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<bool>, vector<TString>, TString, vector<TString>, bool, TString, TString, TString, TString, bool);
+    TopEFT_analysis(vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<bool>, vector<TString>, TString, vector<TString>, bool, TString, TString, TString, bool);
 	~TopEFT_analysis(); //Default destructor
 
 //--- METHODS
@@ -92,6 +93,7 @@ class TopEFT_analysis
     TMVA::Reader *reader;
     TMVA::Reader *reader1; //1 reader for BDT xxx
     TMVA::Reader *reader2; //1 reader for BDT yyy
+    TFModel* clfy1; //DNN classifier
 
     std::vector<TString> sample_list; //List of samples
     std::vector<TString> sample_groups; //List of "group naming", 1 per sample (many samples can have same naming)
@@ -112,7 +114,6 @@ class TopEFT_analysis
 	std::vector<TColor*> v_custom_colors;
 
 	bool use_NeuralNetwork;
-	TString DNN_type;
 	TString classifier_name;
 
     TString region; //"SR" / "CR_ttZ" / "CR_ttW"

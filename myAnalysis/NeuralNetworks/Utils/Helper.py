@@ -41,7 +41,7 @@ def batchOutput(batch, logs):
 # //--------------------------------------------
 # //--------------------------------------------
 
-def Write_Variables_To_TextFile(var_list):
+def Write_Variables_To_TextFile(weight_dir, var_list):
     text_file = open(weight_dir + "ListVariables.txt", "w")
     for var in var_list:
         text_file.write(var)

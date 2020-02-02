@@ -36,21 +36,19 @@ bool Check_File_Existence(const TString& name)
 }
 
 //Move file with bash command 'mv'
-void MoveFile(TString origin_path, TString dest_path)
+int MoveFile(TString origin_path, TString dest_path)
 {
 	TString command = "mv "+origin_path + " " + dest_path;
-	system(command.Data() );
 
-	return;
+	return system(command.Data() );
 }
 
 //Copy file with bash command 'cp'
-void CopyFile(TString origin_path, TString dest_path)
+int CopyFile(TString origin_path, TString dest_path)
 {
 	TString command = "cp "+origin_path + " " + dest_path;
-	system(command.Data() );
 
-	return;
+	return system(command.Data() );;
 }
 
 //Convert a double into a TString
@@ -451,7 +449,7 @@ void Extract_Ranking_Info(TString TMVA_output_file, TString channel)
 	}
 
 	TString mv_command = "mv ranking_tmp.txt " + TMVA_output_file;
-	system(mv_command.Data() ); //Replace TMVA output textfile by modified textfile !
+	int tmp = system(mv_command.Data() ); //Replace TMVA output textfile by modified textfile !
 
 	return;
 }

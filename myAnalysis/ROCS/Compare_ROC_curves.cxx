@@ -21,7 +21,7 @@
 */
 
 //--------------------------------------------
-#include "../Helper.h"
+#include "../Utils/Helper.h"
 
 #include <iostream>
 #include <cstdlib>
@@ -348,12 +348,12 @@ bool Get_Histogram_From_CustomFile(TH1F*& h, TString filename, TString histo_nam
 {
 	if(DEBUG) {cout<<FYEL("-- Get_Histogram_From_CustomFile() --")<<endl;}
 
-	h = 0; //Pointer to histogram passed as argument, filled inside function
+	h = 0; //Init pointer to histogram passed as argument
 
 	if(!Check_File_Existence(filename) ) {cout<<FRED("File "<<filename<<" not found ! Abort")<<endl; return 0;}
 	TFile* f = TFile::Open(filename);
 
-	if(DEBUG) {cout<<"- Opening histo : "<<histo_name<<endl;}
+	if(DEBUG) {cout<<"-- Opening histo : "<<histo_name<<endl;}
 
 	h = (TH1F*) f->Get(histo_name);
 	h->SetDirectory(0); //NECESSARY so that histo is not associated with TFile, and doesn't get deleted when file closed !
