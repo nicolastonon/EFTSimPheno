@@ -20,7 +20,7 @@ int main(int argc, char **argv)
     bool use_systematics = true; //true <-> will compute/store systematics selected below
 
     //-- MVA
-    TString classifier_name = "DNN"; //'BDT' or 'DNN'
+    TString classifier_name = "BDT"; //'BDT' or 'DNN'
 
     //--- Templates options
     TString template_name = "";
@@ -48,8 +48,8 @@ int main(int argc, char **argv)
 
 	vector<TString> set_lumi_years;
     set_lumi_years.push_back("2016");
-    set_lumi_years.push_back("2017");
-    set_lumi_years.push_back("2018");
+    // set_lumi_years.push_back("2017");
+    // set_lumi_years.push_back("2018");
 
 //-----------------------------------------------------------------------------------------
 //   ######  ##     ## ########  ######
@@ -260,10 +260,10 @@ int main(int argc, char **argv)
 //*** CHOOSE HERE FROM BOOLEANS WHAT YOU WANT TO DO !
 
 //-----------------    TRAINING
-    bool train_BDT = false; //Train selected BDT in selected region (with events in training category)
+    bool train_BDT = true; //Train selected BDT in selected region (with events in training category)
 
 //-----------------    TEMPLATES CREATION
-    bool create_templates = true; //Create MVA templates
+    bool create_templates = false; //Create MVA templates
 
 //-----------------    CONTROL HISTOGRAMS
     bool create_inputVar_histograms = false; //Create histograms of input variables, for plotting

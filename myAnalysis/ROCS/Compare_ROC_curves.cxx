@@ -239,14 +239,19 @@ double Get_AUC_From_TMVAfile(TString filename, TString variable, bool use_TrainS
 //--------------------------------------------
 
 
+// ##### #    # #    #   ##
+//   #   ##  ## #    #  #  #
+//   #   # ## # #    # #    #
+//   #   #    # #    # ######
+//   #   #    #  #  #  #    #
+//   #   #    #   ##   #    #
+
+
 /**
  * Get histogram from a TMVA output TTree, for given range, nbins, cuts, etc.
  * @param h        histogram to be filled
  * @param t        TTree to read
  * @param variable variable to plot
- * @param nbins
- * @param xmin
- * @param xmax
  * @param cuts     cuts to apply -- "1" <-> no cut
  */
 bool Create_Histogram_From_TMVA_Tree(TH1F*& h, TString filename, TString treename, TString variable, TString signal, bool is_bkg, int nbins, double xmin, double xmax, bool use_TrainSample, TString cuts="1")
@@ -335,7 +340,12 @@ bool Retrieve_Histogram_From_TMVA_File(TH1F*& h, TString filename, TString varia
 }
 
 
-
+//  ####  #    #  ####  #####  ####  #    #
+// #    # #    # #        #   #    # ##  ##
+// #      #    #  ####    #   #    # # ## #
+// #      #    #      #   #   #    # #    #
+// #    # #    # #    #   #   #    # #    #
+//  ####   ####   ####    #    ####  #    #
 
 /**
  * Get histogram directly from root file (must have been produced before)
@@ -381,7 +391,12 @@ bool Get_Histogram_From_CustomFile(TH1F*& h, TString filename, TString histo_nam
 }
 
 
-
+// #    # ###### #####    ##    ####
+// #   #  #      #    #  #  #  #
+// ####   #####  #    # #    #  ####
+// #  #   #      #####  ######      #
+// #   #  #      #   #  #    # #    #
+// #    # ###### #    # #    #  ####
 
 bool Get_Histogram_From_KerasFile(TH1F*& h, TString filename, TString histo_name)
 {
@@ -822,7 +837,7 @@ int main(int argc, char **argv)
 //--------------------------------------------
 	TString signal = "tZq";
 	TString region = "SR";
-    TString lumiYear = "Run2";
+    TString lumiYear = "2016";
     // TString channel = "";
 
 	TString cuts = "1"; //1 <-> No cut
@@ -841,7 +856,7 @@ int main(int argc, char **argv)
 	vector<TString> v_filepath; //Path of TFile containing TMVA TTree or histograms
 	vector<TString> v_objName; //Complete path of TMVA TTree or histogram
 	vector<TString> v_label; //Label to be displayed on plot
-    vector<TString> v_isTMVA_file; //'TMVA' <-> looking for TMVA TTree ; else (?) <-> looking for histograms
+    vector<TString> v_isTMVA_file; //'TMVA' <-> looking for TMVA TTree ; 'Keras' <-> looking for histograms
     vector<bool> v_isTrainSample; //True <-> looking for ROC from train sample ; else test sample
 //--------------------------------------------
 
@@ -851,9 +866,12 @@ int main(int argc, char **argv)
     v_label.push_back("tZq "+lumiYear);
     v_isTMVA_file.push_back("TMVA"); v_isTrainSample.push_back(false);
 
+    v_filepath.push_back("../outputs/PredictKeras_DNN.root");
+    v_objName.push_back("");
+    v_label.push_back("DNN "+lumiYear);
+    v_isTMVA_file.push_back("Keras"); v_isTrainSample.push_back(false);
+
 //--------------------------------------------
-
-
 
 
 //--------------------------------------------
