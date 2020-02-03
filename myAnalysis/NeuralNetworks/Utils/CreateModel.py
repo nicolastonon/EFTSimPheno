@@ -1,4 +1,7 @@
-# xxx
+# Create the DNN model with Keras
+
+#FIXMES :
+# Pass as args with default values : nof inputs, nof dense layers, batchnorm, dropout, output layer, ...
 
 # //--------------------------------------------
 from tensorflow.keras.models import Sequential, load_model, model_from_json

@@ -23,6 +23,8 @@ from sklearn.preprocessing import MinMaxScaler, Normalizer, StandardScaler
 from sklearn.model_selection import train_test_split, StratifiedKFold
 from tensorflow.keras import utils
 
+from Utils.ColoredPrintout import colors
+
 np.set_printoptions(threshold=np.inf) #If activated, will print full numpy arrays
 # //--------------------------------------------
 # //--------------------------------------------
@@ -81,7 +83,8 @@ def Get_Data_Keras(ntuples_dir, signal, bkg_type, var_list, cuts, nof_outputs, m
         print('File '+filepath+' not found ! Abort !')
         exit(1)
 
-    print("\n* Opening file : " + filepath)
+    # print("\n* Opening file : " + filepath)
+    print(colors.fg.lightgrey, colors.underline, '* Opening file:', colors.reset, ' ', filepath, '\n\n')
     file_signal = TFile.Open(filepath)
 
     #FIXME
@@ -91,7 +94,9 @@ def Get_Data_Keras(ntuples_dir, signal, bkg_type, var_list, cuts, nof_outputs, m
         if not testfilepath.is_file():
             print('File '+filepath+' not found ! Abort !')
             exit(1)
-        print("\n* Opening file : " + filepath)
+        # print("\n* Opening file : " + filepath)
+        print(colors.fg.lightgrey, colors.underline, '* Opening file:', colors.reset, ' ', filepath, '\n\n')
+
         file_bkg1 = TFile.Open(filepath)
 
         filepath = ntuples_dir + 'ttW.root'
@@ -99,16 +104,17 @@ def Get_Data_Keras(ntuples_dir, signal, bkg_type, var_list, cuts, nof_outputs, m
         if not testfilepath.is_file():
             print('File '+filepath+' not found ! Abort !')
             exit(1)
-        print("\n* Opening file : " + filepath)
+        # print("\n* Opening file : " + filepath)
+        print(colors.fg.lightgrey, colors.underline, '* Opening file:', colors.reset, ' ', filepath, '\n\n')
         file_bkg2 = TFile.Open(filepath)
 
-    print("\n===========")
-    print("--- Signal = " + signal)
+    print(colors.fg.lightblue, "===========", colors.reset)
+    print(colors.fg.lightblue, "--- Signal = " + signal, colors.reset)
     if bkg_type == "":
-        print("--- Backgrounds = ttZ, ttW")
+        print(colors.fg.lightblue, "--- Backgrounds = ttZ, ttW", colors.reset)
     else:
-        print("--- Backgrounds = TTbar_DiLep, TTbar_SemiLep")
-    print("===========\n\n")
+        print(colors.fg.lightblue, "--- Backgrounds = TTbar_DiLep, TTbar_SemiLep", colors.reset)
+    print(colors.fg.lightblue, "===========", colors.reset, "\n\n")
 
     #Get trees
     tree_sig = file_signal.Get('result')
@@ -383,10 +389,10 @@ def Get_Data_Keras(ntuples_dir, signal, bkg_type, var_list, cuts, nof_outputs, m
     # print(pca_std)
     # exit(1)
 
-    print("\n===========")
-    print("-- Will use " + str(x_train.shape[0]) + " training events !")
-    print("-- Will use " + str(x_test.shape[0]) + " testing events !")
-    print("===========\n")
+    print(colors.fg.lightblue, "===========", colors.reset)
+    print(colors.fg.lightblue, "-- Will use " + str(x_train.shape[0]) + " training events !", colors.reset)
+    print(colors.fg.lightblue, "-- Will use " + str(x_test.shape[0]) + " testing events !", colors.reset)
+    print(colors.fg.lightblue, "===========\n", colors.reset)
 
     # print(y_train.shape)
     # print(y_train)
