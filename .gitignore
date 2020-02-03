@@ -1,6 +1,12 @@
 # '**' can be used to match any number of directories.
 
 ############
+# Directories #
+############
+
+./myAnalysis/weights/
+
+############
 # Backup copies #
 ############
 *~
