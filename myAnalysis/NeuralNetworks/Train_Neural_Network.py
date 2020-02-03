@@ -1,7 +1,16 @@
 #TODO#
 '''
 - Allow to choose which years to train on (change namings, open multiple ntuples)
-- 
+- argparse
+- segment code
+- check nof max events
+'''
+
+#NOTES#
+'''
+fit() is for training the model with the given inputs (and corresponding training labels).
+evaluate() is for evaluating the already trained model using the validation (or test) data and the corresponding labels. Returns the loss value and metrics values for the model.
+predict() is for the actual prediction. It generates output predictions for the input samples.
 '''
 
 # Nicolas TONON (DESY)
@@ -24,7 +33,7 @@
 
 #--- Set here the main training options
 # //--------------------------------------------
-_nepochs = 10
+_nepochs = 1
 _batchSize = 500
 _nof_outputs = 2 #single output not supported (e.g. for validation steps)
 _maxEvents = 100000 #max total nof events to be used #FIXME
@@ -77,7 +86,6 @@ import ROOT
 from ROOT import TMVA, TFile, TTree, TCut, gROOT, TH1, TH1F
 import numpy as np
 from root_numpy import root2array, tree2array, array2root, fill_hist
-
 import pandas as pd
 import tensorflow
 import keras
@@ -90,7 +98,7 @@ from tensorflow.keras import utils
 # from tensorflow.keras.utils import np_utils
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.callbacks import TensorBoard, EarlyStopping, LambdaCallback, LearningRateScheduler, ReduceLROnPlateau
-# from tensorflow.keras.utils.vis_utils import plot_model
+from tensorflow.keras.utils import plot_model
 from sklearn.model_selection import train_test_split, StratifiedKFold
 from sklearn.preprocessing import MinMaxScaler, Normalizer, StandardScaler
 # from tensorflow.keras.layers.advanced_activations import PReLU
@@ -109,10 +117,11 @@ from sklearn.decomposition import PCA
 from pathlib import Path
 import argparse
 
-
+from tensorflow.python.tools import freeze_graph #FIXME
 from Utils.kerasToTensorflow import freeze_session
-from Utils.Helper import close_event, batchOutput, Write_Variables_To_TextFile, TimeHistory
 
+from Utils.Helper import close_event, batchOutput, Write_Variables_To_TextFile, TimeHistory
+3
 weight_dir = "../weights/DNN/"
 os.makedirs(weight_dir, exist_ok=True)
 
@@ -288,7 +297,7 @@ def Create_Model(outdir, DNN_name, _nof_outputs):
         if _nof_outputs == 1 :
             model.add(Dense(_nof_outputs, kernel_initializer=my_init, activation='sigmoid'))
         elif _nof_outputs == 2:
-            model.add(Dense(_nof_outputs, kernel_initializer=my_init, activation='softmax')) #, name="myOutput"
+            model.add(Dense(_nof_outputs, kernel_initializer=my_init, activation='softmax')) #, name="myOutputs"
        # //--------------------------------------------
 
     #Model 2 -- more elaborate, overtrained
@@ -417,13 +426,11 @@ def Create_Model(outdir, DNN_name, _nof_outputs):
     else:
         print("\n-- ERROR : wrong model_choice value !\n")
 
-
-
     #Model visualization
     print(model.summary())
 
     # outname = outdir+'graphviz_'+DNN_name+'.png'
-    # plot_model(model, to_file=outname, show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file=outname, show_shapes=True, show_layer_names=True, dpi=96)
     # print("\n-- Created DNN arch plot with graphviz : " + outname)
 
     # outname = outdir+'annviz_'+DNN_name+'.gv'
@@ -904,20 +911,6 @@ def Train_Test_Eval_PureKeras(bkg_type, var_list, cuts, _nepochs, _batchSize, _n
     #Get model, compile
     model = Create_Model(weight_dir, "DNN"+bkg_type, _nof_outputs)
 
-    # --- convert model to estimator and save model as frozen graph for c++
-    tensorflow.keras.backend.clear_session()
-    tensorflow.keras.backend.set_learning_phase(0) # has to be done to get a working frozen graph in c++
-    model = load_model(weight_dir + "model_DNN"+bkg_type+".h5") # model has to be re-loaded
-
-    print('inputs: ', [input.op.name for input in model.inputs])
-    print('outputs: ', [output.op.name for output in model.outputs])
-    output_names = [out.op.name for out in model.outputs]
-    print('output_names : ', output_names)
-    sess = tensorflow.compat.v1.keras.backend.get_session()
-    frozen_graph = freeze_session(sess, output_names)
-    tensorflow.compat.v1.train.write_graph(frozen_graph, '../weights/DNN', 'model.pbtxt', as_text=True)
-    tensorflow.compat.v1.train.write_graph(frozen_graph, '../weights/DNN', 'model.pb', as_text=False)
-
     #-- Can access weights and biases of any layer (debug, ...) #Print before training
     # weights_layer, biases_layer = model.layers[0].get_weights()
     # print(weights_layer.shape)
@@ -955,13 +948,12 @@ def Train_Test_Eval_PureKeras(bkg_type, var_list, cuts, _nepochs, _batchSize, _n
     score = model.evaluate(x_test, y_test, batch_size=_batchSize, sample_weight=weightPHY_test)
     # print(score)
 
-
-####    ##   #    # ######    #    #  ####  #####  ###### #
-#       #  #  #    # #         ##  ## #    # #    # #      #
-####  #    # #    # #####     # ## # #    # #    # #####  #
-  # ###### #    # #         #    # #    # #    # #      #
-#    # #    #  #  #  #         #    # #    # #    # #      #
-####  #    #   ##   ######    #    #  ####  #####  ###### ######
+  ####    ##   #    # ######    #    #  ####  #####  ###### #
+ #       #  #  #    # #         ##  ## #    # #    # #      #
+  ####  #    # #    # #####     # ## # #    # #    # #####  #
+      # ###### #    # #         #    # #    # #    # #      #
+ #    # #    #  #  #  #         #    # #    # #    # #      #
+  ####  #    #   ##   ######    #    #  ####  #####  ###### ######
 
     outname = weight_dir + 'model_DNN'+bkg_type
 
@@ -977,6 +969,36 @@ def Train_Test_Eval_PureKeras(bkg_type, var_list, cuts, _nepochs, _batchSize, _n
     #Save list of variables
     Write_Variables_To_TextFile(weight_dir, var_list)
 
+ ###### #####  ###### ###### ###### ######     ####  #####    ##   #####  #    #
+ #      #    # #      #          #  #         #    # #    #  #  #  #    # #    #
+ #####  #    # #####  #####     #   #####     #      #    # #    # #    # ######
+ #      #####  #      #        #    #         #  ### #####  ###### #####  #    #
+ #      #   #  #      #       #     #         #    # #   #  #    # #      #    #
+ #      #    # ###### ###### ###### ######     ####  #    # #    # #      #    #
+
+# --- convert model to estimator and save model as frozen graph for c++
+    with tensorflow.compat.v1.Session() as sess:
+
+        # sess = tensorflow.compat.v1.keras.backend.get_session()
+        graph = sess.graph
+
+        tensorflow.keras.backend.set_learning_phase(0) # This line must be executed before loading Keras model.
+        model = load_model(weight_dir + "model_DNN"+bkg_type+".h5") # model has to be re-loaded
+
+        # inputs_names = [input.op.name for input in model.inputs]
+        # outputs_names = [output.op.name for output in model.outputs]
+        # print('\ninputs: ', model.inputs)
+        # print('--> inputs_names: ', inputs_names)
+        # print('\noutputs: ', model.outputs)
+        # print('--> outputs_names: ', outputs_names)
+        # tf_node_list = [n.name for n in  tensorflow.compat.v1.get_default_graph().as_graph_def().node]
+        # print('nodes list : ', tf_node_list)
+
+        frozen_graph = freeze_session(tensorflow.compat.v1.keras.backend.get_session(), output_names=[output.op.name for output in model.outputs])
+
+        tensorflow.io.write_graph(frozen_graph, '../weights/DNN', 'model.pbtxt', as_text=True)
+        tensorflow.io.write_graph(frozen_graph, '../weights/DNN', 'model.pb', as_text=False)
+        print("\n===> Successfully froze graph...\n\n")
 
  #####  ######  ####  #    # #      #####  ####
  #    # #      #      #    # #        #   #
@@ -987,8 +1009,8 @@ def Train_Test_Eval_PureKeras(bkg_type, var_list, cuts, _nepochs, _batchSize, _n
 
     loss = score[0]
     accuracy = score[1]
-    print("\n Accuracy :", str(accuracy) + "\n")
-    print("\n Loss :", str(loss) + "\n")
+    print("\n** Accuracy :", str(accuracy) + "\n")
+    print("**Loss :", str(loss) + "\n")
 
     show_control_plots = False
 

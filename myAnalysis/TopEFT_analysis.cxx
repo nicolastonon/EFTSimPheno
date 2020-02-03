@@ -842,9 +842,20 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
     else if (!makeHisto_inputVars && classifier_name == "DNN") //DNN
     {
         //Load DNN model
-        TString DNNmodel_path = "./weights/DNN/model.pb";
+        // TString DNNmodel_path = "./weights/DNN/model.pb";
+        TString DNNmodel_path = "/home/ntonon/Downloads/model.pb";
         if(!Check_File_Existence(DNNmodel_path) ) {cout<<BOLD(FRED("Model "<<DNNmodel_path<<" not found ! Abort"))<<endl; return;}
-        clfy1 = new TFModel(DNNmodel_path.Data(), 2, "myInputs_input", 2, "myOutput/Identity"); //Specify names of I/O layers, and nof I/O nodes
+        // clfy1 = new TFModel(DNNmodel_path.Data(), 2, "myInputs_input", 2, "myOutput/Identity"); //Specify names of I/O layers, and nof I/O nodes
+        // clfy1 = new TFModel(DNNmodel_path.Data(), 18, "input", 4, "output/Softmax"); //Specify names of I/O layers, and nof I/O nodes
+        cout<<__LINE__<<endl;
+
+//--------------------------------------------
+        std::cout<<"Load tensorflow graph from "<<DNNmodel_path<<std::endl<< std::endl;
+        tensorflow::GraphDef* graphDef = tensorflow::loadGraphDef(DNNmodel_path.Data());
+
+        std::cout<<"Create tensorflow session"<<std::endl<<std::endl;
+        tensorflow::Session* session = tensorflow::createSession((tensorflow::GraphDef*) graphDef); //1 thread by default
+//--------------------------------------------
 
         //Read the list of input variables directly from .txt file generated at DNN training
         var_list.resize(0);
@@ -1192,7 +1203,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
                     {
                         if(classifier_name == "BDT") {mva_value1 = reader->EvaluateMVA(MVA_method_name);}
 
-                        else //DNN
+                        else //DNN //FIXME -- use pointers to floats
                         {
                             // double test1=50, test2 = 35;
                             // double clfy1_inputs[2] = {test1, test2};
@@ -1210,8 +1221,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
                                 cout<<"clfy1_outputs["<<i<<"] "<<clfy1_outputs[i]<<endl;
                             }
 
-                            // mva_value1 = clfy1_outputs[0];
-                            mva_value1 = 0;
+                            mva_value1 = clfy1_outputs[0];
                         }
                     }
 

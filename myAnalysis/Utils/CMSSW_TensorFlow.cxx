@@ -68,15 +68,18 @@ namespace tensorflow
     return graphDef;
   }
 
-  Session* createSession(SessionOptions& sessionOptions) {
+  Session* createSession(SessionOptions& sessionOptions)
+  {
     // objects to create the session
     Status status;
 
     // create a new, empty session
+    //FIXME error here
     Session* session = nullptr;
     status = NewSession(sessionOptions, &session);
-    if (!status.ok()) {
-      std::cout << "error while creating session: " << status.ToString()<<std::endl;
+    if(!status.ok())
+    {
+      std::cout<<"error while creating session: "<<status.ToString()<<std::endl;
     }
 
     return session;

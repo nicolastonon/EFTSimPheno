@@ -5,20 +5,24 @@
 
 #Define variables
 CC=g++ -fPIC #Compiler used #fPIC useful to get debug messages
-DEBUG = -g -Wl,--allow-multiple-definition -Wl,--allow-multiple-definition -Wl,--whole-archive -Os #flags for TF linking (see https://github.com/tensorflow/tensorflow/issues/4242)
+DEBUG = -g -Wl,--allow-multiple-definition -Wl,--whole-archive -Wl,--no-as-needed -Os #flags for TF linking (see https://github.com/tensorflow/tensorflow/issues/4242)
 CFLAGS = -c #Compilation options
 ROOTFLAGS = `root-config --glibs --cflags`
 
 LFLAGS = $(DEBUG) -lTMVA -lPyMVA
-LFLAGS += -L/home/ntonon/Documents/Programmes/tensorflow/bazel-bin/tensorflow/ -ltensorflow_framework -ltensorflow_all
+LFLAGS += -L/home/ntonon/Documents/Programmes/tensorflow/bazel-bin/tensorflow -Wl,--whole-archive -Wl,--no-as-needed -ltensorflow_framework -lprotobuf
+
+# LFLAGS += -L/home/ntonon/Documents/Programmes/tensorflow/bazel-bin/tensorflow -Wl,--whole-archive -Wl,--no-as-needed -ltensorflow_cc -Wl,--whole-archive -Wl,--no-as-needed -ltensorflow_framework
+# LFLAGS += -L/home/ntonon/Documents/Programmes/tensorflow/bazel-bin/tensorflow -Wl,--whole-archive -Wl,--no-as-needed -ltensorflow_framework -Wl,--whole-archive -Wl,--no-as-needed -ltensorflow_all
+# LFLAGS += -L/home/ntonon/Documents/Programmes/tensorflow/bazel-bin/tensorflow -Wl,--whole-archive -Wl,--no-as-needed -ltensorflow_framework -Wl,--whole-archive -Wl,--no-as-needed -ltensorflow_all -Wl,--whole-archive -Wl,--no-as-needed -ltensorflow_cc
 
 INCFLAGS = -I./include
 INCFLAGS += -I/home/ntonon/Documents/Programmes/tensorflow
 INCFLAGS += -I/home/ntonon/Documents/Programmes/tensorflow/bazel-genfiles
 INCFLAGS += -I/home/ntonon/Documents/Programmes/tensorflow/bazel-tensorflow/external/eigen_archive
 INCFLAGS += -I/home/ntonon/Documents/Programmes/tensorflow/bazel-tensorflow/external/com_google_absl
-INCFLAGS += -I/usr/local/include/google/protobuf/
-INCFLAGS += -I/usr/local/include/google/tensorflow/
+INCFLAGS += -I/usr/local/include/google/protobuf
+INCFLAGS += -I/usr/local/include/google/tensorflow
 
 SRCS = $(wildcard *.cxx) #Source files are all files with .cxx extension
 HDRS = $(wildcard *.h) #Header files are all files with .h extension

@@ -20,10 +20,10 @@ def freeze_session(session, keep_var_names=None, output_names=None, clear_device
         freeze_var_names = list(set(v.op.name for v in tensorflow.compat.v1.global_variables()).difference(keep_var_names or []))
         output_names = output_names or []
         output_names += [v.op.name for v in tensorflow.compat.v1.global_variables()]
-        print('output_names:', output_names)
         graphdef_inf = tensorflow.compat.v1.graph_util.remove_training_nodes(graph.as_graph_def())
         if clear_devices:
             for node in graphdef_inf.node:
                 node.device = ""
-        frozen_graph = tensorflow.compat.v1.graph_util.convert_variables_to_constants(session, graphdef_inf, output_names, freeze_var_names)
+        frozen_graph = tensorflow.compat.v1.graph_util.convert_variables_to_constants(
+            session, graphdef_inf, output_names, freeze_var_names)
         return frozen_graph

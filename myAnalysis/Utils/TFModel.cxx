@@ -1,6 +1,7 @@
 #include "TFModel.h"
 // #include "PhysicsTools/TensorFlow/interface/TensorFlow.h"
 
+
 TFModel::TFModel(const std::string &model_name, const unsigned _n_inputs,
     const std::string &_input_name, const unsigned _n_outputs,
     const std::string &_output_name):
@@ -11,8 +12,9 @@ TFModel::TFModel(const std::string &model_name, const unsigned _n_inputs,
 {
     std::cout<<"Load tensorflow graph from "<<model_name<<std::endl<< std::endl;
     graphDef = tensorflow::loadGraphDef(model_name);
+
     std::cout<<"Create tensorflow session"<<std::endl<<std::endl;
-    session = tensorflow::createSession((tensorflow::GraphDef*) graphDef);
+    session = tensorflow::createSession((tensorflow::GraphDef*) graphDef); //1 thread by default
 }
 
 // std::vector<float> TFModel::evaluate(const double inputs[])

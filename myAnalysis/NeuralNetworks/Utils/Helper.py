@@ -47,7 +47,7 @@ def Write_Variables_To_TextFile(weight_dir, var_list):
         text_file.write(var)
         text_file.write("\n")
     text_file.close()
-    print("Saved list of variables in : " + weight_dir + "ListVariables.txt")
+    print("\n\n===> Saved list of variables in : " + weight_dir + "ListVariables.txt\n\n")
 
 # //--------------------------------------------
 # //--------------------------------------------
