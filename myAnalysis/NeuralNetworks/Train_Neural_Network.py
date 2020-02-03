@@ -979,18 +979,19 @@ def Train_Test_Eval_PureKeras(bkg_type, var_list, cuts, _nepochs, _batchSize, _n
 # --- convert model to estimator and save model as frozen graph for c++
     with tensorflow.compat.v1.Session() as sess:
 
+        # tensorflow.compat.v1.keras.backend.clear_session()
         # sess = tensorflow.compat.v1.keras.backend.get_session()
-        graph = sess.graph
+        # graph = sess.graph
 
         tensorflow.keras.backend.set_learning_phase(0) # This line must be executed before loading Keras model.
         model = load_model(weight_dir + "model_DNN"+bkg_type+".h5") # model has to be re-loaded
 
-        # inputs_names = [input.op.name for input in model.inputs]
-        # outputs_names = [output.op.name for output in model.outputs]
-        # print('\ninputs: ', model.inputs)
-        # print('--> inputs_names: ', inputs_names)
-        # print('\noutputs: ', model.outputs)
-        # print('--> outputs_names: ', outputs_names)
+        inputs_names = [input.op.name for input in model.inputs]
+        outputs_names = [output.op.name for output in model.outputs]
+        print('\ninputs: ', model.inputs)
+        print('--> inputs_names: ', inputs_names, '/n')
+        print('\noutputs: ', model.outputs)
+        print('--> outputs_names: ', outputs_names, '/n')
         # tf_node_list = [n.name for n in  tensorflow.compat.v1.get_default_graph().as_graph_def().node]
         # print('nodes list : ', tf_node_list)
 

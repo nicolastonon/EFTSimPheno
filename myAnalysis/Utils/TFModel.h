@@ -4,15 +4,23 @@
 #include <string>
 #include <vector>
 
-#include "/home/ntonon/Documents/Programmes/tensorflow/tensorflow/core/public/session.h"
-#include "/home/ntonon/Documents/Programmes/tensorflow/tensorflow/core/framework/tensor.h"
-#include "/home/ntonon/Documents/Programmes/tensorflow/tensorflow/cc/saved_model/loader.h"
-#include "/home/ntonon/Documents/Programmes/tensorflow/tensorflow/cc/saved_model/tag_constants.h"
-#include "/home/ntonon/Documents/Programmes/tensorflow/tensorflow/cc/saved_model/constants.h"
-#include "/home/ntonon/Documents/Programmes/tensorflow/tensorflow/core/lib/io/path.h"
-#include "/home/ntonon/Documents/Programmes/tensorflow/tensorflow/core/util/tensor_bundle/naming.h"
+#include "tensorflow/core/public/session.h"
+#include "tensorflow/core/framework/tensor.h"
+#include "tensorflow/cc/saved_model/loader.h"
+#include "tensorflow/cc/saved_model/tag_constants.h"
+#include "tensorflow/cc/saved_model/constants.h"
+#include "tensorflow/core/lib/io/path.h"
+#include "tensorflow/core/util/tensor_bundle/naming.h"
+// #include "/home/ntonon/Documents/Programmes/tensorflow/tensorflow/core/public/session.h"
+// #include "/home/ntonon/Documents/Programmes/tensorflow/tensorflow/core/framework/tensor.h"
+// #include "/home/ntonon/Documents/Programmes/tensorflow/tensorflow/cc/saved_model/loader.h"
+// #include "/home/ntonon/Documents/Programmes/tensorflow/tensorflow/cc/saved_model/tag_constants.h"
+// #include "/home/ntonon/Documents/Programmes/tensorflow/tensorflow/cc/saved_model/constants.h"
+// #include "/home/ntonon/Documents/Programmes/tensorflow/tensorflow/core/lib/io/path.h"
+// #include "/home/ntonon/Documents/Programmes/tensorflow/tensorflow/core/util/tensor_bundle/naming.h"
 
 #include "CMSSW_TensorFlow.h"
+//#include "PhysicsTools/TensorFlow/interface/TensorFlow.h" //CMSSW
 
 // #include "common/include/Logging.h"
 

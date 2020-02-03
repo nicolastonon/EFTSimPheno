@@ -17,6 +17,8 @@
 #include "tensorflow/core/lib/io/path.h"
 #include "tensorflow/core/util/tensor_bundle/naming.h"
 
+#include "tensorflow/core/common_runtime/direct_session.h" //ADDED NT
+
 // #include "FWCore/Utilities/interface/Exception.h"
 
 namespace tensorflow {

@@ -1,0 +1,70 @@
+#SPECIFIC MAKEFILE TO RUN UNDER CMSSW ONLY
+
+CC=g++ -fPIC #Compiler used #fPIC useful to get debug messages
+DEBUG = -g
+CFLAGS = -c #Compilation options
+ROOTFLAGS = `root-config --glibs --cflags`
+
+LFLAGS = $(DEBUG) -lTMVA -lPyMVA -lrt
+LFLAGS+= -L/cvmfs/cms.cern.ch/slc6_amd64_gcc700/external/tensorflow/1.6.0-gnimlf2/lib/ -ltensorflow_framework
+LFLAGS+= -L/cvmfs/cms.cern.ch/slc6_amd64_gcc700/external/protobuf/3.5.2/lib/ -lprotobuf
+LFLAGS+= -L/nfs/dust/cms/user/ntonon/CMSSW_10_2_20/lib/slc6_amd64_gcc700 -lPhysicsToolsTensorFlow -lFWCoreUtilities #CMSSW
+
+INCFLAGS = -I/nfs/dust/cms/user/ntonon/CMSSW_10_2_20/src
+INCFLAGS+= -I/cvmfs/cms.cern.ch/slc6_amd64_gcc700/external/tensorflow/1.6.0-gnimlf2/include
+INCFLAGS+= -I/cvmfs/cms.cern.ch/slc6_amd64_gcc700/external/eigen/64060da8461a627eb25b5a7bc0616776068db58b/include/eigen3
+INCFLAGS+= -I/cvmfs/cms.cern.ch/slc6_amd64_gcc700/external/protobuf/3.5.2/include
+
+SRCS = $(wildcard *.cxx) #Source files are all files with .cxx extension
+HDRS = $(wildcard *.h) #Header files are all files with .h extension
+OBJS = $(SRCS:.cxx=.o) #Object files are all files with .o extension, which have same names as source files
+
+MY_ANALYSIS = analysis_main.exe #Name of executable file
+ROCS = ROCS/Compare_ROC_curves.exe
+PRODUCE_CUTFLOW = Produce_Cutflow.exe
+
+# .PHONY : $(wildcard *.o)  #Force to always recompile object
+
+#Instructions
+all: $(MY_ANALYSIS) $(ROCS) $(PRODUCE_CUTFLOW)
+
+#Obtain executables from object files
+$(MY_ANALYSIS): Utils/TFModel.o Utils/Helper.o analysis_main.o TopEFT_analysis.o
+	@echo "###################################"
+	@echo "-- Creating executable ./$(MY_ANALYSIS) --"
+	@$(CC) Utils/TFModel.o Utils/Helper.o analysis_main.o TopEFT_analysis.o -o $@ $(ROOTFLAGS) $(LFLAGS) $(INCFLAGS)
+	@echo "-- Done --"
+	@echo "###################################""#"
+	@echo ""
+
+$(ROCS): ROCS/Compare_ROC_curves.o Utils/Helper.o
+	@echo "###################################"
+	@echo "-- Creating executable $(ROCS) --"
+	@$(CC) ROCS/Compare_ROC_curves.o Utils/Helper.o -o $@ $(ROOTFLAGS) $(LFLAGS)
+	@echo "-- Done --"
+	@echo "###################################"
+	@echo ""
+
+$(PRODUCE_CUTFLOW):	Utils/Produce_Cutflow.o Utils/Helper.o
+	@echo "###################################""#"
+	@echo "-- Creating executable ./$(PRODUCE_CUTFLOW) --"
+	@$(CC) Utils/Produce_Cutflow.o Utils/Helper.o -o $@ $(ROOTFLAGS) $(LFLAGS) $(INCFLAGS)
+	@echo "-- Done --"
+	@echo "###################################""#"
+	@echo ""
+
+#Obtain objects from source and header files
+#WARNING : only works for .cxx files ! e.g. for .cpp, would need a specific rule
+%.o: %.cxx $(HDRS)
+	@echo "-- Compiling : "$@"--"
+# @echo "-- INCFLAGS : "$(INCFLAGS)" --"
+# @echo "-- LFLAGS : "$(LFLAGS)" --"
+# @echo "-- ROOTFLAGS : "$(ROOTFLAGS)" --"
+# @echo "-- CFLAGS : "$(CFLAGS)" --"
+	@$(CC) $(ROOTFLAGS) $(CFLAGS) $(LFLAGS) $(INCFLAGS) $< -o $@
+	@echo ""
+# @Example :  g++ `root-config --glibs --cflags` -fPIC -c -g Utils/Helper.cxx -o Utils/Helper.o
+
+#Erase all objects and executable
+clean:
+	@-rm -f *.o *.exe Utils/*.o ROCS/*.o ROCS/*.exe

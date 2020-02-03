@@ -841,13 +841,14 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
     }
     else if (!makeHisto_inputVars && classifier_name == "DNN") //DNN
     {
-        //Load DNN model
-        // TString DNNmodel_path = "./weights/DNN/model.pb";
-        TString DNNmodel_path = "/home/ntonon/Downloads/model.pb";
+        //--- Load DNN model
+        TString DNNmodel_path = "./weights/DNN/model.pb";
+        // TString DNNmodel_path = "./model.pb";
         if(!Check_File_Existence(DNNmodel_path) ) {cout<<BOLD(FRED("Model "<<DNNmodel_path<<" not found ! Abort"))<<endl; return;}
-        // clfy1 = new TFModel(DNNmodel_path.Data(), 2, "myInputs_input", 2, "myOutput/Identity"); //Specify names of I/O layers, and nof I/O nodes
+
+        clfy1 = new TFModel(DNNmodel_path.Data(), 2, "dense_input", 2, "dense_3/Softmax"); //Specify names of I/O layers, and nof I/O nodes //These names can be read from the 'model.pbtxt' file produced at DNN training : look for name of first and last nodes *WHICH IS NOT A TRAINING NODE*
         // clfy1 = new TFModel(DNNmodel_path.Data(), 18, "input", 4, "output/Softmax"); //Specify names of I/O layers, and nof I/O nodes
-        cout<<__LINE__<<endl;
+        // clfy1 = new TFModel("/nfs/dust/cms/user/dwalter/deeppotato/Trainings/tzq3l-V05_3_balanced/v1l2n97d06b2577r006226394747999625/model.pb", 18, "input", 4, "output/Softmax");
 
 //--------------------------------------------
         std::cout<<"Load tensorflow graph from "<<DNNmodel_path<<std::endl<< std::endl;
@@ -859,6 +860,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
         //Read the list of input variables directly from .txt file generated at DNN training
         var_list.resize(0);
+        var_list_floats.resize(0);
         TString file_var_path = "./weights/DNN/ListVariables.txt";
         if(!Check_File_Existence(file_var_path) ) {cout<<BOLD(FRED("Error ! List of DNN variables not found ("<<file_var_path<<")"))<<endl; return;}
         else{cout<<"Reading list of DNN input variables from : "<<file_var_path<<endl; }
@@ -871,6 +873,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
             if(ts_line != "") //Last line is empty
             {
                 var_list.push_back(ts_line);
+                var_list_floats.push_back(0.);
                 cout<<"-->  "<<ts_line<<endl;
             }
         }
@@ -1211,7 +1214,8 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
                             //Convert my vector storing input values into array
                             float clfy1_inputs[var_list_floats.size()];
                             std::copy(var_list_floats.begin(), var_list_floats.end(), clfy1_inputs);
-                            for(int i=0; i<var_list_floats.size(); i++) {cout<<clfy1_inputs[i]<<std::endl;}
+
+                            for(int i=0; i<var_list_floats.size(); i++) {cout<<clfy1_inputs[i]<<std::endl;} //FIXME
 
                             //Evaluate output nodes values
                             std::vector<float> clfy1_outputs = clfy1->evaluate(clfy1_inputs);

@@ -1,5 +1,6 @@
 #include "TFModel.h"
-// #include "PhysicsTools/TensorFlow/interface/TensorFlow.h"
+
+// #include "PhysicsTools/TensorFlow/interface/TensorFlow.h" //CMSSW
 
 
 TFModel::TFModel(const std::string &model_name, const unsigned _n_inputs,
