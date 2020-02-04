@@ -28,12 +28,12 @@ from Utils.ColoredPrintout import colors
 # //--------------------------------------------
 # //--------------------------------------------
 
-def Create_TrainTest_ROC_Histos(predictions_train_sig, predictions_train_bkg, predictions_test_sig, predictions_test_bkg, weightLEARN_sig, weightLEARN_bkg, weight_test_sig, weight_test_bkg, _metrics, bkg_type):
+def Create_TrainTest_ROC_Histos(predictions_train_sig, predictions_train_bkg, predictions_test_sig, predictions_test_bkg, weightLEARN_sig, weightLEARN_bkg, weight_test_sig, weight_test_bkg, _metrics):
 
     print(colors.fg.lightblue, "--- Create & store ROC histos...", colors.reset); print('\n')
 
     # Fill a ROOT histogram from a NumPy array
-    rootfile_outname = "../outputs/PredictKeras_DNN"+bkg_type+".root"
+    rootfile_outname = "../outputs/PredictKeras_DNN.root"
     fout = ROOT.TFile(rootfile_outname, "RECREATE")
 
     # print("last : ")
@@ -116,24 +116,30 @@ def Create_TrainTest_ROC_Histos(predictions_train_sig, predictions_train_bkg, pr
 # //--------------------------------------------
 # //--------------------------------------------
 
-def Create_Control_Plots(predictions_train_sig, predictions_train_bkg, predictions_test_sig, predictions_test_bkg, weightLEARN_sig, weightLEARN_bkg, weight_test_sig, weight_test_bkg, y_test, x_test, x_train, y_train, model, history, _metrics, _nof_outputs, weight_dir, bkg_type):
+def Create_Control_Plots(predictions_train_sig, predictions_train_bkg, predictions_test_sig, predictions_test_bkg, weightLEARN_sig, weightLEARN_bkg, weight_test_sig, weight_test_bkg, y_test, x_test, x_train, y_train, model, history, _metrics, _nof_outputs, weight_dir):
 
     print('\n'); print(colors.fg.lightblue, "--- Create control plots...", colors.reset); print('\n')
 
     #Get ROC curve using test data -- different for _nof_outputs>1, should fix it
     #Uses predict() function, which generates (output) given (input + model)
     if _nof_outputs == 1:
-        fpr, tpr, _ = roc_curve(y_test, model.predict(x_test))
+        lw = 2 #linewidth
+        fpr, tpr, _ = roc_curve(y_test, model.predict(x_test)) #Need '_' to read all the return values
         roc_auc = auc(fpr, tpr)
-        plt.plot(fpr, tpr,color='darkorange',label='ROC curve (area = %0.2f)' % roc_auc)
+        fpr_train, tpr_train, _ = roc_curve(y_train, model.predict(x_train)) #Need '_' to read all the return values
+        roc_auc_train = auc(fpr_train, tpr_train)
+
+        plt.plot(tpr, 1-fpr, color='darkorange', lw=lw, label='ROC DNN (test) (AUC = {0:0.2f})' ''.format(roc_auc))
+        plt.plot(tpr_train, 1-fpr_train, color='cornflowerblue', lw=lw, label='ROC DNN (train) (AUC = {0:0.2f})' ''.format(roc_auc_train))
+
         # plt.plot(tpr, 1-fpr,color='darkorange',label='ROC curve (area = %0.2f)' % roc_auc)
-        plt.legend(loc="lower right")
-        plt.xlabel('True Positive Rate')
-        plt.ylabel('False Positive Rate')
-        plt.show()
+        # plt.legend(loc="lower right")
+        # plt.xlabel('True Positive Rate')
+        # plt.ylabel('False Positive Rate')
+        # plt.show()
+
     else: #different for multiclass
-        # Plot linewidth.
-        lw = 2
+        lw = 2 #linewidth
         n_classes = 2
 
         # Compute ROC curve and ROC area for each class
@@ -151,73 +157,32 @@ def Create_Control_Plots(predictions_train_sig, predictions_train_bkg, predictio
             fpr_train[i], tpr_train[i], _ = roc_curve(y_train[:, i], model.predict(x_train)[:, i])
             roc_auc_train[i] = auc(fpr_train[i], tpr_train[i])
 
+            plt.plot(tpr[0], 1-fpr[0], color='darkorange', lw=lw, label='ROC DNN (test) (AUC = {1:0.2f})' ''.format(i, roc_auc[i]))
+            plt.plot(tpr_train[0], 1-fpr_train[0], color='cornflowerblue', lw=lw, label='ROC DNN (train) (AUC = {1:0.2f})' ''.format(i, roc_auc_train[i]))
 
-        # Compute micro-average ROC curve and ROC area
-        # fpr["micro"], tpr["micro"], _ = roc_curve(y_test.ravel(), model.predict(x_test).ravel())
-        # roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
+    # Plot ROC curves
+    fig1 = plt.figure(1)
+    ax = fig1.gca()
+    ax.set_xticks(np.arange(0, 1, 0.1))
+    ax.set_yticks(np.arange(0, 1., 0.1))
+    plt.grid()
 
-        # Compute macro-average ROC curve and ROC area
+    plt.plot([1, 0], [0, 1], 'k--', lw=lw)
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.0])
+    plt.xlabel('Signal efficiency')
+    plt.ylabel('Background rejection')
+    plt.title('')
+    plt.legend(loc="lower left")
 
-        # First aggregate all false positive rates
-        # all_fpr = np.unique(np.concatenate([fpr[i] for i in range(n_classes)]))
-
-        # Then interpolate all ROC curves at this points
-        # mean_tpr = np.zeros_like(all_fpr)
-        # for i in range(n_classes):
-        #     mean_tpr += interp(all_fpr, fpr[i], tpr[i])
-
-        # Finally average it and compute AUC
-        # mean_tpr /= n_classes
-
-        # fpr["macro"] = all_fpr
-        # tpr["macro"] = mean_tpr
-        # roc_auc["macro"] = auc(fpr["macro"], tpr["macro"])
-
-        # Plot all ROC curves
-        fig1 = plt.figure(1)
-        timer = fig1.canvas.new_timer(interval = 3000) #creating a timer object and setting an interval of N milliseconds
-        timer.add_callback(close_event)
-
-        ax = fig1.gca()
-        ax.set_xticks(np.arange(0, 1, 0.1))
-        ax.set_yticks(np.arange(0, 1., 0.1))
-        plt.grid()
-
-        # plt.plot(fpr["micro"], tpr["micro"],
-        #  label='micro-average ROC curve (area = {0:0.2f})'
-        #        ''.format(roc_auc["micro"]),
-        #  color='deeppink', linestyle=':', linewidth=4)
-
-        # plt.plot(fpr["macro"], tpr["macro"],
-        #  label='macro-average ROC curve (area = {0:0.2f})'
-        #        ''.format(roc_auc["macro"]),
-        #  color='navy', linestyle=':', linewidth=4)
-
-        #--- To plot several classes, micro/macro, etc -- commented out !
-        # colors = cycle(['darkorange', 'aqua', 'cornflowerblue'])
-        # for i, color in zip(range(1), colors): #replaced 'n_classes' by 1 => only plot signal ROC
-            # plt.plot(fpr[i], tpr[i], color=color, lw=lw,
-            #      label='ROC curve of class {0} (area = {1:0.2f})'
-            #      ''.format(i, roc_auc[i]))
-            # plt.plot(tpr[0], 1-fpr[0], color='darkorange', lw=lw,
-            #      label='ROC DNN (test) (AUC = {1:0.2f})'
-            #      ''.format(i, roc_auc[i]))
-
-        plt.plot(tpr[0], 1-fpr[0], color='darkorange', lw=lw, label='ROC DNN (test) (AUC = {1:0.2f})' ''.format(i, roc_auc[i]))
-        plt.plot(tpr_train[0], 1-fpr_train[0], color='cornflowerblue', lw=lw, label='ROC DNN (train) (AUC = {1:0.2f})' ''.format(i, roc_auc_train[i]))
-
-        plt.plot([1, 0], [0, 1], 'k--', lw=lw)
-        plt.xlim([0.0, 1.0])
-        plt.ylim([0.0, 1.0])
-        plt.xlabel('Signal efficiency')
-        plt.ylabel('Background rejection')
-        plt.title('')
-        plt.legend(loc="lower left")
-        timer.start()
-        plt.show()
-        plotname = weight_dir + 'ROC_DNN'+bkg_type+'.png'
-        fig1.savefig(plotname)
-        print("Saved ROC plot as : " + plotname)
+    #Display plot in terminal for quick check
+    timer = fig1.canvas.new_timer(interval = 3000) #creating a timer object and setting an interval of N milliseconds
+    timer.add_callback(close_event)
+    timer.start()
+    plt.show()
+    plotname = weight_dir + 'ROC_DNN.png'
+    fig1.savefig(plotname)
+    print("Saved ROC plot as : " + plotname)
 
     # Plotting the loss with the number of iterations
     fig2 = plt.figure(2)
@@ -231,7 +196,7 @@ def Create_Control_Plots(predictions_train_sig, predictions_train_bkg, predictio
     plt.legend(['Train', 'Test'], loc='upper right')
     timer.start()
     plt.show()
-    plotname = weight_dir + 'Loss_DNN'+bkg_type+'.png'
+    plotname = weight_dir + 'Loss_DNN.png'
     fig2.savefig(plotname)
     print("Saved Loss plot as : " + plotname)
 
@@ -249,7 +214,7 @@ def Create_Control_Plots(predictions_train_sig, predictions_train_bkg, predictio
     plt.legend(['Train', 'Test'], loc='lower right')
     timer.start()
     plt.show()
-    plotname = weight_dir + 'Accuracy_DNN'+bkg_type+'.png'
+    plotname = weight_dir + 'Accuracy_DNN.png'
     fig3.savefig(plotname)
     print("Saved Accuracy plot as : " + plotname)
 
@@ -347,6 +312,6 @@ def Create_Control_Plots(predictions_train_sig, predictions_train_bkg, predictio
     timer.start()
     plt.show()
 
-    plotname = weight_dir + 'Overtraining_DNN'+bkg_type+'.png'
+    plotname = weight_dir + 'Overtraining_DNN.png'
     fig4.savefig(plotname)
     print("Saved Overtraining plot as : " + plotname)

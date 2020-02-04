@@ -170,6 +170,12 @@ launch --rwgt_name=ctw_10p0
 set ctW 10.000000
 set ctZ 0.000000
 
-launch --rwgt_name=ctw_10p0
-set ctW 10.000000
-set ctZ 0.000000
+
+
+launch --rwgt_name=ctw_1p0_ctz_1p0
+set ctW 1.000000
+set ctZ 1.000000
+
+launch --rwgt_name=ctw_2p0_ctz_2p0
+set ctW 2.000000
+set ctZ 2.000000

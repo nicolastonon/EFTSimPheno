@@ -31,6 +31,7 @@ set max_npoint_for_channel 0
 
 set stdout_level DEBUG
 
+# specify the decay for the final state particles
 define p = g u c d s u~ c~ d~ s~
 define j = g u c d s u~ c~ d~ s~
 define l+ = e+ mu+
