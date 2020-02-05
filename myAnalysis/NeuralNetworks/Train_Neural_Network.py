@@ -52,9 +52,9 @@ cuts = "passedBJets==1" #Event selection, both for train/test ; "1" <-> no cut
 # //--------------------------------------------
 _nepochs = 10 #Number of training epochs (<-> nof times the full training dataset is shown to the NN)
 _batchSize = 512 #Batch size (<-> nof events fed to the network before its parameter get updated)
-_nof_outputs = 1 #1 (binary) or N (multiclass)
+_nof_outputs = 3 #1 (binary) or N (multiclass)
 
-_maxEvents_perProcess = 10000 #max nof events to be used for each process ; -1 <-> all events
+_maxEvents_perProcess = 1000 #max nof events to be used for each process ; -1 <-> all events
 _nEventsTot_train = -1; _nEventsTot_test = -1  #nof events to be used for training & testing ; -1 <-> use _maxEvents_perProcess & _splitTrainEventFrac params instead
 _splitTrainEventFrac = 0.8 #Fraction of events to be used for training (1 <-> use all requested events for training)
 # //--------------------------------------------
