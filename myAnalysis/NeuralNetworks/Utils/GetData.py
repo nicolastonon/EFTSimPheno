@@ -55,27 +55,48 @@ np.set_printoptions(threshold=np.inf) #If activated, will print full numpy array
 # //--------------------------------------------
 
 #Define the model and train it, using Keras only
-def Get_Data_For_DNN_Training(lumi_years, ntuples_dir, signal, bkg_list, var_list, cuts, nof_outputs, maxEvents, splitTrainEventFrac):
+def Get_Data_For_DNN_Training(lumi_years, ntuples_dir, signal, bkg_list, var_list, cuts, nof_outputs, maxEvents, splitTrainEventFrac, nEventsTot_train, nEventsTot_test):
 
     #Get data from TFiles
     x_sig, sig_weight, list_x_bkgs, list_weights_bkgs = Read_Store_Data(lumi_years, ntuples_dir, signal, bkg_list, var_list, cuts)
 
     #Shape the data arrays properly #Also read arguments which are modified by the function
-    x, y, rows_sig, cols_sig, sig_weight, list_nrows_bkg, list_ncols_bkg, list_weights_bkgs = Shape_Data(x_sig, sig_weight, list_x_bkgs, list_weights_bkgs, maxEvents, nof_outputs)
+    x, y, sig_weight, list_weights_bkgs = Shape_Data(x_sig, sig_weight, list_x_bkgs, list_weights_bkgs, maxEvents, nof_outputs)
 
     #Transform the input features
     x = Transform_Inputs(x)
 
-    #Get event-per-event reweights
-    yield_sig, list_yields_bkg, yield_total, sf_sig, weightPHY, weightLEARN = Get_Events_Weights(signal, bkg_list, rows_sig, sig_weight, list_nrows_bkg, list_weights_bkgs)
+    #Compute event weights considering only abs(weights) => duplicate weight arrays to hold absolute values
+    sig_weight_abs = np.absolute(sig_weight)
+    list_weights_bkgs_abs = []
+    for weights_bkg in list_weights_bkgs:
+        list_weights_bkgs_abs.append(np.absolute(weights_bkg))
 
-    # Define training & testing subsamples (takes care of splitting + shuffling)
-    # http://scikit-learn.org/stable/modules/generated/sklearn.model_selection.train_test_split.html
-    x_train, x_test, y_train, y_test, weightPHY_train, weightPHY_test, weightLEARN_train, weightLEARN_test = train_test_split(x, y, weightPHY, weightLEARN, test_size=1-splitTrainEventFrac, random_state=0) #80% train, 20% test
+    #Get event-per-event reweights (for training phase)
+    yield_sig, list_yields_bkg, yield_total, sf_sig, weightLEARN = Get_Events_Weights(signal, bkg_list, sig_weight_abs, list_weights_bkgs_abs)
 
-    # x_train, x_test, y_train, y_test = train_test_split(x, y, train_size=50000, random_state=0) #50K train
-    # print(x_train[0:5], "\n")
-    # print(y_train[0:5], "\n")
+    #Also get set of 'physical' weights holding the TRUE event weights
+    weightPHY = np.concatenate((sig_weight, np.concatenate(list_weights_bkgs, 0)), 0)
+
+    # print('SUM OF SIGNAL PHY WEIGHTS = ', weightPHY[y==1].sum())
+    # print('SUM OF BACKGROUNDS PHY WEIGHTS = ', weightPHY[y==0].sum()); print('\n')
+    # print('SUM OF SIGNAL LEARN WEIGHTS = ', weightLEARN[y==1].sum())
+    # print('SUM OF BACKGROUNDS LEARN WEIGHTS = ', weightLEARN[y==0].sum()); print('\n')
+
+    # print('x:\n', x[0:10], "\n"); print('y:\n', y[0:20], "\n"); exit(1)
+
+    #-- Define training & testing subsamples (takes care of splitting + shuffling)
+    #-- http://scikit-learn.org/stable/modules/generated/sklearn.model_selection.train_test_split.html
+    #-- Default args : shuffle=True <-> shuffle events ; random_state=None <-> random seed ; could also use stratify=y so that the final splitting respects the class proportions of the array y, if desired (else : random)
+
+    if (nEventsTot_train is not -1) and (nEventsTot_test is not -1): #Specify nof train/test events
+        x_train, x_test, y_train, y_test, weightPHY_train, weightPHY_test, weightLEARN_train, weightLEARN_test = train_test_split(x, y, weightPHY, weightLEARN, train_size=nEventsTot_train, test_size=nEventsTot_test, shuffle=True)
+
+    else: #Specify train/test relative proportions
+        x_train, x_test, y_train, y_test, weightPHY_train, weightPHY_test, weightLEARN_train, weightLEARN_test = train_test_split(x, y, weightPHY, weightLEARN, test_size=1-splitTrainEventFrac, shuffle=True) #X% train, Y% test
+
+    # print('x_train:\n', x_train[0:10], "\n"); print('y_train:\n', y_train[0:10], "\n"); print('x_test:\n', x_test[0:10], "\n"); print('y_test:\n', y_test[0:10], "\n")
+    # print('weightPHY_train:\n', weightPHY_train[0:10], "\n"); print('weightLEARN_train:\n', weightLEARN_train[0:10], "\n"); print('weightPHY_test:\n', weightPHY_test[0:10], "\n"); print('weightLEARN_test:\n', weightLEARN_test[0:10], "\n")
 
     print(colors.fg.lightblue, "===========", colors.reset)
     print(colors.fg.lightblue, "-- Will use " + str(x_train.shape[0]) + " training events !", colors.reset)
@@ -150,13 +171,13 @@ def Read_Store_Data(lumi_years, ntuples_dir, signal, bkg_list, var_list, cuts):
             print('File '+filepath+' not found ! Abort !')
             exit(1)
 
-        print(colors.fg.lightgrey, '* Opening file:', colors.reset, ' ', filepath)
         file_sig = TFile.Open(filepath)
         tree_sig = file_sig.Get('result')
         list_files_sig_allYears.append(file_sig)
         list_trees_sig_allYears.append(tree_sig)
         list_x_sig_allYears.append(tree2array(tree_sig, branches=var_list, selection=cuts))
-        list_weights_sig_allYears.append( np.absolute(tree2array(tree_sig, branches="eventWeight", selection=cuts)) ) #-- using absolute weights
+        list_weights_sig_allYears.append(tree2array(tree_sig, branches="eventWeight", selection=cuts))
+        print(colors.fg.lightgrey, '* Opened file:', colors.reset, ' ', filepath, '(', tree2array(tree_sig, branches="eventWeight", selection=cuts).shape[0], 'entries )')
 
 # //--------------------------------------------
 #BACKGROUNDS
@@ -183,13 +204,14 @@ def Read_Store_Data(lumi_years, ntuples_dir, signal, bkg_list, var_list, cuts):
                 print('File '+filepath+' not found ! Abort !')
                 exit(1)
 
-            print(colors.fg.lightgrey, '* Opening file:', colors.reset, ' ', filepath)
+            # print(colors.fg.lightgrey, '* Opening file:', colors.reset, ' ', filepath)
             file_year = TFile.Open(filepath)
             tree_year = file_year.Get('result')
             list_files_allYears_bkg.append(file_year)
             list_trees_allYears_bkg.append(tree_year)
             list_x_allYears_bkg.append(tree2array(tree_year, branches=var_list, selection=cuts))
-            list_weights_allYears_bkg.append( np.absolute(tree2array(tree_year, branches="eventWeight", selection=cuts)) ) #-- using absolute weights
+            list_weights_allYears_bkg.append(tree2array(tree_year, branches="eventWeight", selection=cuts))
+            print(colors.fg.lightgrey, '* Opened file:', colors.reset, ' ', filepath, '(', tree2array(tree_year, branches="eventWeight", selection=cuts).shape[0], 'entries )')
 
         list_files_allYears_allBkgs.append(list_files_allYears_bkg)
         list_trees_allYears_allBkgs.append(list_trees_allYears_bkg)
@@ -293,6 +315,7 @@ def Shape_Data(x_sig, sig_weight, list_x_bkgs, list_weights_bkgs, maxEvents, nof
         if rows_sig > nmax:
             rows_sig = nmax
             x_sig_array = x_sig_array[0:nmax]
+            x_sig = x_sig[0:nmax]
             sig_weight = sig_weight[0:nmax]
             # print(sig_weight.shape)
 
@@ -301,6 +324,7 @@ def Shape_Data(x_sig, sig_weight, list_x_bkgs, list_weights_bkgs, maxEvents, nof
             if list_nrows_bkg[i] > nmax:
                 list_nrows_bkg[i] = nmax
                 list_x_arrays_bkgs[i] = list_x_arrays_bkgs[i][0:nmax]
+                list_x_bkgs[i] = list_x_bkgs[i][0:nmax]
                 list_weights_bkgs[i] = list_weights_bkgs[i][0:nmax]
                 # print(list_weights_bkgs[i].shape)
 
@@ -310,25 +334,31 @@ def Shape_Data(x_sig, sig_weight, list_x_bkgs, list_weights_bkgs, maxEvents, nof
     x = np.concatenate((x_sig_array, x_array_bkg_total), 0)
     # print(x.shape)
 
-    #Create array of labels, 1 column, 1 line per event
+    #Create array of labels (1 row per event, 1 column per class)
     #'1' = signal, '0' = bdf.
-    #NB : for multiclass classification, should add more labels !
-    y_integer = np.ones((x.shape[0]), dtype = int)
-    y_integer[0:x_sig_array.shape[0]] = 0 #Signal events <-> 0
-    y_integer[x_sig.shape[0]:x.shape[0]] = 1 #Bkg events <-> 1
+    if nof_outputs == 1: #binary, single column => sig 1, bkg 0
+        y_integer = np.ones((x.shape[0]), dtype = int)
+        y_integer[0:x_sig_array.shape[0]] = 1 #Events 0 to nSigEvents => Label 1 [SIG]
+        y_integer[x_sig_array.shape[0]:x.shape[0]] = 0 #Events nSigEvents to nTotalEvents => Label 0 [BKG]
+        y = y_integer
+    elif nof_outputs == 2: #multiclass, n columns => sig 1, bkg 0
+        y_integer = np.ones((x.shape[0]), dtype = int)
+        y_integer[0:x_sig_array.shape[0]] = 0 #NB : sig <-> class 0, so that the *first* column value will be equal to 1 for signal
+        y_integer[x_sig_array.shape[0]:x.shape[0]] = 1
+        y = utils.to_categorical(y_integer, num_classes=2) #Converts a class vector (integers) to binary class matrix #One-hot encode the integers => Use 2 classes (sig, bkg)
+    else:
+        print("Wrong value of nof_outputs -- not supported yet")
+
     # print(y_integer.shape)
     # print(y_integer)
     # exit(1)
 
-    if nof_outputs == 2:
-        # y = np_utils.to_categorical(y_integer, 2) #One-hot encode the integers => Use 2 classes (sig, bkg) #Convert class vector to binary class matrix, for use with categorical_crossentropy.
-        y = utils.to_categorical(y_integer, 2) #One-hot encode the integers => Use 2 classes (sig, bkg) #Convert class vector to binary class matrix, for use with categorical_crossentropy.
-    elif nof_outputs == 1:
-        y = y_integer #Use simple column instead (*not* one-hot encoded)
-    else:
-        print("Wrong value of nof_outputs")
+    # if nof_outputs == 2:
+    #     y = utils.to_categorical(y_integer, num_classes=2) #Converts a class vector (integers) to binary class matrix #One-hot encode the integers => Use 2 classes (sig, bkg)
+    # elif nof_outputs == 1:
+    #     y = y_integer #Use simple column instead (*not* one-hot encoded)
 
-    return x, y, rows_sig, cols_sig, sig_weight, list_nrows_bkg, list_ncols_bkg, list_weights_bkgs
+    return x, y, sig_weight, list_weights_bkgs
 
 
 
@@ -354,71 +384,72 @@ def Shape_Data(x_sig, sig_weight, list_x_bkgs, list_weights_bkgs, maxEvents, nof
 # //--------------------------------------------
 # //--------------------------------------------
 
-def Get_Events_Weights(signal, bkg_list, rows_sig, sig_weight, list_nrows_bkg, list_weights_bkgs):
+#-- Define several arrays of weights with different purposes
+#NB : collections taken in args contain absolute weights !
+#weightPHY => physical event weights
+#weightPHYabs => abs(physical event weights)
+#weightLEARN => arbitrary event weights use for training phase only
+def Get_Events_Weights(signal, bkg_list, sig_weight, list_weights_bkgs):
 
     #Compute yields
-    yield_sig = rows_sig * sig_weight[0]
+    # yield_sig = rows_sig * sig_weight[0] #NB : previously did : yield = nEv * weight[0] ; but actually, each event has a different weight (SFs, ...) => should sum full weight array
+    yield_sig = sig_weight.sum()
     yield_total = yield_sig
-    # print(yield_sig.shape)
 
     list_yields_bkg = []
+    yield_bkg = 0
     for i in range(len(bkg_list)):
-        list_yields_bkg.append(list_nrows_bkg[i] * list_weights_bkgs[i][0])
-        yield_total+= list_yields_bkg[i]
+        # list_yields_bkg.append(list_nrows_bkg[i] * list_weights_bkgs[i][0])
+        # yield_bkg+= list_nrows_bkg[i] * list_weights_bkgs[i][0]
+        # yield_total+= list_nrows_bkg[i] * list_weights_bkgs[i][0]
+        list_yields_bkg.append(list_weights_bkgs[i].sum())
+        yield_bkg+= list_weights_bkgs[i].sum()
+        yield_total+= list_weights_bkgs[i].sum()
     # print(sig_weight[0], bkg1_weight[0], bkg2_weight[0])
     # print(yield_sig, yield_bkg1, yield_bkg2)
 
     #Compute scale factors (so all samples have same yield)
     sf_sig = yield_total / yield_sig
+    sf_bkg = yield_total / yield_bkg
     list_SFs_bkg = []
     for i in range(len(bkg_list)):
         list_SFs_bkg.append(yield_total / list_yields_bkg[i])
 
     #Compute scale factor so that final signal weights are equal to 1 (arbitrary), other samples scaled accordingly
-    norm_factor = 1./(sig_weight[0]*sf_sig)
-    # norm_factor = 1. #Don't use arbitrary rescaling, as it can make later plots wrong (because we need the real weights for plotting, etc.)
+    # norm_factor = 1./(sig_weight[0]*sf_sig)
+    norm_factor = 1. #Don't use arbitrary rescaling, as it can make later plots wrong (because we need the real weights for plotting, etc.)
     # print(norm_factor)
 
     sf_sig = sf_sig * norm_factor
-    print('Process', signal, ' / process SF = ', sf_sig, ' / original yield = ', yield_sig, ' ===> ', sf_sig*yield_sig)
+    sf_bkg = sf_bkg * norm_factor
+    np.set_printoptions(precision=1)
+    print('Signal', signal, ' / Process SF = ', sf_sig, ' / Original yield = ', yield_sig, ' ===>', sf_sig*yield_sig)
+    print('Backgrounds', ' / Process SF = ', sf_bkg, ' / Original yield = ', yield_bkg, ' ===>', sf_bkg*yield_bkg); print('\n')
+
     for i in range(len(bkg_list)):
         list_SFs_bkg[i] = (list_SFs_bkg[i] * norm_factor) / len(bkg_list)
-        print('Process', bkg_list[i], ' / process SF = ', list_SFs_bkg[i], ' / original yield = ', list_yields_bkg[i], ' ===> ', list_SFs_bkg[i]*list_yields_bkg[i])
-
-    print('\n')
+        # print('Process', bkg_list[i], ' / process SF = ', list_SFs_bkg[i], ' / original yield = ', list_yields_bkg[i], ' ===> ', list_SFs_bkg[i]*list_yields_bkg[i])
 
     list_weightsLEARN_bkg = []
     for i in range(len(bkg_list)):
-        list_weightsLEARN_bkg.append(list_weights_bkgs[i]*list_SFs_bkg[i])
-
-    # print(sf_sig, sf_bkg1, sf_bkg2)
-
-    #Create set of "physical weights" (real event weights), and "learning" weights (to ensure equal learning)
-    bkg_total_weightPHY = np.concatenate(list_weights_bkgs, 0)
-    weightPHY = np.concatenate((sig_weight, bkg_total_weightPHY), 0)
-    # weightPHY = weightPHY[:, 0] #necessary trick to get 1D vector instead of 2D array (different 'view' of same data)  #not needed anymore ?
-
+        # list_weightsLEARN_bkg.append(list_weights_bkgs[i]*list_SFs_bkg[i]) #1 SF per bkg process, each rescaled equally
+        list_weightsLEARN_bkg.append(list_weights_bkgs[i]*sf_bkg) #1SF for all bkgs, rescaled as sig=total bkg
     bkg_total_weightLEARN = np.concatenate(list_weightsLEARN_bkg, 0)
-    # bkg_total_weightLEARN = np.concatenate((bkg1_weight*sf_bkg1, bkg2_weight*sf_bkg2), 0)
-    weightLEARN = np.concatenate((sig_weight*sf_sig, bkg_total_weightLEARN), 0)
+    weightLEARN = np.concatenate((sig_weight * sf_sig, bkg_total_weightLEARN), 0)
 
     #-- Class reweighting
     # https://scikit-learn.org/stable/modules/generated/sklearn.utils.class_weight.compute_class_weight.html
     # np.unique(y_org) --> array of classes included in dataset
     # Return class_weight_vect --> Array with class_weight_vect[i] the weight for i-th class
-
     # y_weight = y_train #NEED TO INCLUDE Y_TRAIN...
     # my_classweights = class_weight.compute_class_weight('balanced', np.unique(y_weight), y_weight) #Rescale according to nof entries
     # print("\n\n Using following class weights :")
     # print(my_classweights, "\n\n")
-
     #Included in sample_weights, as can not used both at once
     # if use_same_nof_events_sig_bkg == True:
     #     my_classweights = {0: 1., 1: 1.} #Same proportions, don't need class reweighting
 
-    return yield_sig, list_yields_bkg, yield_total, sf_sig, weightPHY, weightLEARN
-
-
+    return yield_sig, list_yields_bkg, yield_total, sf_sig, weightLEARN
 
 
 
@@ -444,23 +475,22 @@ def Get_Events_Weights(signal, bkg_list, rows_sig, sig_weight, list_nrows_bkg, l
 # //--------------------------------------------
 # //--------------------------------------------
 
+#-- INPUT VARIABLES transformations
 def Transform_Inputs(x):
 
-
-    #-- INPUT VARIABLES transformations
     np.set_printoptions(precision=4)
 
-    #--- RANGE SCALING
     # print('Before transformation :' x[0:5,:])
-    scaler = MinMaxScaler(feature_range=(-1, 1))
-    x = scaler.fit_transform(x)
-    # print('After transformation :' x[0:5,:])
 
-    #--- RESCALE TO UNIT GAUSSIAN -- BUGGY in c++ code... (NB : does not consider weights !)
-    # scaler = StandardScaler().fit(x)
-    # x = scaler.transform(x)
-    # print(x[0:5,:])
-    # exit(1)
+    #--- RANGE SCALING
+    # scaler = MinMaxScaler(feature_range=(-1, 1))
+    # x = scaler.fit_transform(x)
+
+    #--- RESCALE TO UNIT GAUSSIAN
+    scaler = StandardScaler().fit(x)
+    x = scaler.transform(x)
+
+    # print('After transformation :' x[0:5,:])
 
     # print(y.shape)
     # print(y)

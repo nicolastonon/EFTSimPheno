@@ -15,6 +15,7 @@ def step_decay(epoch):
     epochs_drop = 20
     lrate = initial_lrate * math.pow(drop, math.floor((1+epoch)/epochs_drop))
     print("== Epoch "+str(epoch+1)+" : learning rate = "+str(lrate) )
+
     return lrate
 
 

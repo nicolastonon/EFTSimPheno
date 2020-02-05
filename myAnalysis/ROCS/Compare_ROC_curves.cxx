@@ -837,7 +837,7 @@ int main(int argc, char **argv)
 //--------------------------------------------
 	TString signal = "tZq";
 	TString region = "SR";
-    TString lumiYear = "2016";
+    TString lumiYear = "Run2";
     // TString channel = "";
 
 	TString cuts = "1"; //1 <-> No cut
@@ -866,7 +866,7 @@ int main(int argc, char **argv)
     v_label.push_back("tZq "+lumiYear);
     v_isTMVA_file.push_back("TMVA"); v_isTrainSample.push_back(false);
 
-    v_filepath.push_back("../outputs/PredictKeras_DNN.root");
+    v_filepath.push_back("../outputs/DNN_"+signal+"_"+lumiYear+".root");
     v_objName.push_back("");
     v_label.push_back("DNN "+lumiYear);
     v_isTMVA_file.push_back("Keras"); v_isTrainSample.push_back(false);

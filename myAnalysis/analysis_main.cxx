@@ -48,8 +48,8 @@ int main(int argc, char **argv)
 
 	vector<TString> set_lumi_years;
     set_lumi_years.push_back("2016");
-    // set_lumi_years.push_back("2017");
-    // set_lumi_years.push_back("2018");
+    set_lumi_years.push_back("2017");
+    set_lumi_years.push_back("2018");
 
 //-----------------------------------------------------------------------------------------
 //   ######  ##     ## ########  ######

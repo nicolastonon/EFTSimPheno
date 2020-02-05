@@ -12,7 +12,8 @@
 - fit() is for training the model with the given inputs (and corresponding training labels).
 - evaluate() is for evaluating the already trained model using the validation (or test) data and the corresponding labels. Returns the loss value and metrics values for the model.
 - predict() is for the actual prediction. It generates output predictions for the input samples.
-- Using abs event weights
+- Using abs event weights; if using relative, may have problems when computing class weights
+- 50 epochs, batch=128, Full run2, tzq/ttz/tth/ttw => ~30min to train
 '''
 
 
@@ -41,17 +42,20 @@ _lumi_years.append("2016")
 # _lumi_years.append("2017")
 # _lumi_years.append("2018")
 
-_bkg_list = ["ttZ", "ttW", "ttH"]
+# _bkg_list = ["ttZ", "ttW", "ttH"]
+_bkg_list = ["ttZ", "ttW", "ttH", "WZ", "ZZ4l", "DY", "TTbar_DiLep"]
 
 cuts = "passedBJets==1" #Event selection, both for train/test ; "1" <-> no cut
 # //--------------------------------------------
 
 #--- Training options
 # //--------------------------------------------
-_nepochs = 20
-_batchSize = 128
-_nof_outputs = 1 #single output not supported (e.g. for validation steps) #FIXME
-_maxEvents_perProcess = 50000 #max nof events to be used for each process
+_nepochs = 10 #Number of training epochs (<-> nof times the full training dataset is shown to the NN)
+_batchSize = 512 #Batch size (<-> nof events fed to the network before its parameter get updated)
+_nof_outputs = 1 #1 (binary) or N (multiclass)
+
+_maxEvents_perProcess = 10000 #max nof events to be used for each process ; -1 <-> all events
+_nEventsTot_train = -1; _nEventsTot_test = -1  #nof events to be used for training & testing ; -1 <-> use _maxEvents_perProcess & _splitTrainEventFrac params instead
 _splitTrainEventFrac = 0.8 #Fraction of events to be used for training (1 <-> use all requested events for training)
 # //--------------------------------------------
 
@@ -94,17 +98,18 @@ import getopt # command line parser
 # //--------------------------------------------
 import tensorflow
 import keras
-from sklearn.metrics import roc_curve, auc, roc_auc_score
+import numpy as np
+from sklearn.metrics import roc_curve, auc, roc_auc_score, accuracy_score
 from tensorflow.keras.models import load_model
 
 from Utils.FreezeSession import freeze_session
 from Utils.Helper import batchOutput, Write_Variables_To_TextFile, TimeHistory, Get_LumiName
-from Utils.CreateModel import Create_Model
+from Utils.Model import Create_Model
 from Utils.Callbacks import Get_Callbacks
 from Utils.GetData import Get_Data_For_DNN_Training
-from Utils.GetOptimizer import Get_Loss_Optim_Metrics
+from Utils.Optimizer import Get_Loss_Optim_Metrics
 from Utils.ColoredPrintout import colors
-from Utils.Create_Output_Plots_Histos import Create_TrainTest_ROC_Histos, Create_Control_Plots
+from Utils.Output_Plots_Histos import Create_TrainTest_ROC_Histos, Create_Control_Plots
 # //--------------------------------------------
 # //--------------------------------------------
 
@@ -152,7 +157,7 @@ from Utils.Create_Output_Plots_Histos import Create_TrainTest_ROC_Histos, Create
 # //--------------------------------------------
 # //--------------------------------------------
 
-def Train_Test_Eval_PureKeras(_lumi_years, _signal, _bkg_list, var_list, cuts, _nepochs, _batchSize, _nof_outputs, _maxEvents_perProcess, _splitTrainEventFrac):
+def Train_Test_Eval_PureKeras(_lumi_years, _signal, _bkg_list, var_list, cuts, _nepochs, _batchSize, _nof_outputs, _maxEvents_perProcess, _splitTrainEventFrac, _nEventsTot_train, _nEventsTot_test):
 
     #Read luminosity choice
     lumiName = Get_LumiName(_lumi_years)
@@ -171,11 +176,11 @@ def Train_Test_Eval_PureKeras(_lumi_years, _signal, _bkg_list, var_list, cuts, _
 
     #Get data
     print(colors.fg.lightblue, "--- Read and shape the data...", colors.reset); print('\n')
-    x_train, y_train, x_test, y_test, weightPHY_train, weightPHY_test, weightLEARN_train, weightLEARN_test, x, y, weightPHY, weightLEARN = Get_Data_For_DNN_Training(_lumi_years, _ntuples_dir, _signal, _bkg_list, var_list, cuts, _nof_outputs, _maxEvents_perProcess, _splitTrainEventFrac)
+    x_train, y_train, x_test, y_test, weightPHY_train, weightPHY_test, weightLEARN_train, weightLEARN_test, x, y, weightPHY, weightLEARN = Get_Data_For_DNN_Training(_lumi_years, _ntuples_dir, _signal, _bkg_list, var_list, cuts, _nof_outputs, _maxEvents_perProcess, _splitTrainEventFrac, _nEventsTot_train, _nEventsTot_test)
 
     #Get model, compile
     print('\n'); print(colors.fg.lightblue, "--- Create the Keras model...", colors.reset); print('\n')
-    model = Create_Model(weight_dir, "DNN", _nof_outputs, var_list) #FIXME -- default args
+    model = Create_Model(weight_dir, "DNN", _nof_outputs, var_list) #FIXME -- add default args
 
     #-- Can access weights and biases of any layer (debug, ...) #Print before training
     # weights_layer, biases_layer = model.layers[0].get_weights()
@@ -195,6 +200,8 @@ def Train_Test_Eval_PureKeras(_lumi_years, _signal, _bkg_list, var_list, cuts, _
     #Fit model #Slow for full Run 2 ! Should find a way to feed the data in batches, to avoid loading all in memory ?
     print('\n'); print(colors.fg.lightblue, "--- Train (fit) DNN on training sample...", colors.reset, " (may take a while)"); print('\n')
     history = model.fit(x_train, y_train, validation_data=(x_test, y_test), epochs=_nepochs, batch_size=_batchSize, sample_weight=weightLEARN_train, callbacks=callbacks_list, shuffle=True, verbose=1)
+
+    history.history['lr'] # returns a list of learning rates over the epochs
 
     #Print weights after training
     # weights_layer, biases_layer = model.layers[0].get_weights()
@@ -280,28 +287,24 @@ def Train_Test_Eval_PureKeras(_lumi_years, _signal, _bkg_list, var_list, cuts, _
 
         loss = score[0]
         accuracy = score[1]
-        print(colors.fg.lightgrey, '** Accuracy :', str(accuracy), colors.reset)
-        print(colors.fg.lightgrey, '** Loss', str(loss), colors.reset)
+        # print(colors.fg.lightgrey, '** Accuracy :', str(accuracy), colors.reset)
+        # print(colors.fg.lightgrey, '** Loss', str(loss), colors.reset)
 
-        nEvents_train = y_train.shape
-        nEvents_test = y_test.shape
+        nEvents_train = y_train.shape[0]
+        nEvents_test = y_test.shape[0]
 
-        # with tensorflow.compat.v1.Session() as sess: #Must first open a new session
+        # if len(np.unique(y_train)) > 1: # prevent bug in roc_auc_score
+        #     auc_score = roc_auc_score(y_test, model.predict(x_test))
+        #     auc_score_train = roc_auc_score(y_train, model.predict(x_train))
+        #     print('\n'); print(colors.fg.lightgrey, '**** AUC scores ****', colors.reset)
+        #     print(colors.fg.lightgrey, "-- TEST SAMPLE  \t(" + str(nEvents_test) + " events) \t==> " + str(auc_score), colors.reset)
+        #     print(colors.fg.lightgrey, "-- TRAIN SAMPLE \t(" + str(nEvents_train) + " events) \t==> " + str(auc_score_train), colors.reset); print('\n')
 
-        auc_score = roc_auc_score(y_test, model.predict(x_test))
-        auc_score_train = roc_auc_score(y_train, model.predict(x_train))
-        # print("\n*** AUC scores ***")
-        # print("-- TEST SAMPLE  \t(" + str(nEvents_test) + " events) \t\t==> " + str(auc_score) )
-        # print("-- TRAIN SAMPLE \t(" + str(nEvents_train) + " events) \t==> " + str(auc_score_train) + "\n\n")
-        print('\n'); print(colors.fg.lightgrey, '**** AUC scores ****', colors.reset)
-        print(colors.fg.lightgrey, "-- TEST SAMPLE  \t(" + str(nEvents_test) + " events) \t==> " + str(auc_score), colors.reset)
-        print(colors.fg.lightgrey, "-- TRAIN SAMPLE \t(" + str(nEvents_train) + " events) \t==> " + str(auc_score_train), colors.reset); print('\n')
+        predictions_train_sig, predictions_train_bkg, predictions_test_sig, predictions_test_bkg, weightPHY_train_sig, weightPHY_train_bkg, weightPHY_test_sig, weightPHY_test_bkg = Apply_Model_toTrainTestData(_nof_outputs, x_train, y_train, x_test, y_test, weightPHY_train, weightPHY_test, h5model_outname)
 
-        predictions_train_sig, predictions_train_bkg, predictions_test_sig, predictions_test_bkg, weightLEARN_sig, weightLEARN_bkg, weight_test_sig, weight_test_bkg = Apply_Model_toTrainTestData(_signal, var_list, cuts, _nepochs, _batchSize, _nof_outputs, x_train, y_train, x_test, y_test, weightPHY_train, weightPHY_test, h5model_outname)
+        Create_TrainTest_ROC_Histos(_signal, lumiName, predictions_train_sig, predictions_train_bkg, predictions_test_sig, predictions_test_bkg, weightPHY_train_sig, weightPHY_train_bkg, weightPHY_test_sig, weightPHY_test_bkg, _metrics)
 
-        Create_TrainTest_ROC_Histos(predictions_train_sig, predictions_train_bkg, predictions_test_sig, predictions_test_bkg, weightLEARN_sig, weightLEARN_bkg, weight_test_sig, weight_test_bkg, _metrics)
-
-        Create_Control_Plots(predictions_train_sig, predictions_train_bkg, predictions_test_sig, predictions_test_bkg, weightLEARN_sig, weightLEARN_bkg, weight_test_sig, weight_test_bkg, y_test, x_test, x_train, y_train, model, history, _metrics, _nof_outputs, weight_dir)
+        Create_Control_Plots(predictions_train_sig, predictions_train_bkg, predictions_test_sig, predictions_test_bkg, weightPHY_train_sig, weightPHY_train_bkg, weightPHY_test_sig, weightPHY_test_bkg, y_test, x_test, x_train, y_train, model, history, _metrics, _nof_outputs, weight_dir)
 
     #End [with ... as sess]
 # //--------------------------------------------
@@ -343,23 +346,25 @@ def Train_Test_Eval_PureKeras(_lumi_years, _signal, _bkg_list, var_list, cuts, _
 # //--------------------------------------------
 # //--------------------------------------------
 
-def Apply_Model_toTrainTestData(_signal, var_list, cuts, _nepochs, _batchSize, _nof_outputs, x_train, y_train, x_test, y_test, weightLEARN, weight_test, savedModelName):
+def Apply_Model_toTrainTestData(_nof_outputs, x_train, y_train, x_test, y_test, weightPHY_train, weightPHY_test, savedModelName):
 
     print(colors.fg.lightblue, "--- Apply model to train & test data...", colors.reset); print('\n')
 
+    # print('x_test:\n', x_test[:10]); print('y_test:\n', y_test[:10]); print('x_train:\n', x_train[:10]); print('y_train:\n', y_train[:10])
+
     #Split test & train sample between "true signal" & "true background" (must be separated for plotting)
     if _nof_outputs == 1:
-        x_test_sig = x_test[y_test==1]; y_test_sig = y_test[y_test==1]; weight_test_sig = weight_test[y_test==1]
-        x_test_bkg = x_test[y_test==1]; y_test_bkg = y_test[y_test==1]; weight_test_bkg = weight_test[y_test==1]
-        x_train_sig = x_train[y_train==1]; y_train_sig = y_train[y_train==1]; weightLEARN_sig = weightLEARN[y_train==1]
-        x_train_bkg = x_train[y_train==1]; y_train_bkg = y_train[y_train==1]; weightLEARN_bkg = weightLEARN[y_train==1]
+        x_train_sig = x_train[y_train==1]; y_train_sig = y_train[y_train==1]; weightPHY_train_sig = weightPHY_train[y_train==1]
+        x_train_bkg = x_train[y_train==0]; y_train_bkg = y_train[y_train==0]; weightPHY_train_bkg = weightPHY_train[y_train==0]
+        x_test_sig = x_test[y_test==1]; y_test_sig = y_test[y_test==1]; weightPHY_test_sig = weightPHY_test[y_test==1]
+        x_test_bkg = x_test[y_test==0]; y_test_bkg = y_test[y_test==0]; weightPHY_test_bkg = weightPHY_test[y_test==0]
 
     else:
-        x_test_sig = x_test[y_test[:, 0]==1]; y_test_sig = y_test[y_test[:, 0]==1]; weight_test_sig = weight_test[y_test[:, 0]==1]
-        x_test_bkg = x_test[y_test[:, 1]==1]; y_test_bkg = y_test[y_test[:, 1]==1]; weight_test_bkg = weight_test[y_test[:, 1]==1]
-        x_train_sig = x_train[y_train[:, 0]==1]; y_train_sig = y_train[y_train[:, 0]==1]; weightLEARN_sig = weightLEARN[y_train[:, 0]==1]
-        x_train_bkg = x_train[y_train[:, 1]==1]; y_train_bkg = y_train[y_train[:, 1]==1]; weightLEARN_bkg = weightLEARN[y_train[:, 1]==1]
-        # print(weight_test_sig[0:5])
+        x_train_sig = x_train[y_train[:, 0]==1]; y_train_sig = y_train[y_train[:, 0]==1]; weightPHY_train_sig = weightPHY_train[y_train[:, 0]==1]
+        x_train_bkg = x_train[y_train[:, 1]==1]; y_train_bkg = y_train[y_train[:, 1]==1]; weightPHY_train_bkg = weightPHY_train[y_train[:, 1]==1]
+        x_test_sig = x_test[y_test[:, 0]==1]; y_test_sig = y_test[y_test[:, 0]==1]; weightPHY_test_sig = weightPHY_test[y_test[:, 0]==1]
+        x_test_bkg = x_test[y_test[:, 1]==1]; y_test_bkg = y_test[y_test[:, 1]==1]; weightPHY_test_bkg = weightPHY_test[y_test[:, 1]==1]
+        # print(weightPHY_test_sig[0:5])
         if _nof_outputs > 2:
             print(colors.fg.red, colors.bold, 'Warning : in case you are considering >2 signals, should check how to define sig/bkg efficiencies !', colors.reset)
 
@@ -388,26 +393,24 @@ def Apply_Model_toTrainTestData(_signal, var_list, cuts, _nepochs, _batchSize, _
     predictions_train_sig = model.predict(x_train_sig)
     predictions_train_bkg = model.predict(x_train_bkg)
 
-    # print(x_test.shape)
-    # print(predictions_test_sig.shape)
-
     #-- Printout of some results
-    for i in range(5):
+    print("-------------- FEW EXAMPLES... --------------")
+    for i in range(10):
         if (_nof_outputs == 1 and y_test[i]==1) or (_nof_outputs > 1 and y_test[i][0]==1):
-            true_label = "Signal"
+            true_label = "signal"
         else:
-            true_label = "Background"
-        print("--------------")
-        print("X=%s\n=====> Predicted : %s (True label: %s)" % (x_test[i], predictions_test_sig[i,0], true_label)) #For few events : prints values of all inputs variables (rescaled), predicted first output node value, and corresponding class label
-        print("--------------\n")
+            true_label = "background"
+        print("===> First node prediction for %s event : %s" % (true_label, predictions_test_sig[i,0]))
+        # print("X=%s\n=====> Predicted : %s (True label: %s)" % (x_test[i], predictions_test_sig[i,0], true_label)) #For few events : prints values of all inputs variables (rescaled), predicted first output node value, and corresponding class label
+    print("--------------\n")
 
-    #Only keep signal proba (redundant info)
+    #Only keep signal proba (rest is redundant info for now -- single signal)
     predictions_test_sig = predictions_test_sig[:, 0]
     predictions_test_bkg = predictions_test_bkg[:, 0]
     predictions_train_sig = predictions_train_sig[:, 0]
     predictions_train_bkg = predictions_train_bkg[:, 0]
 
-    return predictions_train_sig, predictions_train_bkg, predictions_test_sig, predictions_test_bkg, weightLEARN_sig, weightLEARN_bkg, weight_test_sig, weight_test_bkg
+    return predictions_train_sig, predictions_train_bkg, predictions_test_sig, predictions_test_bkg, weightPHY_train_sig, weightPHY_train_bkg, weightPHY_test_sig, weightPHY_test_bkg
 
 
 
@@ -463,4 +466,4 @@ def Apply_Model_toTrainTestData(_signal, var_list, cuts, _nepochs, _batchSize, _
 
 
 #----------  Manual call to DNN training function
-Train_Test_Eval_PureKeras(_lumi_years, _signal, _bkg_list, var_list, cuts, _nepochs, _batchSize, _nof_outputs, _maxEvents_perProcess, _splitTrainEventFrac)
+Train_Test_Eval_PureKeras(_lumi_years, _signal, _bkg_list, var_list, cuts, _nepochs, _batchSize, _nof_outputs, _maxEvents_perProcess, _splitTrainEventFrac, _nEventsTot_train, _nEventsTot_test)
