@@ -115,6 +115,7 @@ int Get_Color(int index)
 	else {return index;}
 }
 
+//FIXME -- needed ?
 void Get_Signal_and_Backgrounds(TString filepath, TString signal, vector<TString>& v_sig, vector<TString>& v_bkg)
 {
 	v_sig.push_back(signal); //Only 1 signal accounted for (modify if want THQ+THW, etc.)
@@ -629,7 +630,6 @@ void Superimpose_ROC_Curves(vector<TString> v_filepath, vector<TString> v_objNam
 		vector<TString> v_sig_names, v_bkg_names;
 		Get_Signal_and_Backgrounds(v_filepath[iroc], signal, v_sig_names, v_bkg_names);
 
-
 		//1 histo per process
 		vector<TH1F*> v_h_sig(v_sig_names.size());
 		vector<TH1F*> v_h_bkg(v_bkg_names.size());
@@ -668,7 +668,8 @@ void Superimpose_ROC_Curves(vector<TString> v_filepath, vector<TString> v_objNam
 			else if(v_isTMVA_file[iroc] == "Keras") //Retrieve directly histogram from file produced in python script
 			{
 				// TString hname_tmp = "DNN"+variable+"__"+v_sig_names[isig];
-				TString hname_tmp = "hist_test_sig";
+                // TString hname_tmp = "hist_test_sig";
+                TString hname_tmp = "hist_test_" + signal;
 
 				if(!Get_Histogram_From_KerasFile(v_h_sig[isig], v_filepath[iroc], hname_tmp) ) //Check naming convention used in pure-Keras NN
 				{
@@ -706,12 +707,16 @@ void Superimpose_ROC_Curves(vector<TString> v_filepath, vector<TString> v_objNam
 			else if(v_isTMVA_file[iroc] == "Keras")
 			{
 				// TString hname_tmp = "DNN"+variable+"__"+v_bkg_names[ibkg];
-				TString hname_tmp = "hist_test_bkg";
+                // TString hname_tmp = "hist_test_bkg";
+                TString hname_tmp = "hist_test_allClasses";
 
 				if(!Get_Histogram_From_KerasFile(v_h_bkg[ibkg], v_filepath[iroc], hname_tmp) ) //Check naming convention used in pure-Keras NN
 				{
 					return;
 				}
+
+                //FIXME -- do this cleanly, dont need sig/bkg vectors anymore...
+                v_h_bkg[ibkg]->Add(v_h_sig[0], -1); //Substract signal
 			}
 			else {cout<<"Problem !"<<endl; return;}
 		}

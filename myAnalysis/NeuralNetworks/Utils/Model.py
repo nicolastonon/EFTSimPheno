@@ -1,7 +1,6 @@
 # Create the DNN model with Keras
 
-#FIXMES :
-# Pass as args with default values : nof inputs, nof dense layers, batchnorm, dropout, output layer, ...
+#TODO: Pass as args with default values : nof inputs, nof dense layers, batchnorm, dropout, output layer, ...
 
 # //--------------------------------------------
 from tensorflow.keras.models import Sequential, load_model, model_from_json
@@ -89,7 +88,7 @@ def Create_Model(outdir, DNN_name, nof_outputs, var_list):
 
         if nof_outputs == 1 :
             model.add(Dense(nof_outputs, kernel_initializer=my_init, activation='sigmoid'))
-        elif nof_outputs == 2:
+        else:
             model.add(Dense(nof_outputs, kernel_initializer=my_init, activation='softmax')) #, name="myOutputs"
        # //--------------------------------------------
 
