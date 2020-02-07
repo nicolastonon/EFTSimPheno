@@ -5,7 +5,6 @@
 '''
 #TODO#
 - argparse (model, ...)
-- allow for mutiple signals (as for bkgs)
 
 #NOTES#
 - fit() is for training the model with the given inputs (and corresponding training labels).
@@ -43,7 +42,6 @@ _lumi_years.append("2018")
 _processClasses_list = [["tZq"],
                 ["ttZ"],
                 ["ttW", "ttH", "WZ", "ZZ4l", "DY", "TTbar_DiLep"]]
-
                 # ["ttZ", "ttW", "ttH", "WZ", "ZZ4l", "DY", "TTbar_DiLep",]]
 
 _labels_list =  ["tZq",
@@ -55,11 +53,11 @@ cuts = "passedBJets==1" #Event selection, both for train/test ; "1" <-> no cut
 
 #--- Training options
 # //--------------------------------------------
-_nepochs = 10 #Number of training epochs (<-> nof times the full training dataset is shown to the NN)
+_nepochs = 50 #Number of training epochs (<-> nof times the full training dataset is shown to the NN)
 _batchSize = 512 #Batch size (<-> nof events fed to the network before its parameter get updated)
 # _nof_output_nodes = 3 #1 (binary) or N (multiclass)
 
-_maxEvents_perClass = 100000 #max nof events to be used for each process ; -1 <-> all events
+_maxEvents_perClass = -1 #max nof events to be used for each process ; -1 <-> all events
 _nEventsTot_train = -1; _nEventsTot_test = -1  #nof events to be used for training & testing ; -1 <-> use _maxEvents_perClass & _splitTrainEventFrac params instead
 _splitTrainEventFrac = 0.8 #Fraction of events to be used for training (1 <-> use all requested events for training)
 # //--------------------------------------------
@@ -289,18 +287,18 @@ def Train_Test_Eval_PureKeras(_lumi_years, _processClasses_list, _labels_list, v
             print(colors.fg.lightgrey, '** Accuracy :', str(accuracy), colors.reset)
             print(colors.fg.lightgrey, '** Loss', str(loss), colors.reset)
 
-        if len(np.unique(y_train)) > 1: # prevent bug in roc_auc_score, need >=2 unique values (at least sig+bkg classes)
-            auc_score = roc_auc_score(y_test, model.predict(x_test))
-            auc_score_train = roc_auc_score(y_train, model.predict(x_train))
-            print('\n'); print(colors.fg.lightgrey, '**** AUC scores ****', colors.reset)
-            print(colors.fg.lightgrey, "-- TEST SAMPLE  \t==> " + str(auc_score), colors.reset)
-            print(colors.fg.lightgrey, "-- TRAIN SAMPLE \t==> " + str(auc_score_train), colors.reset); print('\n')
+        # if len(np.unique(y_train)) > 1: # prevent bug in roc_auc_score, need >=2 unique values (at least sig+bkg classes)
+        #     auc_score = roc_auc_score(y_test, model.predict(x_test))
+        #     auc_score_train = roc_auc_score(y_train, model.predict(x_train))
+        #     print('\n'); print(colors.fg.lightgrey, '**** AUC scores ****', colors.reset)
+        #     print(colors.fg.lightgrey, "-- TEST SAMPLE  \t==> " + str(auc_score), colors.reset)
+        #     print(colors.fg.lightgrey, "-- TRAIN SAMPLE \t==> " + str(auc_score_train), colors.reset); print('\n')
 
-        list_predictions_train_allClasses, list_predictions_test_allClasses, list_PhysicalWeightsTrain_allClasses, list_PhysicalWeightsTest_allClasses = Apply_Model_toTrainTestData(_nof_output_nodes, _processClasses_list, _labels_list, x_train, y_train, x_test, y_test, PhysicalWeights_train, PhysicalWeights_test, h5model_outname)
+        list_predictions_train_allNodes_allClasses, list_predictions_test_allNodes_allClasses, list_PhysicalWeightsTrain_allClasses, list_PhysicalWeightsTest_allClasses = Apply_Model_toTrainTestData(_nof_output_nodes, _processClasses_list, _labels_list, x_train, y_train, x_test, y_test, PhysicalWeights_train, PhysicalWeights_test, h5model_outname)
 
-        Create_TrainTest_ROC_Histos(lumiName, _labels_list, list_predictions_train_allClasses, list_predictions_test_allClasses, list_PhysicalWeightsTrain_allClasses, list_PhysicalWeightsTest_allClasses, _metrics)
+        Create_TrainTest_ROC_Histos(lumiName, _nof_output_nodes, _labels_list, list_predictions_train_allNodes_allClasses, list_predictions_test_allNodes_allClasses, list_PhysicalWeightsTrain_allClasses, list_PhysicalWeightsTest_allClasses, _metrics)
 
-        Create_Control_Plots(list_predictions_train_allClasses, list_predictions_test_allClasses, list_PhysicalWeightsTrain_allClasses, list_PhysicalWeightsTest_allClasses, x_train, y_train, y_test, x_test, model, history, _metrics, _nof_output_nodes, weight_dir)
+        Create_Control_Plots(_nof_output_nodes, _labels_list, list_predictions_train_allNodes_allClasses, list_predictions_test_allNodes_allClasses, list_PhysicalWeightsTrain_allClasses, list_PhysicalWeightsTest_allClasses, x_train, y_train, y_test, x_test, model, history, _metrics, _nof_output_nodes, weight_dir)
 
     #End [with ... as sess]
 # //--------------------------------------------
@@ -378,20 +376,19 @@ def Apply_Model_toTrainTestData(nof_output_nodes, processClasses_list, labels_li
 
 
     #Application (can also use : predict_classes, predict_proba)
-    list_predictions_train_allClasses = []
-    list_predictions_test_allClasses = []
-    for i in range(len(_processClasses_list)):
-        if nof_output_nodes == 1:
-            list_predictions_train_allClasses.append(model.predict(list_xTrain_allClasses[i])[:,0] )
-            list_predictions_test_allClasses.append(model.predict(list_xTest_allClasses[i])[:,0] )
+    list_predictions_train_allNodes_allClasses = []
+    list_predictions_test_allNodes_allClasses = []
+    for inode in range(nof_output_nodes):
 
-        #FIXME -- ideally, store the predictions/weights for EACH OUTPUT NODE and EACH CLASS <=> can compute efficiencies for all nodes
-        #But this would ask to store many more efficiencies histogram, and for now only care about signal VS the rest. So can only store score of first node (signal)
-        else:
-            # list_predictions_train_allClasses.append(model.predict(list_xTrain_allClasses[i])[:,i])
-            # list_predictions_test_allClasses.append(model.predict(list_xTest_allClasses[i])[:,i])
-            list_predictions_train_allClasses.append(model.predict(list_xTrain_allClasses[i])[:,0]) #STORE ONLY FIRST NODE PREDICTION !
-            list_predictions_test_allClasses.append(model.predict(list_xTest_allClasses[i])[:,0])
+        list_predictions_train_allClasses = []
+        list_predictions_test_allClasses = []
+        for iclass in range(len(processClasses_list)):
+            list_predictions_train_allClasses.append(model.predict(list_xTrain_allClasses[iclass])[:,inode])
+            list_predictions_test_allClasses.append(model.predict(list_xTest_allClasses[iclass])[:,inode])
+
+        list_predictions_train_allNodes_allClasses.append(list_predictions_train_allClasses)
+        list_predictions_test_allNodes_allClasses.append(list_predictions_test_allClasses)
+
 
     # -- Printout of some results
     # np.set_printoptions(threshold=5) #If activated, will print full numpy arrays
@@ -411,7 +408,8 @@ def Apply_Model_toTrainTestData(nof_output_nodes, processClasses_list, labels_li
     #     print("===> Outputs nodes predictions for %s event : %s" % (true_label, (list_predictions_test_allClasses[j])[i]) )
     # print("--------------\n")
 
-    return list_predictions_train_allClasses, list_predictions_test_allClasses, list_PhysicalWeightsTrain_allClasses, list_PhysicalWeightsTest_allClasses
+    # return list_predictions_train_allClasses, list_predictions_test_allClasses, list_PhysicalWeightsTrain_allClasses, list_PhysicalWeightsTest_allClasses
+    return list_predictions_train_allNodes_allClasses, list_predictions_test_allNodes_allClasses, list_PhysicalWeightsTrain_allClasses, list_PhysicalWeightsTest_allClasses
 
 
 
@@ -454,17 +452,8 @@ def Apply_Model_toTrainTestData(nof_output_nodes, processClasses_list, labels_li
 # //--------------------------------------------
 # //--------------------------------------------
 
-
-#-------- Call from external script (e.g. main C++ analysis code) --> Read command line args
 # if len(sys.argv) == 2:
-#     if sys.argv[1] == True:
-#         nLep = "3l"
-#     else:
-#         nLep = "2l"
-
-    # xxxTrain_Test_Eval_PureKeras(yyy)
-    # exit(1)
-
+    # nLep = "3l" if sys.argv[1] == True else False
 
 #----------  Manual call to DNN training function
 Train_Test_Eval_PureKeras(_lumi_years, _processClasses_list, _labels_list, var_list, cuts, _nepochs, _batchSize, _maxEvents_perClass, _splitTrainEventFrac, _nEventsTot_train, _nEventsTot_test)
