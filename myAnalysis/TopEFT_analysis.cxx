@@ -259,7 +259,7 @@ TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> 
     cout<<endl<<endl<<BLINK(BOLD(FBLU("[Region : "<<region<<"]")))<<endl;
     cout<<endl<<BLINK(BOLD(FBLU("[Luminosity : "<<lumiName<<"]")))<<endl<<endl<<endl;
 
-    usleep(2000000); //Pause for 3s (in microsec)
+    usleep(1000000); //Pause for 1s (in microsec)
 }
 
 TopEFT_analysis::~TopEFT_analysis()
@@ -496,7 +496,7 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
             if(sample_list[isample] == "DATA") {continue;} //don't use data for training
 
             //Can hardcode here the backgrounds against which to train, instead of considering full list of samples
-            if(signal_process == "tZq") //FIXME
+            if(signal_process == "tZq")
             {
                 if(samplename_tmp != "tZq" && samplename_tmp != "ttZ" && samplename_tmp != "ttH" && samplename_tmp != "ttW" && samplename_tmp != "WZ" && samplename_tmp != "ZZ4l" && samplename_tmp != "DY" && samplename_tmp != "TTbar_DiLep") {continue;}
                 // if(samplename_tmp != "tZq" && samplename_tmp != "ttZ" && samplename_tmp != "ttW") {continue;}
@@ -817,6 +817,8 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
     //Create output file
 	TFile* file_output = TFile::Open(output_file_name, "RECREATE");
 
+    vector<pair<float,float>> v_inputs_rescaling;
+    TString DNN_inputLayerName = ""; TString DNN_outputLayerName = ""; int nNodes = 1;
     if(!makeHisto_inputVars && classifier_name == "BDT")
     {
         //NB : TMVA requires floats, and nothing else, to ensure reproducibility of results (training done with floats) => Need to recast e.g. doubles as flots
@@ -842,60 +844,46 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
     }
     else if (!makeHisto_inputVars && classifier_name == "DNN") //DNN
     {
-        //--- Load DNN model
-        TString DNNmodel_path = "./weights/DNN/model.pb";
-        // TString DNNmodel_path = "./model.pb";
-        if(!Check_File_Existence(DNNmodel_path) ) {cout<<BOLD(FRED("Model "<<DNNmodel_path<<" not found ! Abort"))<<endl; return;}
-
-        clfy1 = new TFModel(DNNmodel_path.Data(), 2, "dense_input", 2, "dense_3/Softmax"); //Specify names of I/O layers, and nof I/O nodes //These names can be read from the 'model.pbtxt' file produced at DNN training : look for name of first and last nodes *WHICH IS NOT A TRAINING NODE*
-        // clfy1 = new TFModel(DNNmodel_path.Data(), 18, "input", 4, "output/Softmax"); //Specify names of I/O layers, and nof I/O nodes
-        // clfy1 = new TFModel("/nfs/dust/cms/user/dwalter/deeppotato/Trainings/tzq3l-V05_3_balanced/v1l2n97d06b2577r006226394747999625/model.pb", 18, "input", 4, "output/Softmax");
-
-//--------------------------------------------
-        std::cout<<"Load tensorflow graph from "<<DNNmodel_path<<std::endl<< std::endl;
-        tensorflow::GraphDef* graphDef = tensorflow::loadGraphDef(DNNmodel_path.Data());
-
-        std::cout<<"Create tensorflow session"<<std::endl<<std::endl;
-        tensorflow::Session* session = tensorflow::createSession((tensorflow::GraphDef*) graphDef); //1 thread by default
-//--------------------------------------------
-
-        //Read the list of input variables directly from .txt file generated at DNN training
-        var_list.resize(0);
-        var_list_floats.resize(0);
-        TString file_var_path = "./weights/DNN/ListVariables.txt";
-        if(!Check_File_Existence(file_var_path) ) {cout<<BOLD(FRED("Error ! List of DNN variables not found ("<<file_var_path<<")"))<<endl; return;}
-        else{cout<<"Reading list of DNN input variables from : "<<file_var_path<<endl; }
+        //Read the list of input variables directly from .txt file generated at DNN training ; also read the mean/variance of each var, in order to rescale the input values correspondingly
+        v_inputs_rescaling.resize(0); var_list.resize(0); var_list_floats.resize(0);
+        TString file_var_path = "./weights/DNN/"+lumiName+"/DNN_infos.txt";
+        if(!Check_File_Existence(file_var_path) ) {cout<<BOLD(FRED("Error ! DNN infos not found ("<<file_var_path<<")"))<<endl; return;}
+        else{cout<<"Reading list of DNN input variables from : "<<file_var_path<<endl;}
         ifstream file_in(file_var_path);
         string line;
         while(!file_in.eof( ))
-    	{
-    		getline(file_in, line);
-            TString ts_line(line);
-            if(ts_line != "") //Last line is empty
+        {
+            getline(file_in, line);
+            // TString ts_line(line);
+            stringstream ss(line);
+            TString varname; float tmp1, tmp2; //Values tmp1 and tmp2 could be the mean and variance, or min and max, etc. depending on the rescaling
+            ss >> varname >> tmp1 >> tmp2;
+            if(varname != "") //Last line may be empty
             {
-                var_list.push_back(ts_line);
-                var_list_floats.push_back(0.);
-                cout<<"-->  "<<ts_line<<endl;
+                if(tmp1 == -1 && tmp2 == -1) {DNN_inputLayerName = varname;} //Name of input layer
+                else if(tmp1 == -2 && tmp2 == -2) {DNN_outputLayerName = varname;} //Name of output layer
+                else if(tmp1 == -3 && tmp2 == -3) {nNodes = Convert_TString_To_Number(varname);} //Number of output nodes
+                else
+                {
+                    var_list.push_back(varname);
+                    var_list_floats.push_back(0.);
+                    std::pair <float,float> pair_tmp = std::make_pair(tmp1, tmp2);
+                    v_inputs_rescaling.push_back(pair_tmp);
+                }
+                // cout<<"-->  "<<varname<<endl;
             }
         }
+        // cout<<"-->  "<<DNN_inputLayerName<<endl;
+        // cout<<"-->  "<<DNN_outputLayerName<<endl;
+        // cout<<"-->  "<<nNodes<<endl;
+        // cout<<"v_inputs_rescaling.first "<<v_inputs_rescaling[0].first<<" / v_inputs_rescaling.second "<<v_inputs_rescaling[0].second<<endl;
 
-        // for(int ivar=0; ivar<var_list.size(); ivar++)
-        // {
-        //     getline(file_in, line);
-        //     TString ts_line(line);
-        //     cout<<"ts_line "<<ts_line<<endl;
-        //     cout<<"var_list "<<var_list[ivar]<<endl;
-        //     if(ts_line != var_list[ivar])
-        //     {
-        //         cout<<BOLD(FRED("Error : different variables used for DNN training and application ! Abort"))<<endl;
-        //         cout<<"Train var = "<<ts_line<<endl;
-        //         cout<<"Application var = "<<var_list[ivar]<<endl;
-        //         return;
-        //     }
-        //     cout<<"Train var = "<<ts_line<<endl;
-        //     cout<<"Application var = "<<var_list[ivar]<<endl;
-        // }
-        // cout<<endl<<"--- Verify that training/application variables are the same... OK ---"<<endl;
+        //--- Load DNN model
+        TString DNNmodel_path = "./weights/DNN/"+lumiName+"/model.pb";
+        // TString DNNmodel_path = "./model.pb";
+        if(!Check_File_Existence(DNNmodel_path) ) {cout<<BOLD(FRED("Model "<<DNNmodel_path<<" not found ! Abort"))<<endl; return;}
+
+        clfy1 = new TFModel(DNNmodel_path.Data(), var_list.size(), DNN_inputLayerName.Data(), nNodes, DNN_outputLayerName.Data()); //Specify names of I/O layers, and nof I/O nodes //These names can be read from the 'model.pbtxt' file produced at DNN training : look for name of first and last nodes *WHICH IS NOT A TRAINING NODE*
     }
 
 	//Input TFile and TTree, called for each sample
@@ -905,6 +893,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 	//Template binning
 	double xmin = -1, xmax = 1;
 	nbins = 10;
+    if(classifier_name == "DNN") {xmin = 0;}
 
 	//Want to plot ALL selected variables
 	vector<TString> total_var_list;
@@ -1154,7 +1143,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
     			// cout<<"* Tree '"<<systTree_list[itree]<<"' :"<<endl;
 
-    			// int nentries = 10;
+    			// int nentries = 100;
     			int nentries = tree->GetEntries();
 
     			// float total_nentries = total_var_list.size()*nentries;
@@ -1163,7 +1152,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
     			for(int ientry=0; ientry<nentries; ientry++)
     			{
-    				// cout<<"ientry "<<ientry<<endl;
+    				// cout<<FGRN("ientry "<<ientry<<"")<<endl;
 
                     //-- moved : only count events which pass the cuts !
                     // ibar++;
@@ -1207,31 +1196,45 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
                     {
                         if(classifier_name == "BDT") {mva_value1 = reader->EvaluateMVA(MVA_method_name);}
 
-                        else //DNN //FIXME -- use pointers to floats
+                        else //DNN
                         {
-                            // double test1=50, test2 = 35;
-                            // double clfy1_inputs[2] = {test1, test2};
-
                             //Convert my vector storing input values into array
                             float clfy1_inputs[var_list_floats.size()];
                             std::copy(var_list_floats.begin(), var_list_floats.end(), clfy1_inputs);
-
-                            for(int i=0; i<var_list_floats.size(); i++) {cout<<clfy1_inputs[i]<<std::endl;} //FIXME
+                            // cout<<"//-------------------------------------------- "<<endl;
+                            // for(int i=0; i<var_list_floats.size(); i++) {cout<<"clfy1_inputs["<<i<<"] "<<clfy1_inputs[i]<<std::endl;}
+                            for(int i=0; i<var_list.size(); i++)
+                            {
+                                clfy1_inputs[i] = Rescale_Input_Variable(clfy1_inputs[i], v_inputs_rescaling[i].first, v_inputs_rescaling[i].second);
+                            }
+                            // for(int i=0; i<var_list_floats.size(); i++) {cout<<"clfy1_inputs["<<i<<"] "<<clfy1_inputs[i]<<std::endl;}
 
                             //Evaluate output nodes values
                             std::vector<float> clfy1_outputs = clfy1->evaluate(clfy1_inputs);
-
-                            for(unsigned i=0; i< clfy1_outputs.size(); i++)
-                            {
-                                cout<<"clfy1_outputs["<<i<<"] "<<clfy1_outputs[i]<<endl;
-                            }
+                            // for(unsigned i=0; i<clfy1_outputs.size(); i++) {cout<<"clfy1_outputs["<<i<<"] "<<clfy1_outputs[i]<<endl;}
 
                             mva_value1 = clfy1_outputs[0];
+                            // cout<<"mva_value1 "<<mva_value1<<endl;
                         }
                     }
+                    else
+                    {
+                        for(int ivar=0; ivar<total_var_list.size(); ivar++)
+                        {
+                            //-- Rescale input variables here, to plot them and make sure they are properly rescaled
+                            // cout<<"//--------------------------------------------"<<endl;
+                            // cout<<"sample_list["<<isample<<"] "<<sample_list[isample]<<endl;
+                            // cout<<"total_var_list["<<ivar<<"] "<<total_var_list[ivar]<<endl;
+                            // cout<<"total_var_floats["<<ivar<<"] "<<total_var_floats[ivar]<<endl;
+                            // cout<<"v_inputs_rescaling["<<ivar<<"].first "<<v_inputs_rescaling[ivar].first<<endl;
+                            // cout<<"v_inputs_rescaling["<<ivar<<"].second "<<v_inputs_rescaling[ivar].second<<endl;
+                            // total_var_floats[ivar] = Rescale_Input_Variable(total_var_floats[ivar], v_inputs_rescaling[ivar].first, v_inputs_rescaling[ivar].second);
+                            // cout<<"===> total_var_floats["<<ivar<<"] "<<total_var_floats[ivar]<<endl;
 
-    				// cout<<"//--------------------------------------------"<<endl;
-    				// cout<<"mva_value1 = "<<mva_value1<<endl;
+                            //Some special variables are already read, must get their proper values
+                            if(total_var_list[ivar] == "channel") {total_var_floats[ivar] = channel;}
+                        }
+                    }
 
     				//-- Fill histos for all subcategories
     				for(int ichan=0; ichan<channel_list.size(); ichan++)
@@ -1276,11 +1279,20 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
     						{
     							for(int ivar=0; ivar<total_var_list.size(); ivar++)
     							{
-                                    // cout<<"total_var_floats[ivar] "<<total_var_floats[ivar]<<endl;
+                                    /*
+                                    cout<<"//--------------------------------------------"<<endl;
+                                    cout<<"sample_list["<<isample<<"] "<<sample_list[isample]<<endl;
+                                    cout<<"total_var_list["<<ivar<<"] "<<total_var_list[ivar]<<endl;
+                                    cout<<"total_var_floats["<<ivar<<"] "<<total_var_floats[ivar]<<endl;
+                                    cout<<"v_inputs_rescaling["<<ivar<<"].first "<<v_inputs_rescaling[ivar].first<<endl;
+                                    cout<<"v_inputs_rescaling["<<ivar<<"].second "<<v_inputs_rescaling[ivar].second<<endl;
+                                    // total_var_floats[ivar] = Rescale_Input_Variable(total_var_floats[ivar], v_inputs_rescaling[ivar].first, v_inputs_rescaling[ivar].second);
+                                    total_var_floats[ivar] = 0;
+                                    cout<<"===> total_var_floats["<<ivar<<"] "<<total_var_floats[ivar]<<endl;
 
                                     //Some special variables are already read, must get their proper values
                                     if(total_var_list[ivar] == "channel") {total_var_floats[ivar] = channel;}
-
+                                    */
     								Fill_TH1F_UnderOverflow(v3_histo_chan_syst_var[ichan][isyst][ivar], total_var_floats[ivar], weight_tmp);
     							}
     						}

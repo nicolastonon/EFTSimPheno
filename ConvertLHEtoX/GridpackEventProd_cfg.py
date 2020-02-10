@@ -39,10 +39,13 @@ process.source = cms.Source("EmptySource")
 
 process.externalLHEProducer = cms.EDProducer("ExternalLHEProducer",
     #args = cms.vstring('/cvmfs/cms.cern.ch/phys_generator/gridpacks/slc6_amd64_gcc630/13TeV/madgraph/V5_2.6.5/ttPlusJ_012j_5f_ckm_NLO_FXFX_NNLO3p1/v2/ttPlusJ_012j_5f_ckm_NLO_FXFX_NNLO3p1_slc6_amd64_gcc630_CMSSW_9_3_16_tarball.tar.xz'),
-    args = cms.vstring('/afs/cern.ch/work/n/ntonon/public/Madgraph/CMSSW_10_2_18/src/MG5_aMC_v2_6_7/Configuration/GenProduction/bin/MadGraph5_aMCatNLO/workdir_tllqdim6/tllqdim6_slc6_amd64_gcc630_CMSSW_9_3_16_tarball.tar.xz'),
-    nEvents = cms.untracked.uint32(100000),
+    args = cms.vstring('../tllqdim6_slc6_amd64_gcc630_CMSSW_9_3_16_tarball.tar.xz'),
+    nEvents = cms.untracked.uint32(100),
     numberOfParameters = cms.uint32(1),
-    outputFile = cms.string('crab_LHE_events.lhe'),
+    #outputFile = cms.string('crab_LHE_events.lhe'),
+    #outputFile = cms.string('file:crab_LHE_events.lhe'),
+    #outputFile = cms.string('file:cmsgrid_final.lhe'),
+    outputFile = cms.string('cmsgrid_final.lhe'),
     scriptName = cms.FileInPath('GeneratorInterface/LHEInterface/data/run_generic_tarball_cvmfs.sh')
 )
 
@@ -66,7 +69,7 @@ process.RAWSIMoutput = cms.OutputModule("PoolOutputModule",
     compressionAlgorithm = cms.untracked.string('LZMA'),
     compressionLevel = cms.untracked.int32(9),
     dataset = cms.untracked.PSet(
-        dataTier = cms.untracked.string('GEN'),
+        dataTier = cms.untracked.string('GEN'), #GEN-SIM?
         filterName = cms.untracked.string('')
     ),
     eventAutoFlushCompressedSize = cms.untracked.int32(20971520),
@@ -75,12 +78,14 @@ process.RAWSIMoutput = cms.OutputModule("PoolOutputModule",
     splitLevel = cms.untracked.int32(0)
 )
 
+#FIXME -- NOT NEEDED ? try removing step in chain
 process.LHEoutput = cms.OutputModule("PoolOutputModule",
     dataset = cms.untracked.PSet(
         dataTier = cms.untracked.string('LHE'),
         filterName = cms.untracked.string('')
     ),
-    fileName = cms.untracked.string('file:crabEvents_inLHE.root'),
+    #fileName = cms.untracked.string('file:crabEvents_inLHE.root'),
+    fileName = cms.untracked.string('file:crab_LHE_events.root'),
     outputCommands = process.LHEEventContent.outputCommands,
     splitLevel = cms.untracked.int32(0)
 )

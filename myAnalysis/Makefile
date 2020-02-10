@@ -5,18 +5,12 @@
 
 #Define variables
 CC=g++ -fPIC #Compiler used #fPIC useful to get debug messages
-# DEBUG = -g #flags for TF linking (see https://github.com/tensorflow/tensorflow/issues/4242)
-DEBUG = -g -Wl,--allow-multiple-definition -Wl,--whole-archive -Wl,--no-as-needed -Os #flags for TF linking (see https://github.com/tensorflow/tensorflow/issues/4242)
-CFLAGS = -c #Compilation options
+DEBUG = -g
+CFLAGS = -c $(DEBUG) #Compilation options
 ROOTFLAGS = `root-config --glibs --cflags`
 
 LFLAGS = $(DEBUG) -lTMVA -lPyMVA
-# LFLAGS += -L/home/ntonon/Documents/Programmes/tensorflow/bazel-bin/tensorflow -ltensorflow_framework -lprotobuf
-LFLAGS += -L/home/ntonon/Documents/Programmes/tensorflow/bazel-bin/tensorflow -Wl,--whole-archive -Wl,--no-as-needed -ltensorflow_framework -lprotobuf
-
-# LFLAGS += -L/home/ntonon/Documents/Programmes/tensorflow/bazel-bin/tensorflow -Wl,--whole-archive -Wl,--no-as-needed -ltensorflow_cc -Wl,--whole-archive -Wl,--no-as-needed -ltensorflow_framework
-# LFLAGS += -L/home/ntonon/Documents/Programmes/tensorflow/bazel-bin/tensorflow -Wl,--whole-archive -Wl,--no-as-needed -ltensorflow_framework -Wl,--whole-archive -Wl,--no-as-needed -ltensorflow_all
-# LFLAGS += -L/home/ntonon/Documents/Programmes/tensorflow/bazel-bin/tensorflow -Wl,--whole-archive -Wl,--no-as-needed -ltensorflow_framework -Wl,--whole-archive -Wl,--no-as-needed -ltensorflow_all -Wl,--whole-archive -Wl,--no-as-needed -ltensorflow_cc
+LFLAGS+= -L/home/ntonon/Documents/Programmes/tensorflow/bazel-bin/tensorflow -Wl,--allow-multiple-definition -Wl,--whole-archive -ltensorflow_framework -Wl,--whole-archive -Wl,--no-as-needed -ltensorflow_cc #-lprotobuf
 
 INCFLAGS = -I./include
 INCFLAGS += -I/home/ntonon/Documents/Programmes/tensorflow

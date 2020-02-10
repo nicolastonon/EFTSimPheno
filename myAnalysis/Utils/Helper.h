@@ -77,6 +77,7 @@
     void Extract_Ranking_Info(TString, TString);
     void Get_Ranking_Vectors(TString, std::vector<TString>&, std::vector<double>&);
     void Compare_Histograms(TString, TString, TString, TString);
+    float Rescale_Input_Variable(float, float, float);
 
 //-- Analysis-specific helper functions
     bool Apply_CommandArgs_Choices(int, char **, std::vector<TString>&, TString&);

@@ -40,13 +40,13 @@ _lumi_years.append("2018")
 
 #Signal process must be first
 _processClasses_list = [["tZq"],
-                ["ttZ"],
-                ["ttW", "ttH", "WZ", "ZZ4l", "DY", "TTbar_DiLep"]]
+                # ["ttZ"]]
+                ["ttZ"], ["ttW", "ttH", "WZ", "ZZ4l", "DY", "TTbar_DiLep"]]
                 # ["ttZ", "ttW", "ttH", "WZ", "ZZ4l", "DY", "TTbar_DiLep",]]
 
 _labels_list =  ["tZq",
-                "ttZ",
-                "Backgrounds"]
+                "ttZ", "Backgrounds"]
+                # "Backgrounds"]
 
 cuts = "passedBJets==1" #Event selection, both for train/test ; "1" <-> no cut
 # //--------------------------------------------
@@ -54,7 +54,7 @@ cuts = "passedBJets==1" #Event selection, both for train/test ; "1" <-> no cut
 #--- Training options
 # //--------------------------------------------
 _nepochs = 50 #Number of training epochs (<-> nof times the full training dataset is shown to the NN)
-_batchSize = 512 #Batch size (<-> nof events fed to the network before its parameter get updated)
+_batchSize = 256 #Batch size (<-> nof events fed to the network before its parameter get updated)
 # _nof_output_nodes = 3 #1 (binary) or N (multiclass)
 
 _maxEvents_perClass = -1 #max nof events to be used for each process ; -1 <-> all events
@@ -186,7 +186,7 @@ def Train_Test_Eval_PureKeras(_lumi_years, _processClasses_list, _labels_list, v
 
     #Get data
     print(colors.fg.lightblue, "--- Read and shape the data...", colors.reset); print('\n')
-    x_train, y_train, x_test, y_test, PhysicalWeights_train, PhysicalWeights_test, LearningWeights_train, LearningWeights_test, x, y, PhysicalWeights_allClasses, LearningWeights_allClasses = Get_Data_For_DNN_Training(_lumi_years, _ntuples_dir, _processClasses_list, _labels_list, var_list, cuts, _nof_output_nodes, _maxEvents_perClass, _splitTrainEventFrac, _nEventsTot_train, _nEventsTot_test)
+    x_train, y_train, x_test, y_test, PhysicalWeights_train, PhysicalWeights_test, LearningWeights_train, LearningWeights_test, x, y, PhysicalWeights_allClasses, LearningWeights_allClasses = Get_Data_For_DNN_Training(weight_dir, _lumi_years, _ntuples_dir, _processClasses_list, _labels_list, var_list, cuts, _nof_output_nodes, _maxEvents_perClass, _splitTrainEventFrac, _nEventsTot_train, _nEventsTot_test, lumiName)
 
     #Get model, compile
     print('\n'); print(colors.fg.lightblue, "--- Create the Keras model...", colors.reset); print('\n')
@@ -232,8 +232,8 @@ def Train_Test_Eval_PureKeras(_lumi_years, _processClasses_list, _labels_list, v
     with open(weight_dir + 'arch_DNN.json', 'w') as json_file:
         json_file.write(model.to_json())
 
-    #Save list of variables
-    Write_Variables_To_TextFile(weight_dir, var_list)
+    #Save list of variables #Done in data transformation function now
+    # Write_Variables_To_TextFile(weight_dir, var_list)
 
 
  ###### #####  ###### ###### ###### ######     ####  #####    ##   #####  #    #
@@ -259,14 +259,21 @@ def Train_Test_Eval_PureKeras(_lumi_years, _processClasses_list, _labels_list, v
         outputs_names = [output.op.name for output in model.outputs]
         # print('\ninputs: ', model.inputs)
         print('\n')
-        print(colors.fg.lightgrey, '--> inputs_names: ', inputs_names, colors.reset, '\n')
+        print(colors.fg.lightgrey, '--> inputs_names: ', inputs_names[0], colors.reset, '\n')
         # print('\noutputs: ', model.outputs)
-        print(colors.fg.lightgrey, '--> outputs_names: ', outputs_names, colors.reset, '\n')
+        print(colors.fg.lightgrey, '--> outputs_names: ', outputs_names[0], colors.reset, '\n')
         # tf_node_list = [n.name for n in  tensorflow.compat.v1.get_default_graph().as_graph_def().node]; print('nodes list : ', tf_node_list)
         frozen_graph = freeze_session(sess, output_names=[output.op.name for output in model.outputs])
         tensorflow.io.write_graph(frozen_graph, weight_dir, 'model.pbtxt', as_text=True)
         tensorflow.io.write_graph(frozen_graph, weight_dir, 'model.pb', as_text=False)
         print('\n'); print(colors.fg.lightgrey, '===> Successfully froze graph...', colors.reset, '\n')
+
+        #Also append the names of the input/output nodes in the file "DNN_info.txt" containing input features names, etc. (for later use in C++ code)
+        text_file = open(weight_dir + "DNN_infos.txt", "a") #Append mode
+        text_file.write(inputs_names[0]); text_file.write(' -1 -1 \n'); #use end values as flags to signal these lines
+        text_file.write(outputs_names[0]); text_file.write(' -2 -2 \n');
+        text_file.write(_nof_output_nodes); text_file.write(' -3 -3\n');
+        text_file.close()
 
 
  #####  ######  ####  #    # #      #####  ####

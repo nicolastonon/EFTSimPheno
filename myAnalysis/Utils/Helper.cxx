@@ -557,8 +557,13 @@ void Compare_Histograms(TString filepath1, TString filepath2, TString histname1,
 	return;
 }
 
+//Rescale input value, depending on the mean and variance of this variable
+float Rescale_Input_Variable(float value, float val1, float val2)
+{
+    return (value * val2) + val1; //sklearn.preprocessing.MinMaxScaler (-1;+1)
 
-
+    // return (value - val1) / sqrt(val2); //sklearn.preprocessing.StandardScaler
+}
 
 
 
@@ -802,6 +807,8 @@ void Set_Custom_ColorPalette(vector<TColor*> &v_custom_colors, vector<int> &v, v
 //Store here the binnings and ranges of all the variables to be plotted via ControlHistograms files
 bool Get_Variable_Range(TString var, int& nbins, double& xmin, double& xmax)
 {
+    // {nbins = 20; xmin = -1; xmax = 1; return true;}
+
     //Categories are either 0 or 1 (NB : encoded in Char_t!)
     if(var.BeginsWith("is_") || var.BeginsWith("passed") ) {nbins = 2; xmin = 0; xmax = 2;}
 

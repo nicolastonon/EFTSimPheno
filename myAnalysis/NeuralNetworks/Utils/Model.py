@@ -79,7 +79,7 @@ def Create_Model(outdir, DNN_name, nof_outputs, var_list):
     #Model 1 -- simple
     if model_choice == 1:
        # //--------------------------------------------
-        model.add(Dense(64, kernel_initializer=my_init, activation='tanh', input_dim=num_input_variables)) #, name="myInputs"
+        model.add(Dense(64, kernel_initializer=my_init, activation='tanh', input_dim=num_input_variables, name="MYINPUT")) #, name="myInputs"
         # model.add(Dropout(droprate))
         model.add(Dense(64, kernel_initializer=my_init, activation='relu'))
         # model.add(Dropout(droprate))
@@ -89,7 +89,7 @@ def Create_Model(outdir, DNN_name, nof_outputs, var_list):
         if nof_outputs == 1 :
             model.add(Dense(nof_outputs, kernel_initializer=my_init, activation='sigmoid'))
         else:
-            model.add(Dense(nof_outputs, kernel_initializer=my_init, activation='softmax')) #, name="myOutputs"
+            model.add(Dense(nof_outputs, kernel_initializer=my_init, activation='softmax', name="MYOUTPUT")) #, name="myOutputs"
        # //--------------------------------------------
 
     #Model 2 -- more elaborate, overtrained
