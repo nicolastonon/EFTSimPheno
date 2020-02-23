@@ -60,15 +60,19 @@
 #include "Utils/Helper.h" //Helper functions
 #include "Utils/TFModel.h" //Tensorflow functions
 
+//xxx
+#include "Utils/TH1EFT.h" //Tensorflow functions
+#include "Utils/WCPoint.h" //Tensorflow functions
+#include "Utils/WCFit.h" //Tensorflow functions
+
 using namespace std;
 
 class TopEFT_analysis
 {
-
 	public :
 
 	TopEFT_analysis(); //Default constructor
-    TopEFT_analysis(vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<bool>, vector<TString>, TString, vector<TString>, bool, TString, TString, TString, bool);
+    TopEFT_analysis(vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<bool>, vector<TString>, TString, vector<TString>, bool, TString, TString, TString, bool, bool);
 	~TopEFT_analysis(); //Default destructor
 
 //--- METHODS
@@ -78,7 +82,7 @@ class TopEFT_analysis
     void Compare_TemplateShapes_Processes(TString, TString);
 
     void SetBranchAddress_SystVariationArray(TTree*, TString, vector<Double_t*>&, int); //Details in func comments
-    void Merge_Templates_ByProcess(TString, TString, bool=false);
+    void Merge_Templates_ByProcess(TString, TString, vector<TString>, bool=false);
 
 //--- MEMBERS
 	bool stop_program;
@@ -115,6 +119,9 @@ class TopEFT_analysis
 
 	bool use_NeuralNetwork;
 	TString classifier_name;
+    TString DNN_inputLayerName, DNN_outputLayerName; int nNodes = 1; //DNN model params
+    std::vector<TString> var_list_DNN; //Input features of DNN training may differ from those declared in 'analysis_main.cxx'
+    std::vector<pair<float,float>> v_inputs_rescaling; //For now, can read rescaling params from DNN info file to rescale input features on the fly
 
     TString region; //"SR" / "CR_ttZ" / "CR_ttW"
 	TString categ_bool_name; //Name of boolean associated to category
@@ -122,7 +129,6 @@ class TopEFT_analysis
     TString dir_ntuples; //Path to base dir. containing Ntuples
     TString t_name;
 	TString plot_extension;
-    // TString lumiYear;
     vector<TString> v_lumiYears;
     TString lumiName;
     double lumiValue;
@@ -132,6 +138,7 @@ class TopEFT_analysis
     bool is_blind;
     int nSampleGroups; //Nof sample groups (e.g. 'Rares',  ...)
     bool use_custom_colorPalette;
+    bool use_PrivateMC;
 
     //Systematics variations arrays //More details in comments of func Handle_SystVariationArray()
     double* array_PU;

@@ -12,6 +12,5 @@ lAsymmetry -1.1980534e-05 0.4000103
 maxDijetMass -1.0033416 0.00024156581
 maxDelPhiLL -1.0048571 0.6381659
 MYINPUT_input -1 -1 
-MYOUTPUT/Softmax -2 -2
-3 -3 -3
-
+MYOUTPUT/Softmax -2 -2 
+3 -3 -3 

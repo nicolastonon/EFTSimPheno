@@ -72,7 +72,7 @@ def Create_Model(outdir, DNN_name, nof_outputs, var_list):
     # model.add(PReLU(alpha_initializer=my_init))
     # model.add(Activation('selu'))
 
-    model_choice = 1
+    model_choice = 2
 
     #-- List different models, by order of complexity
 
@@ -80,14 +80,23 @@ def Create_Model(outdir, DNN_name, nof_outputs, var_list):
     if model_choice == 1:
        # //--------------------------------------------
         model.add(Dense(64, kernel_initializer=my_init, activation='tanh', input_dim=num_input_variables, name="MYINPUT")) #, name="myInputs"
-        # model.add(Dropout(droprate))
+        if use_batchNorm==True:
+            model.add(BatchNormalization())
+        if use_dropout==True:
+            model.add(Dropout(droprate))
         model.add(Dense(64, kernel_initializer=my_init, activation='relu'))
-        # model.add(Dropout(droprate))
+        if use_batchNorm==True:
+            model.add(BatchNormalization())
+        if use_dropout==True:
+            model.add(Dropout(droprate))
         model.add(Dense(64, kernel_initializer=my_init, activation='relu'))
-        # model.add(Dropout(droprate))
+        if use_batchNorm==True:
+            model.add(BatchNormalization())
+        if use_dropout==True:
+            model.add(Dropout(droprate))
 
         if nof_outputs == 1 :
-            model.add(Dense(nof_outputs, kernel_initializer=my_init, activation='sigmoid'))
+            model.add(Dense(nof_outputs, kernel_initializer=my_init, activation='sigmoid', name="MYOUTPUT"))
         else:
             model.add(Dense(nof_outputs, kernel_initializer=my_init, activation='softmax', name="MYOUTPUT")) #, name="myOutputs"
        # //--------------------------------------------
@@ -95,26 +104,34 @@ def Create_Model(outdir, DNN_name, nof_outputs, var_list):
     #Model 2 -- more elaborate, overtrained
     elif model_choice == 2:
        # //--------------------------------------------
-       model.add(Dense(100, input_dim=num_input_variables, activation='tanh', kernel_initializer=my_init) ) #Input layer
-       # model.add(BatchNormalization())
-       model.add(Dropout(droprate))
+       model.add(Dense(100, input_dim=num_input_variables, activation='tanh', kernel_initializer=my_init, name="MYINPUT") ) #Input layer
+       if use_batchNorm==True:
+           model.add(BatchNormalization())
+       if use_dropout==True:
+           model.add(Dropout(droprate))
 
        model.add(Dense(100, activation='relu', kernel_initializer=my_init) ) #hidden layer
-       # model.add(BatchNormalization())
        # model.add(LeakyReLU(alpha=0.1))
-       model.add(Dropout(droprate))
+       if use_batchNorm==True:
+           model.add(BatchNormalization())
+       if use_dropout==True:
+           model.add(Dropout(droprate))
 
        model.add(Dense(100, activation='relu', kernel_initializer=my_init) ) #hidden layer
-       # model.add(BatchNormalization())
        # model.add(LeakyReLU(alpha=0.1))
-       model.add(Dropout(droprate))
+       if use_batchNorm==True:
+           model.add(BatchNormalization())
+       if use_dropout==True:
+           model.add(Dropout(droprate))
 
        model.add(Dense(100, activation='relu', kernel_initializer=my_init) ) #hidden layer
-       # model.add(BatchNormalization())
        # model.add(LeakyReLU(alpha=0.1))
-       model.add(Dropout(droprate))
+       if use_batchNorm==True:
+           model.add(BatchNormalization())
+       if use_dropout==True:
+           model.add(Dropout(droprate))
 
-       model.add(Dense(nof_outputs, activation='softmax', kernel_initializer=my_init) ) #output layer
+       model.add(Dense(nof_outputs, activation='softmax', kernel_initializer=my_init, name="MYOUTPUT") ) #output layer
        # //--------------------------------------------
 
     #Model 2 -- more elaborate, overtrained

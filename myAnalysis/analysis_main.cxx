@@ -16,13 +16,14 @@ int main(int argc, char **argv)
 
     //-- MAIN OPTIONS --
     TString signal_process = "tZq";
-    bool split_analysis_by_channel = false; //true <-> will *also* produce templates/histos/plots for each subchannel (defined below)
     bool use_systematics = true; //true <-> will compute/store systematics selected below
+    bool use_PrivateMC = true;
 
     //-- MVA
-    TString classifier_name = "DNN"; //'BDT' or 'DNN'
+    TString classifier_name = "BDT"; //'BDT' or 'DNN'
 
     //--- Templates options
+    bool split_analysis_by_channel = false; //true <-> will *also* produce templates/histos/plots for each subchannel (defined below)
     TString region_choice = "SR";
     TString template_name = "";
     bool show_pulls_ratio = false;
@@ -47,9 +48,9 @@ int main(int argc, char **argv)
 //NB : years must be placed in the right order !
 
 	vector<TString> set_lumi_years;
-    set_lumi_years.push_back("2016");
+    // set_lumi_years.push_back("2016");
     set_lumi_years.push_back("2017");
-    set_lumi_years.push_back("2018");
+    // set_lumi_years.push_back("2018");
 
 //-----------------------------------------------------------------------------------------
 //   ######  ##     ## ########  ######
@@ -108,6 +109,9 @@ int main(int argc, char **argv)
 //-------------------
     //DATA --- Single sample, in first position
     thesamplelist.push_back("DATA"); thesamplegroups.push_back("DATA");
+
+    //Private MC production //FIXME
+    // thesamplelist.push_back("PrivProdMC_tZq"); thesamplegroups.push_back("tZq");
 
     //Signal(s)
     thesamplelist.push_back("tZq"); thesamplegroups.push_back("tZq");
@@ -271,7 +275,7 @@ int main(int argc, char **argv)
 //-----------------    PLOTS
     TString plotChannel = ""; //Can choose to plot particular subchannel //uu, ue, ee, ...
 
-    bool draw_templates = true; //Plot templates of selected BDT, in selected region
+    bool draw_templates = false; //Plot templates of selected BDT, in selected region
         bool prefit = true; //true <-> plot prefit templates ; else postfit (requires combine output file)
         bool use_combine_file = false; //true <-> use MLF output file from Combine (can get postfit plots, total error, etc.)
 
@@ -323,7 +327,7 @@ int main(int argc, char **argv)
     //  CREATE INSTANCE OF CLASS & INITIALIZE
     //#############################################
 
-    TopEFT_analysis* theAnalysis = new TopEFT_analysis(thesamplelist, thesamplegroups, theSystWeights, theSystTree, thechannellist, thevarlist, set_v_cut_name, set_v_cut_def, set_v_cut_IsUsedForBDT, set_v_add_var_names, plot_extension, set_lumi_years, show_pulls_ratio, region_choice, signal_process, classifier_name, use_custom_colorPalette);
+    TopEFT_analysis* theAnalysis = new TopEFT_analysis(thesamplelist, thesamplegroups, theSystWeights, theSystTree, thechannellist, thevarlist, set_v_cut_name, set_v_cut_def, set_v_cut_IsUsedForBDT, set_v_add_var_names, plot_extension, set_lumi_years, show_pulls_ratio, region_choice, signal_process, classifier_name, use_custom_colorPalette, use_PrivateMC);
     if(theAnalysis->stop_program) {return 1;}
 
     //#############################################

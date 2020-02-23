@@ -336,7 +336,6 @@ bool Get_Histogram_From_CustomFile(TH1F*& h, TString filename, TString histo_nam
 	if(DEBUG) {cout<<FYEL("-- Get_Histogram_From_CustomFile() --")<<endl;}
 
 	h = 0; //Init pointer to histogram passed as argument
-
 	if(!Check_File_Existence(filename) ) {cout<<FRED("File "<<filename<<" not found ! Abort")<<endl; return 0;}
 	TFile* f = TFile::Open(filename);
 
@@ -506,10 +505,15 @@ bool Produce_Efficiency_TGraph(TGraph* &g, double& AUC, TH1F* h_sig, TH1F* h_bkg
 
 
 
-
-
-
-
+//--------------------------------------------
+//  ######   ######## ########    ########   #######   ######   ######
+// ##    ##  ##          ##       ##     ## ##     ## ##    ## ##    ##
+// ##        ##          ##       ##     ## ##     ## ##       ##
+// ##   #### ######      ##       ########  ##     ## ##        ######
+// ##    ##  ##          ##       ##   ##   ##     ## ##             ##
+// ##    ##  ##          ##       ##    ##  ##     ## ##    ## ##    ##
+//  ######   ########    ##       ##     ##  #######   ######   ######
+//--------------------------------------------
 
 void Get_ROC_Curves(vector<TGraph*>& v_graph, vector<double>& v_AUC, vector<TString>& v_label, vector<TString> v_filepath, vector<TString> v_isTMVA_file, vector<TString> v_Filelabel, vector<bool> v_isTrainSample, TString region, int nbins, double xmin, double xmax, vector<TString> v_processes, bool superimpose_allNodes_DNN, TString cuts="1")
 {
@@ -601,6 +605,20 @@ void Get_ROC_Curves(vector<TGraph*>& v_graph, vector<double>& v_AUC, vector<TStr
     return;
 }
 
+
+
+
+
+//--------------------------------------------
+//  ######  ##     ## ########  ######## ########  #### ##     ## ########   #######   ######  ########    ########   #######   ######
+// ##    ## ##     ## ##     ## ##       ##     ##  ##  ###   ### ##     ## ##     ## ##    ## ##          ##     ## ##     ## ##    ##
+// ##       ##     ## ##     ## ##       ##     ##  ##  #### #### ##     ## ##     ## ##       ##          ##     ## ##     ## ##
+//  ######  ##     ## ########  ######   ########   ##  ## ### ## ########  ##     ##  ######  ######      ########  ##     ## ##
+//       ## ##     ## ##        ##       ##   ##    ##  ##     ## ##        ##     ##       ## ##          ##   ##   ##     ## ##
+// ##    ## ##     ## ##        ##       ##    ##   ##  ##     ## ##        ##     ## ##    ## ##          ##    ##  ##     ## ##    ##
+//  ######   #######  ##        ######## ##     ## #### ##     ## ##         #######   ######  ########    ##     ##  #######   ######
+//--------------------------------------------
+
 void Superimpose_ROC_Curves(vector<TGraph*> v_graph, vector<TString> v_label, vector<double> v_AUC)
 {
     TCanvas* c = new TCanvas("", "", 1000, 800);
@@ -670,11 +688,8 @@ void Superimpose_ROC_Curves(vector<TGraph*> v_graph, vector<TString> v_label, ve
 
 	for(int igraph=0; igraph<v_graph.size(); igraph++)
 	{
-		// v_graph[igraph]->SetLineColor(Get_Color(igraph));
 		v_graph[igraph]->SetLineColorAlpha(Get_Color(igraph), 0.75);
 		v_graph[igraph]->SetLineWidth(4);
-		// v_graph[igraph]->SetMarkerColor(Get_Color(igraph));
-		// v_graph[igraph]->SetLineStyle(2);
 
 		//-- dashed lines for some ROCs ?
         // if(igraph > 1)
@@ -717,7 +732,15 @@ void Superimpose_ROC_Curves(vector<TGraph*> v_graph, vector<TString> v_label, ve
 
 
 
-
+//--------------------------------------------
+// ##     ##    ###    ##    ## ########    ########  ##        #######  ########
+// ###   ###   ## ##   ##   ##  ##          ##     ## ##       ##     ##    ##
+// #### ####  ##   ##  ##  ##   ##          ##     ## ##       ##     ##    ##
+// ## ### ## ##     ## #####    ######      ########  ##       ##     ##    ##
+// ##     ## ######### ##  ##   ##          ##        ##       ##     ##    ##
+// ##     ## ##     ## ##   ##  ##          ##        ##       ##     ##    ##
+// ##     ## ##     ## ##    ## ########    ##        ########  #######     ##
+//--------------------------------------------
 
 void Make_Plot(vector<TString> v_filepath, vector<TString> v_Filelabel, vector<TString> v_isTMVA_file, vector<bool> v_isTrainSample, TString region, int nbins, double xmin, double xmax, vector<TString> v_processes, bool superimpose_allNodes_DNN, TString cuts="1")
 {

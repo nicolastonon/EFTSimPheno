@@ -39,7 +39,7 @@ CODE EXAMPLE
 _____________________________________________________________________________
 
 > Files and instructions to :
-> * generate private Top EFT samples ;
+> * generate private MC samples including EFT reweighting ;
 > * perform basic phenomenology studies ;
 > * analyse DESY TopZ ntuples ;
 > * run COMBINE.
@@ -48,10 +48,10 @@ _____________________________________________________________________________
 
 * [MC simulation](https://github.com/nicolastonon/EFT-Simu-Pheno#MC-simulation)
     * [Setup](https://github.com/nicolastonon/EFT-Simu-Pheno#Setup)
-    * [Cards](https://github.com/nicolastonon/EFT-Simu-Pheno#Cards)
+    * [Madgraph cards](https://github.com/nicolastonon/EFT-Simu-Pheno#Madgraph-cards)
     * [Gridpack generation](https://github.com/nicolastonon/EFT-Simu-Pheno#Gridpack-generation)
-    * [Generate parton-level events](https://github.com/nicolastonon/EFT-Simu-Pheno#Generate-parton-level-events)
-    * [Generate particle-level events](https://github.com/nicolastonon/EFT-Simu-Pheno#Generate-particle-level-events)
+    * [Generate LHE events interactively](https://github.com/nicolastonon/EFT-Simu-Pheno#Generate-LHE-events-interactively)
+    * [Generate miniAOD events](https://github.com/nicolastonon/EFT-Simu-Pheno#Generate-miniAOD-events)
       * [GEN-only](https://github.com/nicolastonon/EFT-Simu-Pheno#GEN-only)
       * [Shower + FastSim + RECO](https://github.com/nicolastonon/EFT-Simu-Pheno#Shower--FastSim--RECO)
 
@@ -80,25 +80,38 @@ _____________________________________________________________________________
 
 ## Setup
 
+Depending on the production step, and the data-taking year you are considering, different CMSSW releases may be used.
+
+Example commands below are valid for 2017 MC production.
+
+:construction: *Add commands for each year.*
+
 ```
 mkdir MyAnalysis
 cd MyAnalysis
 
-# CMSSW Release
-RELEASE=9_3_4
+# Or other release, as specific below
+RELEASE=9_3_6
 
 # Setup release
 cmsrel CMSSW_$RELEASE
 cd CMSSW_X_Y_Z/src
 cmsenv
-git cms-init
+
+# Useful for GEN step only
+mkdir -p Configuration/GenProduction/
+git clone https://github.com/cms-sw/genproductions.git Configuration/GenProduction/
+
+# You can then copy the custom fragment [Configuration/GenProduction/python/PrivProd.py](https://github.com/nicolastonon/EFT-Simu-Pheno/ProductionScripts/Fragments/PrivProd.py)
 ```
 
-## Cards
+## Madgraph cards
 
-* Template datacards for main processes are stored in the [GenCards](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/GenCards) directory.
+Templates of Madgraph datacards are provided for some processes in the [GenCards](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/GenCards) directory.
 
 ## Gridpack generation
+
+Gridpacks may be generated in several ways (e.g. interactively, using screen, via CRAB, HTCondor, etc.). I suggest using the CMSConnect service (easy to use and efficient).
 
 - First time : [General instructions](https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookCMSConnect) to create an account and use the CMSConnect service.
 
@@ -123,9 +136,9 @@ nohup ./submit_cmsconnect_gridpack_generation.sh [name of process card without '
 :arrow_right: This outputs a gridpack with a name of the form 'PROCNAME_$SCRAM_ARCH_CMSSW_X_Y_Z_tarball.tar.xz'.
 
 
-## Generate parton-level events
+## Generate LHE events interactively
 
-- You can run Madgraph directly, or generate events from the gridpack :
+You can run Madgraph directly, or generate events from the gridpack :
 
 ```
 mkdir workdir
@@ -142,65 +155,187 @@ NCPU=1
 ./runcmsgrid.sh $NEVENTS $RANDOMSEED $NCPU
 ```
 
-:clock430: *NB : generation of 10K events for the ttZ and tZq processes (including dim6top operators) takes ~30 min. Similar times both running Madgraph directly or from the gridpack.*
-
 :arrow_right: This outputs a file in the LHE format named 'cmsgrid_final.lhe'.
 
-## Generate particle-level events
+## Generate miniAOD events
 
-To generate physical collision events, the LHE files we have created need to be showered.
-Parton showering accounts for non-perturbative QCD  effects with phenomenological models.
-The most used tool for parton showering in CMS is Pythia 8.
+CMSSW can act as a wrapper around various generators and chain their outputs together.
+This makes it quite  easy to run large-scale production from a gridpack to the finished (Mini/Nano)AOD file.
 
-### GEN-only
+Once you have generated your gridpack, you may either want to :
+1) simply generate events in LHE format and shower them (for phenomenology studies) ;
+2) generate events in LHE format, shower them, run the detector simulation, digitize the signals in the detector, emulate the trigger response, and reconstruct events in the miniAOD format (for final anlysis).
+
+Moreover, you may run these steps either interactively or e.g. via CRAB (HTConder not tested yet). For more than ~1K events, using CRAB is mandatory.
+
+Below you can find example `cmsDriver` commands to create python configuration files for each production step.
+Template for CRAB and python configuration files for each production step can be found in the [ProductionScripts](https://github.com/nicolastonon/EFT-Simu-Pheno/ProductionScripts) directory.
 
 :information_source: Type 'cmsDriver --help' to get infos on arguments.
 
-- Example : produce the config file 'GEN_cfg.py' using a custom fragment and run:
+### GEN-only
+
+- Create the config file 'GEN_cfg.py', read a LHE input file, shower events with a custom fragment :
 ```
 cmsDriver.py Configuration/GenProduction/python/PrivProd.py --mc --conditions auto:run2_mc -n 100 --era Run2_25ns --eventcontent RAWSIM --step GEN --datatier GEN-SIM --beamspot Realistic25ns13TeVEarly2017Collision --filein file:cmsgrid_final_tzq.lhe --fileout file:GEN.root --python_filename GEN_cfg.py --no_exec
 
 cmsRun GEN_cfg.py
 ```
 
-:arrow_right_hook: The output file can be passed to the GenAnalyzer code for generator-level studies.
+:arrow_right_hook: The output file can be passed to my [GenAnalyzer](https://github.com/nicolastonon/EFT-Simu-Pheno/Pheno/Analyzer) code for generator-level studies.
 
-:clock430: *NB : for 10K events interactively, this step takes ~1h.*
+<!-- :clock430: *NB : for 10K events interactively, this step takes ~1h.* -->
 
-### Shower + FastSim + RECO
+## Fast simulation
 
-CMSSW can act as a wrapper around various generators and chain their outputs together.
-This makes it quite  easy to run large-scale production from a gridpack to the finished (Mini/Nano)AOD file.
+*[VALIDATED UNDER CMSSW_9_4_12]*
 
-Here's an example how to chain Shower + FastSim + RECO steps.
+With FastSim, several production steps can be chained together, and a simplified detector simulation is used.
 
-- Example : produce the config file 'FASTSIM_cfg.py' using a custom fragment and run:
+* Step 1 [GEN,SIM,DIGI]
+
+If you read and existing LHE file, remove the `LHE` keyword and add `--filein file:yourfile.lhe` :
 ```
-cmsDriver.py Configuration/GenProduction/python/PrivProd.py --conditions auto:run2_mc --fast -n 100 --era Run2_25ns --eventcontent AODSIM -s GEN,SIM,RECOBEFMIX,DIGI:pdigi_valid,RECO --datatier GEN-SIM-DIGI-RECO --beamspot Realistic25ns13TeVEarly2017Collision --filein file:cmsgrid_final_tzq.lhe --fileout file:test_FASTSIM.root --python_filename python_FASTSIM_cfg.py --no_exec
+cmsDriver.py Configuration/GenProduction/python/PrivProdFromGridpack.py \
+--fileout file:FASTSIM1.root \
+--python_filename FASTSIM1_cfg.py \
+--mc --eventcontent LHE,AODSIM \
+--fast \
+--datatier LHE,AODSIM \
+--step LHE,GEN,SIM,RECOBEFMIX,DIGIPREMIX_S2,DATAMIX,L1,DIGI2RAW,L1Reco,RECO \
+--conditions 94X_mc2017_realistic_v15 \
+--datamix PreMix --era Run2_2017_FastSim \
+--beamspot Realistic25ns13TeVEarly2017Collision \
+--no_exec -n 10 --customise Configuration/DataProcessing/Utils.addMonitoring \
+--pileup_input "dbs:/Neutrino_E-10_gun/RunIIFall17FSPrePremix-PUMoriond17_94X_mc2017_realistic_v15-v1/GEN-SIM-DIGI-RAW"
 
-cmsRun python_FASTSIM_cfg.py
+cmsRun FASTSIM1_cfg.py
 ```
 
-### Run with CRAB
-
-If you are processing >10K events, or are chaining several processing steps, you may need to run on CRAB.
-
-- The directory [ConvertLHEtoX](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/ConvertLHEtoX) contains examples of config files necessary to perform showering/fastSim via CRAB *(to adapt to your needs)*.
-
-- Once finished, the outputs stored to T2_DE_DESY can then be found e.g. with the command :
+* Step 2 [miniAOD]
 
 ```
-gfal-ls -l srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/$USER/
+cmsDriver.py --filein file:FASTSIM1.root --fileout file:miniAOD.root \
+--python_filename FASTSIM2_cfg.py \
+--mc --eventcontent MINIAODSIM --runUnscheduled \
+--fast \
+--datatier MINIAODSIM \
+--conditions 94X_mc2017_realistic_v15 \
+--step PAT --scenario pp \
+--era Run2_2017_FastSim,run2_miniAOD_94XFall17 \
+--no_exec --customise Configuration/DataProcessing/Utils.addMonitoring
+
+cmsRun FASTSIM2_cfg.py
+```
+
+
+## Full simulation
+
+Here are the main production steps when using the full GEANT4 detector simulation.
+
+### GEN-SIM
+
+*[VALIDATED UNDER CMSSW_9_3_6]*
+
+Use this command if you want to read an existing LHE file (if you want to create events from a gridpack, see below) :
+
+```
+cmsDriver.py Configuration/GenProduction/python/PrivProd.py \
+--filein file:xxx.lhe --fileout file:GEN-SIM.root \
+--python_filename GEN-SIM_cfg.py \
+--mc --eventcontent RAWSIM --datatier GEN-SIM \
+--conditions 93X_mc2017_realistic_v3 \
+--beamspot Realistic25ns13TeVEarly2017Collision \
+--step GEN,SIM \
+--geometry DB:Extended --era Run2_2017 \
+--customise Configuration/DataProcessing/Utils.addMonitoring \
+--no_exec -n 10
+
+
+cmsRun GEN-SIM_cfg.py
+```
+
+### LHE-GEN-SIM
+
+*[VALIDATED UNDER CMSSW_9_3_6]*
+
+Use this command if you want to create events from a gridpack (+ shower them and apply detector simulation) :
+
+```
+cmsDriver.py Configuration/GenProduction/python/PrivProdFromGridpack.py \
+--fileout file:LHE-GEN-SIM.root \
+--python_filename LHE-GEN-SIM_cfg.py \
+--mc --eventcontent RAWSIM,LHE --datatier GEN-SIM,LHE \
+--conditions 93X_mc2017_realistic_v3 \
+--beamspot Realistic25ns13TeVEarly2017Collision \
+--step LHE,GEN,SIM \
+--geometry DB:Extended --era Run2_2017 \
+--customise Configuration/DataProcessing/Utils.addMonitoring \
+--no_exec -n 10
+
+cmsRun LHE-GEN-SIM_cfg.py
+```
+
+:heavy_exclamation_mark: Note that a different custom fragment [PrivProdFromGridpack.py](https://github.com/nicolastonon/EFT-Simu-Pheno/ProductionScripts/Fragments/PrivProdFromGridpack.py) is used, which includes a block to read the gridpack.
+
+### DIGI-RECO
+
+*[VALIDATED UNDER CMSSW_9_4_4]*
+
+* Step 1 [L1, HLT, Pileup, DIGI] :
+```
+cmsDriver.py step1 --filein file:GEN-SIM.root --fileout file:DIGI1.root \
+--python_filename DIGI1_cfg.py \
+--eventcontent PREMIXRAW \
+--datatier GEN-SIM-RAW \
+--step DIGIPREMIX_S2,DATAMIX,L1,DIGI2RAW,HLT:2e34v40 \
+--datamix PreMix --era Run2_2017 \
+--conditions 94X_mc2017_realistic_v11 --mc -n 10 \
+--customise Configuration/DataProcessing/Utils.addMonitoring \
+--no_exec \
+--pileup_input "dbs:/Neutrino_E-10_gun/RunIISummer17PrePremix-MCv2_correctPU_94X_mc2017_realistic_v9-v1/GEN-SIM-DIGI-RAW"
+
+cmsRun DIGI1_cfg.py
+```
+
+* Step 2 [RECO] :
+```
+cmsDriver.py step2 --filein file:DIGI1.root --fileout file:DIGI2.root \
+--python_filename DIGI2_cfg.py \
+--mc --eventcontent AODSIM \
+--runUnscheduled --datatier AODSIM \
+--conditions 94X_mc2017_realistic_v11 \
+--step RAW2DIGI,RECO,RECOSIM,EI \
+--era Run2_2017 \
+--no_exec
+
+cmsRun DIGI2_cfg.py
+```
+
+### MINIAOD
+
+*[VALIDATED UNDER CMSSW_9_4_4]*
+
+```
+cmsDriver.py --filein file:DIGI2.root --fileout file:miniAOD.root \
+--python_filename miniAOD_cfg.py \
+--eventcontent MINIAODSIM \
+--datatier MINIAODSIM --conditions 94X_mc2017_realistic_v14 \
+--step PAT \
+--mc --runUnscheduled --scenario pp \
+--era Run2_2017 --no_exec
+
+cmsRun miniAOD_cfg.py
 ```
 
 # Pheno studies
 
-The GenAnalyzer must be run under CMSSW (see [Setup](https://github.com/nicolastonon/EFT-Simu-Pheno#Setup) ; I am using CMSSW_10_2_18).
-The GenPlotter is a standalone code (I run it locally).
+The [GenAnalyzer](https://github.com/nicolastonon/EFT-Simu-Pheno/Pheno/Analyzer) code must be run under CMSSW (I am using CMSSW_10_2_18).
+The [GenPlotter](https://github.com/nicolastonon/EFT-Simu-Pheno/Pheno/Plotter) is a standalone code (I run it locally).
 
 ## GenAnalyzer
 
-- The directory [Pheno](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/Pheno) contains examples of cfg/code files necessary to analyze the showered events, and extract some relevant features (top/Z kinematics, ...).
+- The directory [Pheno/Analyzer](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/Pheno/Analyzer) contains examples of cfg/code files necessary to analyze the showered events, and extract some relevant features (top/Z kinematics, ...).
 
 - After making the necessary modifications in the config file, run the code :
 ```
@@ -211,7 +346,9 @@ cmsRun Pheno/Analyzer/test/GenAnalyzer/ConfFile_cfg.py
 
 ## GenPlotter
 
-- Compiling and running the code 'GenPlotter.cc' will produce plots for pheno studies.
+- The directory [Pheno/Plotter](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/Pheno/Plotter) contains codes to produce plots from ROOT files created with the GenAnalyzer code, for any available variable / EFT weight / process.
+
+- Compiling and running the code 'GenPlotter.cc' :
 
 ```
 g++ GenPlotter.cc -o GenPlotter.exe `root-config --cflags --glibs`

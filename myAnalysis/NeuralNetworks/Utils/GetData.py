@@ -55,7 +55,7 @@ np.set_printoptions(threshold=np.inf) #If activated, will print full numpy array
 # //--------------------------------------------
 
 #Define the model and train it, using Keras only
-def Get_Data_For_DNN_Training(weight_dir, lumi_years, ntuples_dir, processClasses_list, labels_list, var_list, cuts, nof_output_nodes, maxEvents_perClass, splitTrainEventFrac, nEventsTot_train, nEventsTot_test, lumiName):
+def Get_Data_For_DNN_Training(weight_dir, lumi_years, ntuples_dir, processClasses_list, labels_list, var_list, cuts, nof_output_nodes, maxEvents_perClass, splitTrainEventFrac, nEventsTot_train, nEventsTot_test, lumiName, startFromExistingModel):
 
     #Get data from TFiles
     list_x_allClasses, list_weights_allClasses = Read_Store_Data(lumi_years, ntuples_dir, processClasses_list, labels_list, var_list, cuts)
@@ -64,7 +64,7 @@ def Get_Data_For_DNN_Training(weight_dir, lumi_years, ntuples_dir, processClasse
     x, y, list_weights_allClasses = Shape_Data(list_x_allClasses, list_weights_allClasses, maxEvents_perClass, nof_output_nodes)
 
     #Transform the input features
-    x = Transform_Inputs(weight_dir, x, var_list, lumiName)
+    x = Transform_Inputs(weight_dir, x, var_list, lumiName, startFromExistingModel)
 
     #Compute event weights considering only abs(weights) => duplicate weight arrays to hold absolute values
     list_weights_allClasses_abs = []
@@ -297,7 +297,7 @@ def Get_Events_Weights(processClasses_list, labels_list, list_weights_allClasses
 # //--------------------------------------------
 
 #-- INPUT VARIABLES transformations
-def Transform_Inputs(weight_dir, x, var_list, lumiName):
+def Transform_Inputs(weight_dir, x, var_list, lumiName, startFromExistingModel):
 
     np.set_printoptions(precision=3)
 
@@ -330,14 +330,15 @@ def Transform_Inputs(weight_dir, x, var_list, lumiName):
     # x = scaler.transform(x)
     # print('means', means); print('vars', vars) print('scales', scales); print('nsamples = ', nsamples)
 
-    text_file = open(weight_dir + "DNN_infos.txt", "w")
-    for ivar in range(len(var_list)):
-        text_file.write(var_list[ivar]); text_file.write(' ')
-        text_file.write(str(mins[ivar])); text_file.write(' ')
-        # text_file.write(str(means[ivar])); text_file.write(' ')
-        text_file.write(str(scales[ivar])); text_file.write('\n')
-    text_file.close()
-    print(colors.fg.lightgrey, '===> Saved DNN infos (input/output nodes names, rescaling values, etc.) in : ', weight_dir + "MinScale_InputVariables_"+lumiName+".txt", colors.reset)
+    if startFromExistingModel == False:
+        text_file = open(weight_dir + "DNN_infos.txt", "w")
+        for ivar in range(len(var_list)):
+            text_file.write(var_list[ivar]); text_file.write(' ')
+            text_file.write(str(mins[ivar])); text_file.write(' ')
+            # text_file.write(str(means[ivar])); text_file.write(' ')
+            text_file.write(str(scales[ivar])); text_file.write('\n')
+        text_file.close()
+        print(colors.fg.lightgrey, '===> Saved DNN infos (input/output nodes names, rescaling values, etc.) in : ', weight_dir + "MinScale_InputVariables_"+lumiName+".txt", colors.reset)
 
     # print('After transformation :', x[0:5,:])
 

@@ -22,10 +22,15 @@
 set ms_dir MadspinDir
 
 # specify the decay for the final state particles
-decay t > w+ b DIM6<=1 FCNC=0, w+ > all all DIM6=0 FCNC=0
-decay t~ > w- b~ DIM6<=1 FCNC=0, w- > all all DIM6=0 FCNC=0
+#decay t > w+ b DIM6<=1 FCNC=0, w+ > all all DIM6=0 FCNC=0
+#decay t~ > w- b~ DIM6<=1 FCNC=0, w- > all all DIM6=0 FCNC=0
 #decay w+ > all all
 #decay w- > all all
+
+decay t > w+ b  DIM6=0 FCNC=0, (w+ > l+ vl DIM6=0 FCNC=0)
+decay t~ > w- b~  DIM6=0 FCNC=0, (w- > l- vl~ DIM6=0 FCNC=0)
+decay w+ > l+ vl DIM6=0 FCNC=0
+decay w- > l- vl~ DIM6=0 FCNC=0
 
 # running the actual code
 launch

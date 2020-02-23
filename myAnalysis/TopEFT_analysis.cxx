@@ -33,7 +33,7 @@ using namespace std;
 /////////////////////////////////////////////////////////
 
 //Overloaded constructor
-TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> thesamplegroups, vector<TString> thesystlist, vector<TString> thesystTreelist, vector<TString> thechannellist, vector<TString> thevarlist, vector<TString> set_v_cut_name, vector<TString> set_v_cut_def, vector<bool> set_v_cut_IsUsedForBDT, vector<TString> set_v_add_var_names, TString theplotextension, vector<TString> set_lumi_years, bool show_pulls, TString region, TString signal_process, TString classifier_name, bool use_custom_colorPalette)
+TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> thesamplegroups, vector<TString> thesystlist, vector<TString> thesystTreelist, vector<TString> thechannellist, vector<TString> thevarlist, vector<TString> set_v_cut_name, vector<TString> set_v_cut_def, vector<bool> set_v_cut_IsUsedForBDT, vector<TString> set_v_add_var_names, TString theplotextension, vector<TString> set_lumi_years, bool show_pulls, TString region, TString signal_process, TString classifier_name, bool use_custom_colorPalette, bool use_PrivateMC)
 {
     //Canvas definition
     Load_Canvas_Style();
@@ -51,6 +51,8 @@ TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> 
 	this->region = region;
 
     this->signal_process = signal_process;
+
+    this->use_PrivateMC = use_PrivateMC;
 
 	// this->is_blind = is_blind;
 
@@ -255,6 +257,43 @@ TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> 
 			this->filename_suffix+= tmp;
 		}
 	}
+
+    //Read the list of input variables directly from .txt file generated at DNN training
+    //Also read the mean/variance of each var, in order to rescale the input values correspondingly
+    v_inputs_rescaling.resize(0); var_list_DNN.resize(0);
+    if(classifier_name == "DNN")
+    {
+        TString file_var_path = "./weights/DNN/"+lumiName+"/DNN_infos.txt";
+        if(!Check_File_Existence(file_var_path) ) {cout<<BOLD(FRED("Error ! DNN infos not found ("<<file_var_path<<")"))<<endl; return;}
+        else{cout<<"Reading list of DNN input variables from : "<<file_var_path<<endl;}
+        ifstream file_in(file_var_path);
+        string line;
+        while(!file_in.eof( ))
+        {
+            getline(file_in, line);
+            // TString ts_line(line);
+            stringstream ss(line);
+            TString varname; float tmp1, tmp2; //Values tmp1 and tmp2 could be the mean and variance, or min and max, etc. depending on the rescaling
+            ss >> varname >> tmp1 >> tmp2;
+            if(varname != "") //Last line may be empty
+            {
+                if(tmp1 == -1 && tmp2 == -1) {DNN_inputLayerName = varname;} //Name of input layer
+                else if(tmp1 == -2 && tmp2 == -2) {DNN_outputLayerName = varname;} //Name of output layer
+                else if(tmp1 == -3 && tmp2 == -3) {nNodes = Convert_TString_To_Number(varname);} //Number of output nodes
+                else
+                {
+                    var_list_DNN.push_back(varname);
+                    std::pair <float,float> pair_tmp = std::make_pair(tmp1, tmp2);
+                    v_inputs_rescaling.push_back(pair_tmp);
+                }
+                // cout<<"-->  "<<varname<<endl;
+            }
+        }
+        // cout<<"-->  "<<DNN_inputLayerName<<endl;
+        // cout<<"-->  "<<DNN_outputLayerName<<endl;
+        // cout<<"-->  "<<nNodes<<endl;
+        // cout<<"v_inputs_rescaling.first "<<v_inputs_rescaling[0].first<<" / v_inputs_rescaling.second "<<v_inputs_rescaling[0].second<<endl;
+    }
 
     cout<<endl<<endl<<BLINK(BOLD(FBLU("[Region : "<<region<<"]")))<<endl;
     cout<<endl<<BLINK(BOLD(FBLU("[Luminosity : "<<lumiName<<"]")))<<endl<<endl<<endl;
@@ -498,8 +537,7 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
             //Can hardcode here the backgrounds against which to train, instead of considering full list of samples
             if(signal_process == "tZq")
             {
-                if(samplename_tmp != "tZq" && samplename_tmp != "ttZ" && samplename_tmp != "ttH" && samplename_tmp != "ttW" && samplename_tmp != "WZ" && samplename_tmp != "ZZ4l" && samplename_tmp != "DY" && samplename_tmp != "TTbar_DiLep") {continue;}
-                // if(samplename_tmp != "tZq" && samplename_tmp != "ttZ" && samplename_tmp != "ttW") {continue;}
+                if(!samplename_tmp.Contains("tZq") && !samplename_tmp.Contains("ttZ") && !samplename_tmp.Contains("ttH") && samplename_tmp.Contains("ttW") && samplename_tmp.Contains("WZ") && samplename_tmp.Contains("ZZ4l") && samplename_tmp.Contains("DY") && samplename_tmp.Contains("TTbar_DiLep") ) {continue;}
             }
 
     		cout<<endl<<"-- Sample : "<<sample_list[isample]<<endl;
@@ -790,7 +828,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
     else
     {
         //Must allocate memory to these arrays, which will hold the values of the systematics variations weights
-        //NB : the sizes of the arrays are hardcoded, depends on Potato implementation (could alos set same large size for all)
+        //NB : the sizes of the arrays are hardcoded, depends on Potato implementation (could also set same large size for all)
         array_PU = new double[2];
         array_prefiringWeight = new double[2];
         array_Btag = new double[4];
@@ -817,8 +855,8 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
     //Create output file
 	TFile* file_output = TFile::Open(output_file_name, "RECREATE");
 
-    vector<pair<float,float>> v_inputs_rescaling;
-    TString DNN_inputLayerName = ""; TString DNN_outputLayerName = ""; int nNodes = 1;
+    // vector<pair<float,float>> v_inputs_rescaling;
+    // TString DNN_inputLayerName = ""; TString DNN_outputLayerName = ""; int nNodes = 1;
     if(!makeHisto_inputVars && classifier_name == "BDT")
     {
         //NB : TMVA requires floats, and nothing else, to ensure reproducibility of results (training done with floats) => Need to recast e.g. doubles as flots
@@ -842,45 +880,13 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
             }
         }
     }
-    else if (!makeHisto_inputVars && classifier_name == "DNN") //DNN
+    else if(!makeHisto_inputVars && classifier_name == "DNN") //DNN
     {
-        //Read the list of input variables directly from .txt file generated at DNN training ; also read the mean/variance of each var, in order to rescale the input values correspondingly
-        v_inputs_rescaling.resize(0); var_list.resize(0); var_list_floats.resize(0);
-        TString file_var_path = "./weights/DNN/"+lumiName+"/DNN_infos.txt";
-        if(!Check_File_Existence(file_var_path) ) {cout<<BOLD(FRED("Error ! DNN infos not found ("<<file_var_path<<")"))<<endl; return;}
-        else{cout<<"Reading list of DNN input variables from : "<<file_var_path<<endl;}
-        ifstream file_in(file_var_path);
-        string line;
-        while(!file_in.eof( ))
-        {
-            getline(file_in, line);
-            // TString ts_line(line);
-            stringstream ss(line);
-            TString varname; float tmp1, tmp2; //Values tmp1 and tmp2 could be the mean and variance, or min and max, etc. depending on the rescaling
-            ss >> varname >> tmp1 >> tmp2;
-            if(varname != "") //Last line may be empty
-            {
-                if(tmp1 == -1 && tmp2 == -1) {DNN_inputLayerName = varname;} //Name of input layer
-                else if(tmp1 == -2 && tmp2 == -2) {DNN_outputLayerName = varname;} //Name of output layer
-                else if(tmp1 == -3 && tmp2 == -3) {nNodes = Convert_TString_To_Number(varname);} //Number of output nodes
-                else
-                {
-                    var_list.push_back(varname);
-                    var_list_floats.push_back(0.);
-                    std::pair <float,float> pair_tmp = std::make_pair(tmp1, tmp2);
-                    v_inputs_rescaling.push_back(pair_tmp);
-                }
-                // cout<<"-->  "<<varname<<endl;
-            }
-        }
-        // cout<<"-->  "<<DNN_inputLayerName<<endl;
-        // cout<<"-->  "<<DNN_outputLayerName<<endl;
-        // cout<<"-->  "<<nNodes<<endl;
-        // cout<<"v_inputs_rescaling.first "<<v_inputs_rescaling[0].first<<" / v_inputs_rescaling.second "<<v_inputs_rescaling[0].second<<endl;
+        var_list = var_list_DNN; //Use DNN input features
+        var_list_floats.resize(var_list.size());
 
         //--- Load DNN model
         TString DNNmodel_path = "./weights/DNN/"+lumiName+"/model.pb";
-        // TString DNNmodel_path = "./model.pb";
         if(!Check_File_Existence(DNNmodel_path) ) {cout<<BOLD(FRED("Model "<<DNNmodel_path<<" not found ! Abort"))<<endl; return;}
 
         clfy1 = new TFModel(DNNmodel_path.Data(), var_list.size(), DNN_inputLayerName.Data(), nNodes, DNN_outputLayerName.Data()); //Specify names of I/O layers, and nof I/O nodes //These names can be read from the 'model.pbtxt' file produced at DNN training : look for name of first and last nodes *WHICH IS NOT A TRAINING NODE*
@@ -910,9 +916,15 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 	}
 	else
 	{
-		total_var_list.push_back(template_name);
+        if(classifier_name == "BDT") {total_var_list.push_back(classifier_name);}
+		else
+        {
+            for(int inode=0; inode<nNodes; inode++)
+            {
+                total_var_list.push_back(classifier_name + Convert_Number_To_TString(inode));
+            }
+        }
 	}
-
     vector<float> total_var_floats(total_var_list.size()); //NB : can not read/cut on BDT... (would conflict with input var floats ! Can not set address twice)
 
 // #    #      ##      #    #    #
@@ -1146,10 +1158,6 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
     			// int nentries = 100;
     			int nentries = tree->GetEntries();
 
-    			// float total_nentries = total_var_list.size()*nentries;
-                // tmp_compare+= total_nentries;
-    			// cout<<"Will process : "<<total_var_list.size()<<" variable(s) * "<<nentries<<" = "<<setprecision(9)<<total_nentries<<" events...."<<endl<<endl;
-
     			for(int ientry=0; ientry<nentries; ientry++)
     			{
     				// cout<<FGRN("ientry "<<ientry<<"")<<endl;
@@ -1191,50 +1199,51 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
                     // cout<<"eventMCFactor "<<eventMCFactor<<endl;
 
     				//Get MVA value to make template
-    				double mva_value1 = -9, mva_value2 = -9;
                     if(!makeHisto_inputVars)
                     {
-                        if(classifier_name == "BDT") {mva_value1 = reader->EvaluateMVA(MVA_method_name);}
+                        if(classifier_name == "BDT") {total_var_floats[0] = reader->EvaluateMVA(MVA_method_name);}
 
+                        //NB -- slow evaluation ! ==> Don't rescale inputs, add lambda layer in model to rescale inputs !
                         else //DNN
                         {
                             //Convert my vector storing input values into array
-                            float clfy1_inputs[var_list_floats.size()];
-                            std::copy(var_list_floats.begin(), var_list_floats.end(), clfy1_inputs);
+                            // float clfy1_inputs[var_list_floats.size()];
+                            // std::copy(var_list_floats.begin(), var_list_floats.end(), clfy1_inputs);
                             // cout<<"//-------------------------------------------- "<<endl;
                             // for(int i=0; i<var_list_floats.size(); i++) {cout<<"clfy1_inputs["<<i<<"] "<<clfy1_inputs[i]<<std::endl;}
                             for(int i=0; i<var_list.size(); i++)
                             {
-                                clfy1_inputs[i] = Rescale_Input_Variable(clfy1_inputs[i], v_inputs_rescaling[i].first, v_inputs_rescaling[i].second);
+                                // clfy1_inputs[i] = Rescale_Input_Variable(clfy1_inputs[i], v_inputs_rescaling[i].first, v_inputs_rescaling[i].second);
+                                var_list_floats[i] = Rescale_Input_Variable(var_list_floats[i], v_inputs_rescaling[i].first, v_inputs_rescaling[i].second);
                             }
                             // for(int i=0; i<var_list_floats.size(); i++) {cout<<"clfy1_inputs["<<i<<"] "<<clfy1_inputs[i]<<std::endl;}
 
                             //Evaluate output nodes values
-                            std::vector<float> clfy1_outputs = clfy1->evaluate(clfy1_inputs);
+                            // std::vector<float> clfy1_outputs = clfy1->evaluate(clfy1_inputs);
+                            std::vector<float> clfy1_outputs = clfy1->evaluate(var_list_floats);
                             // for(unsigned i=0; i<clfy1_outputs.size(); i++) {cout<<"clfy1_outputs["<<i<<"] "<<clfy1_outputs[i]<<endl;}
 
-                            mva_value1 = clfy1_outputs[0];
-                            // cout<<"mva_value1 "<<mva_value1<<endl;
+                            for(int ivar=0; ivar<total_var_list.size(); ivar++) {total_var_floats[ivar] = clfy1_outputs[ivar];}
                         }
                     }
-                    else
-                    {
-                        for(int ivar=0; ivar<total_var_list.size(); ivar++)
-                        {
-                            //-- Rescale input variables here, to plot them and make sure they are properly rescaled
-                            // cout<<"//--------------------------------------------"<<endl;
-                            // cout<<"sample_list["<<isample<<"] "<<sample_list[isample]<<endl;
-                            // cout<<"total_var_list["<<ivar<<"] "<<total_var_list[ivar]<<endl;
-                            // cout<<"total_var_floats["<<ivar<<"] "<<total_var_floats[ivar]<<endl;
-                            // cout<<"v_inputs_rescaling["<<ivar<<"].first "<<v_inputs_rescaling[ivar].first<<endl;
-                            // cout<<"v_inputs_rescaling["<<ivar<<"].second "<<v_inputs_rescaling[ivar].second<<endl;
-                            // total_var_floats[ivar] = Rescale_Input_Variable(total_var_floats[ivar], v_inputs_rescaling[ivar].first, v_inputs_rescaling[ivar].second);
-                            // cout<<"===> total_var_floats["<<ivar<<"] "<<total_var_floats[ivar]<<endl;
-
-                            //Some special variables are already read, must get their proper values
-                            if(total_var_list[ivar] == "channel") {total_var_floats[ivar] = channel;}
-                        }
-                    }
+                    // else
+                    // {
+                    //     for(int ivar=0; ivar<total_var_list.size(); ivar++)
+                    //     {
+                    //         //-- Rescale input variables here, to plot them and make sure they are properly rescaled
+                    //         // cout<<"//--------------------------------------------"<<endl;
+                    //         // cout<<"sample_list["<<isample<<"] "<<sample_list[isample]<<endl;
+                    //         // cout<<"total_var_list["<<ivar<<"] "<<total_var_list[ivar]<<endl;
+                    //         // cout<<"total_var_floats["<<ivar<<"] "<<total_var_floats[ivar]<<endl;
+                    //         // cout<<"v_inputs_rescaling["<<ivar<<"].first "<<v_inputs_rescaling[ivar].first<<endl;
+                    //         // cout<<"v_inputs_rescaling["<<ivar<<"].second "<<v_inputs_rescaling[ivar].second<<endl;
+                    //         // total_var_floats[ivar] = Rescale_Input_Variable(total_var_floats[ivar], v_inputs_rescaling[ivar].first, v_inputs_rescaling[ivar].second);
+                    //         // cout<<"===> total_var_floats["<<ivar<<"] "<<total_var_floats[ivar]<<endl;
+                    //
+                    //         //Some special variables are already read, must get their proper values
+                    //         // if(total_var_list[ivar] == "channel") {total_var_floats[ivar] = channel;}
+                    //     }
+                    // }
 
     				//-- Fill histos for all subcategories
     				for(int ichan=0; ichan<channel_list.size(); ichan++)
@@ -1275,28 +1284,10 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
     							continue;
     						}
 
-    						if(makeHisto_inputVars)
-    						{
-    							for(int ivar=0; ivar<total_var_list.size(); ivar++)
-    							{
-                                    /*
-                                    cout<<"//--------------------------------------------"<<endl;
-                                    cout<<"sample_list["<<isample<<"] "<<sample_list[isample]<<endl;
-                                    cout<<"total_var_list["<<ivar<<"] "<<total_var_list[ivar]<<endl;
-                                    cout<<"total_var_floats["<<ivar<<"] "<<total_var_floats[ivar]<<endl;
-                                    cout<<"v_inputs_rescaling["<<ivar<<"].first "<<v_inputs_rescaling[ivar].first<<endl;
-                                    cout<<"v_inputs_rescaling["<<ivar<<"].second "<<v_inputs_rescaling[ivar].second<<endl;
-                                    // total_var_floats[ivar] = Rescale_Input_Variable(total_var_floats[ivar], v_inputs_rescaling[ivar].first, v_inputs_rescaling[ivar].second);
-                                    total_var_floats[ivar] = 0;
-                                    cout<<"===> total_var_floats["<<ivar<<"] "<<total_var_floats[ivar]<<endl;
-
-                                    //Some special variables are already read, must get their proper values
-                                    if(total_var_list[ivar] == "channel") {total_var_floats[ivar] = channel;}
-                                    */
-    								Fill_TH1F_UnderOverflow(v3_histo_chan_syst_var[ichan][isyst][ivar], total_var_floats[ivar], weight_tmp);
-    							}
-    						}
-    						else {Fill_TH1F_UnderOverflow(v3_histo_chan_syst_var[ichan][isyst][0], mva_value1, weight_tmp);}
+                            for(int ivar=0; ivar<total_var_list.size(); ivar++)
+                            {
+                                Fill_TH1F_UnderOverflow(v3_histo_chan_syst_var[ichan][isyst][ivar], total_var_floats[ivar], weight_tmp);
+                            }
     					} //syst loop
 
     					if(channel_list[ichan] != "") {break;} //subcategories are orthogonal ; if already found, can break subcat. loop
@@ -1332,7 +1323,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
     					for(int ivar=0; ivar<total_var_list.size(); ivar++)
     					{
     						TString output_histo_name;
-    						if(makeHisto_inputVars)
+    						// if(makeHisto_inputVars)
     						{
     							output_histo_name = total_var_list[ivar] + "_" + region;
     							if(channel_list[ichan] != "") {output_histo_name+= "_" + channel_list[ichan];}
@@ -1341,15 +1332,15 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
     							if(syst_list[isyst] != "") {output_histo_name+= "__" + Get_Modified_SystName(syst_list[isyst], v_lumiYears[iyear]);}
     							else if(systTree_list[itree] != "") {output_histo_name+= "__" + systTree_list[itree];}
     						}
-    						else
-    						{
-    							output_histo_name = classifier_name + template_name + "_" + region;
-    							if(channel_list[ichan] != "") {output_histo_name+= "_" + channel_list[ichan];}
-                                output_histo_name+= "_" + v_lumiYears[iyear];
-    							output_histo_name+= "__" + samplename;
-    							if(syst_list[isyst] != "") {output_histo_name+= "__" + Get_Modified_SystName(syst_list[isyst], v_lumiYears[iyear]);}
-    							else if(systTree_list[itree] != "") {output_histo_name+= "__" + systTree_list[itree];}
-    						}
+    						// else
+    						// {
+    						// 	output_histo_name = classifier_name + template_name + "_" + region;
+    						// 	if(channel_list[ichan] != "") {output_histo_name+= "_" + channel_list[ichan];}
+                            //     output_histo_name+= "_" + v_lumiYears[iyear];
+    						// 	output_histo_name+= "__" + samplename;
+    						// 	if(syst_list[isyst] != "") {output_histo_name+= "__" + Get_Modified_SystName(syst_list[isyst], v_lumiYears[iyear]);}
+    						// 	else if(systTree_list[itree] != "") {output_histo_name+= "__" + systTree_list[itree];}
+    						// }
 
     						file_output->cd();
 
@@ -1417,7 +1408,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
     if(!makeHisto_inputVars) //For COMBINE fit, want to directly merge contributions from different processes into single histograms
     {
-        Merge_Templates_ByProcess(output_file_name, template_name);
+        Merge_Templates_ByProcess(output_file_name, template_name, total_var_list);
     }
 
 	return;
@@ -1609,7 +1600,11 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 	}
 	else
 	{
-		total_var_list.push_back(template_name);
+        if(classifier_name == "DNN")
+        {
+            for(int inode=0; inode<nNodes; inode++) {total_var_list.push_back(classifier_name + Convert_Number_To_TString(inode));} //1 template per output node
+        }
+        else {total_var_list.push_back(classifier_name);} //Single BDT template
 	}
 
 
@@ -1703,7 +1698,7 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
     				if(use_combine_file) {histo_name = dir_hist + samplename;}
     				else
     				{
-    					histo_name = classifier_name + total_var_list[ivar] + "_" + region;
+    					histo_name = total_var_list[ivar] + "_" + region;
     					if(channel != "") {histo_name+= "_" + channel;}
     					histo_name+= + "_" + v_lumiYears[iyear];
                         histo_name+= + "__" + samplename;
@@ -1891,7 +1886,8 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
     		if(use_combine_file) {data_histo_name = "data";}
     		else
     		{
-    			data_histo_name = classifier_name + total_var_list[ivar] + "_" + region;
+                // data_histo_name = classifier_name + total_var_list[ivar] + "_" + region;
+                data_histo_name = total_var_list[ivar] + "_" + region;
     			if(channel != "") {data_histo_name+= "_" + channel;}
     			data_histo_name+= "_" + v_lumiYears[iyear];
                 data_histo_name+= "__data_obs";
@@ -2394,7 +2390,12 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 		else
 		{
             // histo_ratio_data->GetXaxis()->SetTitle(classifier_name+" (vs "+template_name + ")");
-            histo_ratio_data->GetXaxis()->SetTitle(classifier_name);
+            histo_ratio_data->GetXaxis()->SetTitle(total_var_list[ivar]);
+
+            //Hardcode DNN output nodes names...?
+            if(total_var_list[ivar] == "DNN0") {histo_ratio_data->GetXaxis()->SetTitle("DNN (tZq node)");}
+            else if(total_var_list[ivar] == "DNN1" && nNodes == 3) {histo_ratio_data->GetXaxis()->SetTitle("DNN (ttZ node)");}
+            else if(total_var_list[ivar] == "DNN2" && nNodes == 3) {histo_ratio_data->GetXaxis()->SetTitle("DNN (Bkgs node)");}
 
 			if(template_name == "categ") //Vertical text X labels (categories names)
 			{
@@ -2604,7 +2605,8 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 			output_plot_name = "plots/templates/" + region + "/" + lumiName;
 			if(prefit) {output_plot_name+= "/prefit/";}
 			else {output_plot_name+= "/postfit/";}
-			output_plot_name+= classifier_name + template_name + "_template_" + signal_process;
+            // output_plot_name+= classifier_name + template_name + "_template_" + signal_process;
+            output_plot_name+= total_var_list[ivar] + "_template_" + signal_process;
 		}
 		if(channel != "") {output_plot_name+= "_" + channel;}
 		output_plot_name+= this->filename_suffix;
@@ -3097,7 +3099,7 @@ void TopEFT_analysis::SetBranchAddress_SystVariationArray(TTree* t, TString syst
  * ===> In addition to individual histos, also merge the relevant subprocesses together and store the merged histos
  * NB : here the order of loops is important because we sum histograms recursively, and the 'sample_list' loop must be the most nested one !
  */
-void TopEFT_analysis::Merge_Templates_ByProcess(TString filename, TString template_name, bool force_normTemplate_positive/*=false*/)
+void TopEFT_analysis::Merge_Templates_ByProcess(TString filename, TString template_name, vector<TString> total_var_list, bool force_normTemplate_positive/*=false*/)
 {
 	cout<<FYEL("==> Merging some templates in file : ")<<filename<<endl;
 
@@ -3105,110 +3107,113 @@ void TopEFT_analysis::Merge_Templates_ByProcess(TString filename, TString templa
 	TFile* f = TFile::Open(filename, "UPDATE");
 
 	//NB :here the order of loops is important because we sum histograms recursively ! The 'sample_list' loop *must be the most nested one* !
-    for(int iyear=0; iyear<v_lumiYears.size(); iyear++)
+    for(int ivar=0; ivar<total_var_list.size(); ivar++) //There may be more than 1 template, e.g. several DNN output nodes
     {
-        for(int ichan=0; ichan<channel_list.size(); ichan++)
-    	{
-            // cout<<"channel_list[ichan] "<<channel_list[ichan]<<endl;
+        for(int iyear=0; iyear<v_lumiYears.size(); iyear++)
+        {
+            for(int ichan=0; ichan<channel_list.size(); ichan++)
+        	{
+                // cout<<"channel_list[ichan] "<<channel_list[ichan]<<endl;
 
-    		for(int itree=0; itree<systTree_list.size(); itree++)
-    		{
-    			// if(systTree_list[itree] != "" && channel_list.size() > 1 && channel_list[ichan] == "") {continue;}
+        		for(int itree=0; itree<systTree_list.size(); itree++)
+        		{
+        			// if(systTree_list[itree] != "" && channel_list.size() > 1 && channel_list[ichan] == "") {continue;}
 
-    			for(int isyst=0; isyst<syst_list.size(); isyst++)
-    			{
-    				// if(((channel_list.size() > 1 && channel_list[ichan] == "") || systTree_list[itree] != "") && syst_list[isyst] != "") {continue;}
-    				if(systTree_list[itree] != "" && syst_list[isyst] != "") {break;}
+        			for(int isyst=0; isyst<syst_list.size(); isyst++)
+        			{
+        				// if(((channel_list.size() > 1 && channel_list[ichan] == "") || systTree_list[itree] != "") && syst_list[isyst] != "") {continue;}
+        				if(systTree_list[itree] != "" && syst_list[isyst] != "") {break;}
 
-    				TH1F* h_merging = 0; //Merged histogram
+        				TH1F* h_merging = 0; //Merged histogram
 
-    				for(int isample=0; isample<sample_list.size(); isample++)
-    				{
-    					//-- Protections : not all syst weights apply to all samples, etc.
-                        if(sample_list[isample] == "DATA" && (systTree_list[itree] != "" || syst_list[isyst] != "")) {continue;} //nominal data only
-                        if(v_lumiYears[iyear] == "2018" && syst_list[isyst].BeginsWith("prefiring") ) {continue;} //no prefire in 2018
+        				for(int isample=0; isample<sample_list.size(); isample++)
+        				{
+        					//-- Protections : not all syst weights apply to all samples, etc.
+                            if(sample_list[isample] == "DATA" && (systTree_list[itree] != "" || syst_list[isyst] != "")) {continue;} //nominal data only
+                            if(v_lumiYears[iyear] == "2018" && syst_list[isyst].BeginsWith("prefiring") ) {continue;} //no prefire in 2018
 
-    					// cout<<endl<<"Syst "<<syst_list[isyst]<<systTree_list[itree]<<" / chan "<<channel_list[ichan]<<" / sample "<<sample_list[isample]<<endl;
+        					// cout<<endl<<"Syst "<<syst_list[isyst]<<systTree_list[itree]<<" / chan "<<channel_list[ichan]<<" / sample "<<sample_list[isample]<<endl;
 
-    					//Check if this sample needs to be merged, i.e. if the samples before/after belong to the same "group of samples"
-    					bool merge_this_sample = false;
-    					if(!isample && sample_groups.size() > 1 && sample_groups[isample+1] == sample_groups[isample]) {merge_this_sample = true;}
-    					else if(isample == sample_list.size()-1 && sample_groups[isample-1] == sample_groups[isample]) {merge_this_sample = true;}
-    					else if(isample > 0 && isample < sample_list.size()-1 && (sample_groups[isample+1] == sample_groups[isample] || sample_groups[isample-1] == sample_groups[isample])) {merge_this_sample = true;}
+        					//Check if this sample needs to be merged, i.e. if the samples before/after belong to the same "group of samples"
+        					bool merge_this_sample = false;
+        					if(!isample && sample_groups.size() > 1 && sample_groups[isample+1] == sample_groups[isample]) {merge_this_sample = true;}
+        					else if(isample == sample_list.size()-1 && sample_groups[isample-1] == sample_groups[isample]) {merge_this_sample = true;}
+        					else if(isample > 0 && isample < sample_list.size()-1 && (sample_groups[isample+1] == sample_groups[isample] || sample_groups[isample-1] == sample_groups[isample])) {merge_this_sample = true;}
 
-    					// cout<<"merge_this_sample "<<merge_this_sample<<endl;
-    					if(!merge_this_sample) {continue;} //Only care about samples to merge : others are already stored in file
+        					// cout<<"merge_this_sample "<<merge_this_sample<<endl;
+        					if(!merge_this_sample) {continue;} //Only care about samples to merge : others are already stored in file
 
-    					TString samplename = sample_list[isample];
-    					if(samplename == "DATA") {samplename = "data_obs";}
+        					TString samplename = sample_list[isample];
+        					if(samplename == "DATA") {samplename = "data_obs";}
 
-    					TString histoname = classifier_name + template_name + "_" + region;
-    					if(channel_list[ichan] != "") {histoname+= "_" + channel_list[ichan];}
-                        histoname+= "_" + v_lumiYears[iyear];
-                        histoname+= "__" + samplename;
-    					if(syst_list[isyst] != "") {histoname+= "__" + Get_Modified_SystName(syst_list[isyst], v_lumiYears[iyear]);}
-    					else if(systTree_list[itree] != "") {histoname+= "__" + systTree_list[itree];}
-    					// cout<<"histoname "<<histoname<<endl;
+        					TString histoname = total_var_list[ivar] + "_" + region;
+        					if(channel_list[ichan] != "") {histoname+= "_" + channel_list[ichan];}
+                            histoname+= "_" + v_lumiYears[iyear];
+                            histoname+= "__" + samplename;
+        					if(syst_list[isyst] != "") {histoname+= "__" + Get_Modified_SystName(syst_list[isyst], v_lumiYears[iyear]);}
+        					else if(systTree_list[itree] != "") {histoname+= "__" + systTree_list[itree];}
+        					// cout<<"histoname "<<histoname<<endl;
 
-    					if(!f->GetListOfKeys()->Contains(histoname) && systTree_list[itree] == "" && syst_list[isyst] == "")
-    					{
-    						cout<<FRED("Histo "<<histoname<<" not found in file "<<filename<<" !")<<endl;
-    					 	continue;
-    					}
+        					if(!f->GetListOfKeys()->Contains(histoname) && systTree_list[itree] == "" && syst_list[isyst] == "")
+        					{
+        						cout<<FRED("Histo "<<histoname<<" not found in file "<<filename<<" !")<<endl;
+        					 	continue;
+        					}
 
-    					TH1F* h_tmp = (TH1F*) f->Get(histoname); //Get individual histograms
-    					// cout<<"h_tmp->Integral() = "<<h_tmp->Integral()<<endl;
+        					TH1F* h_tmp = (TH1F*) f->Get(histoname); //Get individual histograms
+        					// cout<<"h_tmp->Integral() = "<<h_tmp->Integral()<<endl;
 
-    					int factor = +1; //Addition
-    					// if(sample_list[isample] == "Fakes_MC") {factor = -1;} //Substraction of 'MC Fakes' (prompt contribution to fakes)
+        					int factor = +1; //Addition
+        					// if(sample_list[isample] == "Fakes_MC") {factor = -1;} //Substraction of 'MC Fakes' (prompt contribution to fakes)
 
-    					if(h_tmp != 0)
-    					{
-    						if(!h_merging) {h_merging = (TH1F*) h_tmp->Clone();}
-    						else {h_merging->Add(h_tmp, factor);}
-    					}
-    					else {cout<<"h_tmp null !"<<endl;}
+        					if(h_tmp != 0)
+        					{
+        						if(!h_merging) {h_merging = (TH1F*) h_tmp->Clone();}
+        						else {h_merging->Add(h_tmp, factor);}
+        					}
+        					else {cout<<"h_tmp null !"<<endl;}
 
-    					// cout<<"h_merging->Integral() = "<<h_merging->Integral()<<endl;
+        					// cout<<"h_merging->Integral() = "<<h_merging->Integral()<<endl;
 
-    					delete h_tmp; h_tmp = 0;
-    					if(!h_merging) {cout<<"Syst "<<syst_list[isyst]<<systTree_list[itree]<<" / chan "<<channel_list[ichan]<<" / sample "<<sample_list[isample]<<endl; cout<<"h_merging is null ! Fix this first"<<endl; return;}
+        					delete h_tmp; h_tmp = 0;
+        					if(!h_merging) {cout<<"Syst "<<syst_list[isyst]<<systTree_list[itree]<<" / chan "<<channel_list[ichan]<<" / sample "<<sample_list[isample]<<endl; cout<<"h_merging is null ! Fix this first"<<endl; return;}
 
-    					//Check if next sample will be merged with this one, or else if must write the histogram
-    					if(isample < sample_list.size()-1 && sample_groups[isample+1] == sample_groups[isample]) {continue;}
-    					else
-    					{
-    						// if(force_normTemplate_positive)
-    						// {
-    						// 	//If integral of histo is negative, set to 0 (else COMBINE crashes) -- must mean that norm is close to 0 anyway
-    						// 	if(h_merging->Integral() <= 0)
-    						// 	{
-    						// 		// cout<<endl<<"While merging processes by groups ('Rares'/...) :"<<endl<<FRED(" h_merging->Integral() = "<<h_merging->Integral()<<" (<= 0) ! Distribution set to ~>0 (flat), to avoid crashes in COMBINE !")<<endl;
-    						// 		Set_Histogram_FlatZero(h_merging, true, "h_merging");
-    						// 		cout<<"(Syst "<<syst_list[isyst]<<systTree_list[itree]<<" / chan "<<channel_list[ichan]<<" / sample "<<sample_list[isample]<<")"<<endl;
-    						// 	}
-    						// }
-    						// cout<<"h_merging->Integral() = "<<h_merging->Integral()<<endl;
+        					//Check if next sample will be merged with this one, or else if must write the histogram
+        					if(isample < sample_list.size()-1 && sample_groups[isample+1] == sample_groups[isample]) {continue;}
+        					else
+        					{
+        						// if(force_normTemplate_positive)
+        						// {
+        						// 	//If integral of histo is negative, set to 0 (else COMBINE crashes) -- must mean that norm is close to 0 anyway
+        						// 	if(h_merging->Integral() <= 0)
+        						// 	{
+        						// 		// cout<<endl<<"While merging processes by groups ('Rares'/...) :"<<endl<<FRED(" h_merging->Integral() = "<<h_merging->Integral()<<" (<= 0) ! Distribution set to ~>0 (flat), to avoid crashes in COMBINE !")<<endl;
+        						// 		Set_Histogram_FlatZero(h_merging, true, "h_merging");
+        						// 		cout<<"(Syst "<<syst_list[isyst]<<systTree_list[itree]<<" / chan "<<channel_list[ichan]<<" / sample "<<sample_list[isample]<<")"<<endl;
+        						// 	}
+        						// }
+        						// cout<<"h_merging->Integral() = "<<h_merging->Integral()<<endl;
 
-    						TString histoname_new = classifier_name + template_name + "_" + region;
-    						if(channel_list[ichan] != "") {histoname_new+="_"  + channel_list[ichan];}
-                            histoname_new+= "_" + v_lumiYears[iyear];
-    						histoname_new+= "__" + sample_groups[isample];
-    						if(syst_list[isyst] != "") {histoname_new+= "__" + Get_Modified_SystName(syst_list[isyst], v_lumiYears[iyear]);}
-    						else if(systTree_list[itree] != "") {histoname_new+= "__" + systTree_list[itree];}
+        						TString histoname_new = total_var_list[ivar] + "_" + region;
+        						if(channel_list[ichan] != "") {histoname_new+="_"  + channel_list[ichan];}
+                                histoname_new+= "_" + v_lumiYears[iyear];
+        						histoname_new+= "__" + sample_groups[isample];
+        						if(syst_list[isyst] != "") {histoname_new+= "__" + Get_Modified_SystName(syst_list[isyst], v_lumiYears[iyear]);}
+        						else if(systTree_list[itree] != "") {histoname_new+= "__" + systTree_list[itree];}
 
-    						f->cd();
-    						h_merging->Write(histoname_new, TObject::kOverwrite);
+        						f->cd();
+        						h_merging->Write(histoname_new, TObject::kOverwrite);
 
-    						// cout<<"- Writing merged histo "<<histoname_new<<" with integral "<<h_merging->Integral()<<endl;
+        						// cout<<"- Writing merged histo "<<histoname_new<<" with integral "<<h_merging->Integral()<<endl;
 
-    						delete h_merging; h_merging = 0;
-    					} //write histo
-    				} //sample loop
-    			} //syst loop
-    		} //tree loop
-    	} //channel loop
-    } //years loop
+        						delete h_merging; h_merging = 0;
+        					} //write histo
+        				} //sample loop
+        			} //syst loop
+        		} //tree loop
+        	} //channel loop
+        } //years loop
+    } //vars loop
 
 	f->Close();
 

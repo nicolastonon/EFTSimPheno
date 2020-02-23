@@ -2,6 +2,7 @@
 # $@ = name of target ("main")
 # -c asks the compiler not to link. Allows to get a compiled "object file" which does not contain
 # -o specify target
+# $^ all prerequisites in the rule
 
 #Define variables
 CC=g++ -fPIC #Compiler used #fPIC useful to get debug messages
@@ -37,7 +38,7 @@ all: $(MY_ANALYSIS) $(ROCS) $(PRODUCE_CUTFLOW)
 $(MY_ANALYSIS): Utils/CMSSW_TensorFlow.o Utils/TFModel.o Utils/Helper.o analysis_main.o TopEFT_analysis.o
 	@echo "###################################"
 	@echo "-- Creating executable ./$(MY_ANALYSIS) --"
-	@$(CC) Utils/CMSSW_TensorFlow.o Utils/TFModel.o Utils/Helper.o analysis_main.o TopEFT_analysis.o -o $@ $(ROOTFLAGS) $(LFLAGS) $(INCFLAGS)
+	@$(CC) $^ -o $@ $(ROOTFLAGS) $(LFLAGS) $(INCFLAGS) -I./Utils
 	@echo "-- Done --"
 	@echo "###################################""#"
 	@echo ""
@@ -45,7 +46,7 @@ $(MY_ANALYSIS): Utils/CMSSW_TensorFlow.o Utils/TFModel.o Utils/Helper.o analysis
 $(ROCS): ROCS/Compare_ROC_curves.o Utils/Helper.o
 	@echo "###################################"
 	@echo "-- Creating executable $(ROCS) --"
-	@$(CC) ROCS/Compare_ROC_curves.o Utils/Helper.o -o $@ $(ROOTFLAGS) $(LFLAGS)
+	@$(CC) $^ -o $@ $(ROOTFLAGS) $(LFLAGS)
 	@echo "-- Done --"
 	@echo "###################################"
 	@echo ""
@@ -53,22 +54,30 @@ $(ROCS): ROCS/Compare_ROC_curves.o Utils/Helper.o
 $(PRODUCE_CUTFLOW):	Utils/Produce_Cutflow.o Utils/Helper.o
 	@echo "###################################""#"
 	@echo "-- Creating executable ./$(PRODUCE_CUTFLOW) --"
-	@$(CC) Utils/Produce_Cutflow.o Utils/Helper.o -o $@ $(ROOTFLAGS) $(LFLAGS) $(INCFLAGS)
+	@$(CC) $^ -o $@ $(ROOTFLAGS) $(LFLAGS) $(INCFLAGS)
 	@echo "-- Done --"
 	@echo "###################################""#"
 	@echo ""
 
 #Obtain objects from source and header files
-#WARNING : only works for .cxx files ! e.g. for .cpp, would need a specific rule
+#NB : only works for .cxx files ! e.g. for .cpp, would need a specific rule
 %.o: %.cxx $(HDRS)
 	@echo "-- Compiling : "$@"--"
-# @echo "-- INCFLAGS : "$(INCFLAGS)" --"
-# @echo "-- LFLAGS : "$(LFLAGS)" --"
-# @echo "-- ROOTFLAGS : "$(ROOTFLAGS)" --"
-# @echo "-- CFLAGS : "$(CFLAGS)" --"
 	@$(CC) $(ROOTFLAGS) $(CFLAGS) $(LFLAGS) $(INCFLAGS) $< -o $@
 	@echo ""
 # @Example :  g++ `root-config --glibs --cflags` -fPIC -c -g Utils/Helper.cxx -o Utils/Helper.o
+
+#For .cpp files
+# %.o: %.cpp $(HDRS)
+# 	@echo "-- Compiling : "$@"--"
+# 	@$(CC) $(ROOTFLAGS) $(CFLAGS) $(LFLAGS) $(INCFLAGS) $< -o $@
+# 	@echo ""
+
+#For .cc files
+# %.o: %.cc $(HDRS)
+# 	@echo "-- Compiling : "$@"--"
+# 	@$(CC) $(ROOTFLAGS) $(CFLAGS) $(LFLAGS) $(INCFLAGS) $< -o $@
+# 	@echo ""
 
 #Erase all objects and executable
 clean:

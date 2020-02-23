@@ -1,9 +1,10 @@
 #xxx
 
 # //--------------------------------------------
-from tensorflow.keras.callbacks import TensorBoard, EarlyStopping, LambdaCallback, LearningRateScheduler, ReduceLROnPlateau, Callback
+from tensorflow.keras.callbacks import TensorBoard, EarlyStopping, LambdaCallback, LearningRateScheduler, ReduceLROnPlateau, Callback, ModelCheckpoint
 import datetime
 from Utils.Helper import TimeHistory
+import os # mkdir
 # //--------------------------------------------
 # //--------------------------------------------
 
@@ -53,6 +54,26 @@ class MyCustomCallback(Callback):
 # //--------------------------------------------
 # //--------------------------------------------
 
+
+def Checkpoints(weight_dir):
+
+    # Include the epoch in the file name (uses `str.format`)
+    # ckpt_path = weight_dir + "checkpoint.ckpt"
+    ckpt_path = weight_dir + "checkpoints/cp-{epoch:04d}.ckpt"
+
+    # Create a callback that saves the model's weights every 5 epochs
+    cp_callback = ModelCheckpoint(
+        filepath=ckpt_path,
+        verbose=1,
+        save_weights_only=True,
+        save_freq=1000000) #in number of train events seen
+
+    return cp_callback, ckpt_path
+
+# //--------------------------------------------
+# //--------------------------------------------
+
+
 def Get_Callbacks(weight_dir):
 
     # batchLogCallback = LambdaCallback(on_batch_end=batchOutput) #Could be used to perform action at end of each batch
@@ -79,8 +100,10 @@ def Get_Callbacks(weight_dir):
     #Get training time at each epoch
     time_callback = TimeHistory()
 
+    cp_callback, ckpt_path = Checkpoints(weight_dir)
+
     # callbacks_list = [tensorboard, ES]
-    list = [tensorboard, lrate_plateau, time_callback]
+    list = [tensorboard, lrate_plateau, time_callback, cp_callback]
     # list = [tensorboard, lrate_plateau, time_callback, MyCustomCallback()]
 
-    return list
+    return list, ckpt_path
