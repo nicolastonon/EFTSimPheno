@@ -53,7 +53,8 @@ _____________________________________________________________________________
     * [Generate LHE events interactively](https://github.com/nicolastonon/EFT-Simu-Pheno#Generate-LHE-events-interactively)
     * [Generate miniAOD events](https://github.com/nicolastonon/EFT-Simu-Pheno#Generate-miniAOD-events)
       * [GEN-only](https://github.com/nicolastonon/EFT-Simu-Pheno#GEN-only)
-      * [Shower + FastSim + RECO](https://github.com/nicolastonon/EFT-Simu-Pheno#Shower--FastSim--RECO)
+      * [Fast simulation](https://github.com/nicolastonon/EFT-Simu-Pheno#Fast-simulation)
+      * [Full simulation](https://github.com/nicolastonon/EFT-Simu-Pheno#Full-simulation)
 
 * [Pheno studies](https://github.com/nicolastonon/EFT-Simu-Pheno#Pheno-studies)
     * [GenAnalyzer](https://github.com/nicolastonon/EFT-Simu-Pheno#GenAnalyzer)
@@ -186,7 +187,7 @@ cmsRun GEN_cfg.py
 
 <!-- :clock430: *NB : for 10K events interactively, this step takes ~1h.* -->
 
-## Fast simulation
+### Fast simulation
 
 *[VALIDATED UNDER CMSSW_9_4_12]*
 
@@ -229,11 +230,11 @@ cmsRun FASTSIM2_cfg.py
 ```
 
 
-## Full simulation
+### Full simulation
 
 Here are the main production steps when using the full GEANT4 detector simulation.
 
-### GEN-SIM
+#### GEN-SIM
 
 *[VALIDATED UNDER CMSSW_9_3_6]*
 
@@ -255,7 +256,7 @@ cmsDriver.py Configuration/GenProduction/python/PrivProd.py \
 cmsRun GEN-SIM_cfg.py
 ```
 
-### LHE-GEN-SIM
+#### LHE-GEN-SIM
 
 *[VALIDATED UNDER CMSSW_9_3_6]*
 
@@ -278,7 +279,7 @@ cmsRun LHE-GEN-SIM_cfg.py
 
 :heavy_exclamation_mark: Note that a different custom fragment [PrivProdFromGridpack.py](https://github.com/nicolastonon/EFT-Simu-Pheno/ProductionScripts/Fragments/PrivProdFromGridpack.py) is used, which includes a block to read the gridpack.
 
-### DIGI-RECO
+#### DIGI-RECO
 
 *[VALIDATED UNDER CMSSW_9_4_4]*
 
@@ -312,7 +313,7 @@ cmsDriver.py step2 --filein file:DIGI1.root --fileout file:DIGI2.root \
 cmsRun DIGI2_cfg.py
 ```
 
-### MINIAOD
+#### MINIAOD
 
 *[VALIDATED UNDER CMSSW_9_4_4]*
 
