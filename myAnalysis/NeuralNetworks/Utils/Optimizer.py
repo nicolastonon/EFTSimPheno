@@ -1,4 +1,4 @@
-# xxx
+#Define the loss function, optimizer and metric to be used to train the network
 
 from tensorflow.keras.optimizers import SGD, Adam, RMSprop
 
@@ -16,7 +16,7 @@ from tensorflow.keras.optimizers import SGD, Adam, RMSprop
 # //--------------------------------------------
 # //--------------------------------------------
 
-#Choose here the Loss / Optimizer / Metrics to be used to train the model
+#Define here the loss function / optimizer / metrics to be used to train the model
 def Get_Loss_Optim_Metrics(nof_outputs):
 
     #The bigger the LR, the bigger the changes of weights in-between epochs. Too low -> weights don't update. Too large -> Instability

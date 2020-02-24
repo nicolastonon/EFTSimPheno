@@ -1,5 +1,5 @@
 # Nicolas Tonon (DESY)
-# Python helper function related to DNNs
+# Python helper functions
 
 import time   # time accounting
 import ROOT
@@ -83,14 +83,19 @@ def Get_LumiName(lumi_years):
 # //--------------------------------------------
 # //--------------------------------------------
 
+#Sanity checks of input args
 def SanityChecks_Parameters(processClasses_list, labels_list):
 
     if len(processClasses_list) == 0:
         print(colors.fg.red, 'ERROR : no process class defined...', colors.reset); exit(1)
     elif len(processClasses_list) is not len(labels_list):
         print(colors.fg.red, 'ERROR : sizes of lists processClasses_list and labels_list are different...', colors.reset); exit(1)
+# //--------------------------------------------
+# //--------------------------------------------
 
-
+#Normalize input features
+def normalize(val, m, dev):
+    return (val-m)/dev
 # //--------------------------------------------
 # //--------------------------------------------
 

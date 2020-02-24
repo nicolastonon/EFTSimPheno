@@ -54,7 +54,7 @@ np.set_printoptions(threshold=np.inf) #If activated, will print full numpy array
 # //--------------------------------------------
 # //--------------------------------------------
 
-#Define the model and train it, using Keras only
+#Call sub-function to read/store/shape the data
 def Get_Data_For_DNN_Training(weight_dir, lumi_years, ntuples_dir, processClasses_list, labels_list, var_list, cuts, nof_output_nodes, maxEvents_perClass, splitTrainEventFrac, nEventsTot_train, nEventsTot_test, lumiName, startFromExistingModel):
 
     #Get data from TFiles
@@ -64,7 +64,7 @@ def Get_Data_For_DNN_Training(weight_dir, lumi_years, ntuples_dir, processClasse
     x, y, list_weights_allClasses = Shape_Data(list_x_allClasses, list_weights_allClasses, maxEvents_perClass, nof_output_nodes)
 
     #Transform the input features
-    x = Transform_Inputs(weight_dir, x, var_list, lumiName, startFromExistingModel)
+    x, means, stddev = Transform_Inputs(weight_dir, x, var_list, lumiName, startFromExistingModel)
 
     #Compute event weights considering only abs(weights) => duplicate weight arrays to hold absolute values
     list_weights_allClasses_abs = []
@@ -87,7 +87,7 @@ def Get_Data_For_DNN_Training(weight_dir, lumi_years, ntuples_dir, processClasse
     print(colors.fg.lightblue, "-- Will use " + str(x_test.shape[0]) + " testing events !", colors.reset)
     print(colors.fg.lightblue, "===========\n", colors.reset)
 
-    return x_train, y_train, x_test, y_test, PhysicalWeights_train, PhysicalWeights_test, LearningWeights_train, LearningWeights_test, x, y, PhysicalWeights_allClasses, LearningWeights_allClasses
+    return x_train, y_train, x_test, y_test, PhysicalWeights_train, PhysicalWeights_test, LearningWeights_train, LearningWeights_test, x, y, PhysicalWeights_allClasses, LearningWeights_allClasses, means, stddev
 # //--------------------------------------------
 # //--------------------------------------------
 
@@ -113,6 +113,7 @@ def Get_Data_For_DNN_Training(weight_dir, lumi_years, ntuples_dir, processClasse
 # //--------------------------------------------
 # //--------------------------------------------
 
+#Read the data from ROOT files and store it in np arrays
 def Read_Store_Data(lumi_years, ntuples_dir, processClasses_list, labels_list, var_list, cuts):
 
     testdirpath = Path(ntuples_dir)
@@ -178,6 +179,7 @@ def Read_Store_Data(lumi_years, ntuples_dir, processClasses_list, labels_list, v
 # //--------------------------------------------
 # //--------------------------------------------
 
+#Shape the data into arrays (per process, lumiYear, etc.)
 def Shape_Data(list_x_allClasses, list_weights_allClasses, maxEvents_perClass, nof_output_nodes):
 
     #Reshape as normal arrays (root_numpy uses different format) : 1 column per variable, 1 line per event
@@ -246,6 +248,7 @@ def Shape_Data(list_x_allClasses, list_weights_allClasses, maxEvents_perClass, n
 # //--------------------------------------------
 # //--------------------------------------------
 
+#Compute and apply weights to training dataset to balance the training
 def Get_Events_Weights(processClasses_list, labels_list, list_weights_allClasses_abs, list_weights_allClasses):
 
     #Compute 'yields' (from *absolute* weights) to reweight classes
@@ -296,7 +299,8 @@ def Get_Events_Weights(processClasses_list, labels_list, list_weights_allClasses
 # //--------------------------------------------
 # //--------------------------------------------
 
-#-- INPUT VARIABLES transformations
+#-- Transform the input features
+#-- Use it to access and store macro parameters related to input features and use them to define a normalization input layer in the DNN model
 def Transform_Inputs(weight_dir, x, var_list, lumiName, startFromExistingModel):
 
     np.set_printoptions(precision=3)
@@ -308,38 +312,49 @@ def Transform_Inputs(weight_dir, x, var_list, lumiName, startFromExistingModel):
             print('x = ', x[i,8])
 
     #--- RANGE SCALING
-    scalerMinMax = MinMaxScaler(feature_range=(-1, 1)).fit(x)
-    mins = scalerMinMax.min_
-    scales = scalerMinMax.scale_
-    x = scalerMinMax.transform(x)
+    # scalerMinMax = MinMaxScaler(feature_range=(-1, 1)).fit(x) #Conpute macro parameters
+    # mins = scalerMinMax.min_
+    # scales = scalerMinMax.scale_
+    # x = scalerMinMax.transform(x) #Apply transformation
     # x = scalerMinMax.fit_transform(x)
 
-    #Example to save the parameters and use them to rescale other inputs later
+    #-- Example to save the parameters and use them to rescale other inputs later
     # scaler_data_ = np.array([scalerMinMax.data_min_, scalerMinMax.data_max_])
     # np.save("my_scaler.npy", scaler_data_)
     # scaler_data_ = np.load("my_scaler.npy")
     # Xmin, Xmax = scaler_data_[0], scaler_data_[1]
     # Xscaled = (Xreal - Xmin) / (Xmax-Xmin)
 
-    #--- RESCALE TO UNIT GAUSSIAN
-    # scaler = StandardScaler().fit(x)
-    # means = scaler.mean_
-    # # vars = scaler.var_
-    # scales = scaler.scale_
+    #--- RESCALE TO UNIT GAUSSIAN -- https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html
+    #NB : only use this function to store the means and variance of all input features ; given to input layer for automatic rescaling of any data
+    scaler = StandardScaler().fit(x)
+    means = scaler.mean_
+    stddev = scaler.scale_ # = np.sqrt(var_)
+    # vars = scaler.var_
     # nsamples = scaler.n_samples_seen_
     # x = scaler.transform(x)
-    # print('means', means); print('vars', vars) print('scales', scales); print('nsamples = ', nsamples)
+    # print('means', means); print('vars', vars); print('stddev', stddev); print('nsamples = ', nsamples)
 
     if startFromExistingModel == False:
+
         text_file = open(weight_dir + "DNN_infos.txt", "w")
+
+        # Scaling in range [min;max]
+        # for ivar in range(len(var_list)):
+        #     text_file.write(var_list[ivar]); text_file.write(' ')
+        #     text_file.write(str(mins[ivar])); text_file.write(' ')
+        #     # text_file.write(str(means[ivar])); text_file.write(' ')
+        #     text_file.write(str(scales[ivar])); text_file.write('\n')
+
+        #Standard scaling
         for ivar in range(len(var_list)):
             text_file.write(var_list[ivar]); text_file.write(' ')
-            text_file.write(str(mins[ivar])); text_file.write(' ')
-            # text_file.write(str(means[ivar])); text_file.write(' ')
-            text_file.write(str(scales[ivar])); text_file.write('\n')
+            text_file.write(str(means[ivar])); text_file.write(' ')
+            text_file.write(str(stddev[ivar])); text_file.write('\n')
+
         text_file.close()
-        print(colors.fg.lightgrey, '===> Saved DNN infos (input/output nodes names, rescaling values, etc.) in : ', weight_dir + "MinScale_InputVariables_"+lumiName+".txt", colors.reset)
+        print(colors.fg.lightgrey, '\n===> Saved DNN infos (input/output nodes names, rescaling values, etc.) in : ', weight_dir + "DNN_infos.txt \n", colors.reset)
 
     # print('After transformation :', x[0:5,:])
 
-    return x
+    return x, means, stddev

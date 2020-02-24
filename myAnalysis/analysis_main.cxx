@@ -16,11 +16,11 @@ int main(int argc, char **argv)
 
     //-- MAIN OPTIONS --
     TString signal_process = "tZq";
+    bool use_PrivateMC = false;
     bool use_systematics = true; //true <-> will compute/store systematics selected below
-    bool use_PrivateMC = true;
 
     //-- MVA
-    TString classifier_name = "BDT"; //'BDT' or 'DNN'
+    TString classifier_name = "DNN"; //'BDT' or 'DNN'
 
     //--- Templates options
     bool split_analysis_by_channel = false; //true <-> will *also* produce templates/histos/plots for each subchannel (defined below)
@@ -48,8 +48,8 @@ int main(int argc, char **argv)
 //NB : years must be placed in the right order !
 
 	vector<TString> set_lumi_years;
-    // set_lumi_years.push_back("2016");
-    set_lumi_years.push_back("2017");
+    set_lumi_years.push_back("2016");
+    // set_lumi_years.push_back("2017");
     // set_lumi_years.push_back("2018");
 
 //-----------------------------------------------------------------------------------------

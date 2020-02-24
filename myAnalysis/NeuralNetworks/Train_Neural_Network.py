@@ -1,17 +1,11 @@
 # Nicolas TONON (DESY)
-# Train fully-connected neural networks with Keras (tf back-end)
+# Train fully-connected neural networks with Keras (tensorflow back-end)
 # //--------------------------------------------
 
 '''
 #TODO#
 - argparse (model, ...)
-
-#NOTES#
-- fit() is for training the model with the given inputs (and corresponding training labels).
-- evaluate() is for evaluating the already trained model using the validation (or test) data and the corresponding labels. Returns the loss value and metrics values for the model.
-- predict() is for the actual prediction. It generates output predictions for the input samples.
-
-- Using abs event weights; if using relative, may have problems when computing class weights
+- Very long to load full Run2 dataset into RAM... load by batches ?
 '''
 
 
@@ -35,8 +29,8 @@
 # Naming convention enforced : 2016+2017 <-> "201617" ; etc.; 2016+2017+2018 <-> "Run2" # NB : years must be placed in the right order !
 _lumi_years = []
 _lumi_years.append("2016")
-_lumi_years.append("2017")
-_lumi_years.append("2018")
+# _lumi_years.append("2017")
+# _lumi_years.append("2018")
 
 #Signal process must be first
 _processClasses_list = [["tZq"],
@@ -53,11 +47,11 @@ cuts = "passedBJets==1" #Event selection, both for train/test ; "1" <-> no cut
 
 #--- Training options
 # //--------------------------------------------
-_nepochs = 50 #Number of training epochs (<-> nof times the full training dataset is shown to the NN)
+_nepochs = 20 #Number of training epochs (<-> nof times the full training dataset is shown to the NN)
 _batchSize = 512 #Batch size (<-> nof events fed to the network before its parameter get updated)
 # _nof_output_nodes = 3 #1 (binary) or N (multiclass)
 
-_maxEvents_perClass = -1 #max nof events to be used for each process ; -1 <-> all events
+_maxEvents_perClass = 100000 #max nof events to be used for each process ; -1 <-> all events
 _nEventsTot_train = -1; _nEventsTot_test = -1  #nof events to be used for training & testing ; -1 <-> use _maxEvents_perClass & _splitTrainEventFrac params instead
 _splitTrainEventFrac = 0.8 #Fraction of events to be used for training (1 <-> use all requested events for training)
 
@@ -162,17 +156,7 @@ from Utils.Output_Plots_Histos import Create_TrainTest_ROC_Histos, Create_Contro
 # //--------------------------------------------
 # //--------------------------------------------
 
-""" checks if a certain dataset directory exists. Raises an IOError if it doesn't
-Parameters
-----------
-dataset_name : name of the dataset to check
-Raises
-------
-IOError : if the dataset dataset_name doesn't exist
-Returns
--------
-None : if the dataset dataset exists
-"""
+#Main function, calling sub-functions to perform all necessary actions
 def Train_Test_Eval_PureKeras(_lumi_years, _processClasses_list, _labels_list, var_list, cuts, _nepochs, _batchSize, _maxEvents_perClass, _splitTrainEventFrac, _nEventsTot_train, _nEventsTot_test, _startFromExistingModel):
 
  # #    # # #####
@@ -182,12 +166,13 @@ def Train_Test_Eval_PureKeras(_lumi_years, _processClasses_list, _labels_list, v
  # #   ## #   #
  # #    # #   #
 
+    #Sanity chek of input args
     SanityChecks_Parameters(_processClasses_list, _labels_list)
 
     #Read luminosity choice
     lumiName = Get_LumiName(_lumi_years)
 
-    # Main paths
+    # Set main output paths
     weight_dir = "../weights/DNN/" + lumiName + '/'
     os.makedirs(weight_dir, exist_ok=True)
 
@@ -214,25 +199,25 @@ def Train_Test_Eval_PureKeras(_lumi_years, _processClasses_list, _labels_list, v
 
     #Get data
     print(colors.fg.lightblue, "--- Read and shape the data...", colors.reset); print('\n')
-    x_train, y_train, x_test, y_test, PhysicalWeights_train, PhysicalWeights_test, LearningWeights_train, LearningWeights_test, x, y, PhysicalWeights_allClasses, LearningWeights_allClasses = Get_Data_For_DNN_Training(weight_dir, _lumi_years, _ntuples_dir, _processClasses_list, _labels_list, var_list, cuts, _nof_output_nodes, _maxEvents_perClass, _splitTrainEventFrac, _nEventsTot_train, _nEventsTot_test, lumiName, _startFromExistingModel)
+    x_train, y_train, x_test, y_test, PhysicalWeights_train, PhysicalWeights_test, LearningWeights_train, LearningWeights_test, x, y, PhysicalWeights_allClasses, LearningWeights_allClasses, means, stddev = Get_Data_For_DNN_Training(weight_dir, _lumi_years, _ntuples_dir, _processClasses_list, _labels_list, var_list, cuts, _nof_output_nodes, _maxEvents_perClass, _splitTrainEventFrac, _nEventsTot_train, _nEventsTot_test, lumiName, _startFromExistingModel)
 
     print('\n'); print(colors.fg.lightblue, "--- Define the loss function & metrics...", colors.reset); print('\n')
     _loss, _optim, _metrics = Get_Loss_Optim_Metrics(_nof_output_nodes)
 
-    #Get model, compile
+    #Get model and compile it
     print('\n'); print(colors.fg.lightblue, "--- Create the Keras model...", colors.reset); print('\n')
-    model = Create_Model(weight_dir, "DNN", _nof_output_nodes, var_list) #-- add default args
-
+    model = Create_Model(weight_dir, "DNN", _nof_output_nodes, var_list, means, stddev) #-- add default args
     print('\n'); print(colors.fg.lightblue, "--- Compile the Keras model...", colors.reset); print('\n')
     model.compile(loss=_loss, optimizer=_optim, metrics=[_metrics]) #For multiclass classification
 
+    #Define list of callbacks
     callbacks_list, ckpt_path = Get_Callbacks(weight_dir)
     ckpt_dir = os.path.dirname(ckpt_path)
     history = 0
 
     if _startFromExistingModel == False: #True <-> don't train DNN, directly load existing DNN
 
-        #Fit model #Slow for full Run 2 ! (load all data within RAM)
+        #Fit model (TRAIN)
         print('\n'); print(colors.fg.lightblue, "--- Train (fit) DNN on training sample...", colors.reset, " (may take a while)"); print('\n')
         history = model.fit(x_train, y_train, validation_data=(x_test, y_test), epochs=_nepochs, batch_size=_batchSize, sample_weight=LearningWeights_train, callbacks=callbacks_list, shuffle=True, verbose=1)
 
@@ -244,7 +229,7 @@ def Train_Test_Eval_PureKeras(_lumi_years, _processClasses_list, _labels_list, v
         # latest = tf.train.latest_checkpoint(checkpoint_dir)
         # model.load_weights(latest)
 
-    # Evaluate the model (metrics)
+    # Evaluate the neural network's performance (evaluate metrics on validation or test dataset)
     print('\n'); print(colors.fg.lightblue, "--- Evaluate DNN performance on test sample...", colors.reset); print('\n')
     score = model.evaluate(x_test, y_test, batch_size=_batchSize, sample_weight=PhysicalWeights_test)
     # print(score)
@@ -436,8 +421,7 @@ def Apply_Model_toTrainTestData(nof_output_nodes, processClasses_list, labels_li
         list_predictions_train_allNodes_allClasses.append(list_predictions_train_allClasses)
         list_predictions_test_allNodes_allClasses.append(list_predictions_test_allClasses)
 
-
-    # -- Printout of some results
+    # -- Printout of some predictions
     # np.set_printoptions(threshold=5) #If activated, will print full numpy arrays
     # print("-------------- FEW EXAMPLES... --------------")
     # for i in range(10):

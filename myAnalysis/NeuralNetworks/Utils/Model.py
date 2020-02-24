@@ -1,15 +1,15 @@
-# Create the DNN model with Keras
+# Define the DNN model
 
 #TODO: Pass as args with default values : nof inputs, nof dense layers, batchnorm, dropout, output layer, ...
 
 # //--------------------------------------------
 from tensorflow.keras.models import Sequential, load_model, model_from_json
-from tensorflow.keras.layers import Dense, Dropout, AlphaDropout, Activation, BatchNormalization, LeakyReLU
+from tensorflow.keras.layers import Lambda, Input, Dense, Dropout, AlphaDropout, Activation, BatchNormalization, LeakyReLU
 from tensorflow.keras import regularizers
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.callbacks import TensorBoard, EarlyStopping, LambdaCallback, LearningRateScheduler, ReduceLROnPlateau
 from tensorflow.keras.utils import plot_model
-# from tensorflow.keras.layers.advanced_activations import PReLU
+from Utils.Helper import normalize
 
 
 
@@ -41,13 +41,11 @@ from tensorflow.keras.utils import plot_model
 #Should use sigmoid (binary) of softmax (multiclass) for output layer, to get class probabilities ? NB : if nof_outputs=1, softmax doesn't seem to work
 
 #Define here the Keras DNN model
-def Create_Model(outdir, DNN_name, nof_outputs, var_list):
+def Create_Model(outdir, DNN_name, nof_outputs, var_list, means, stddev):
 
-    use_batchNorm = True
-    use_dropout = True #Necessary to avoid overtraining (for deep or wide NN)
-
-    #Set some hyperparameters
-    # decay_rate = learning_rate / _nepochs
+    use_normInputLayer = True #True <-> add normalization layer to automatically rescale all input values (gaussian scaling)
+    use_batchNorm = True #True <-> Active batch norm layers
+    use_dropout = True #True <-> Activate dropout for each dense layer by amount 'droprate' to mitigate overtraining
     droprate = 0.5
 
     # Define model
@@ -72,24 +70,31 @@ def Create_Model(outdir, DNN_name, nof_outputs, var_list):
     # model.add(PReLU(alpha_initializer=my_init))
     # model.add(Activation('selu'))
 
-    model_choice = 2
+    model_choice = 1 #FIXME check use_bias, batchnorm --> works as expected ?
 
     #-- List different models, by order of complexity
 
     #Model 1 -- simple
     if model_choice == 1:
        # //--------------------------------------------
-        model.add(Dense(64, kernel_initializer=my_init, activation='tanh', input_dim=num_input_variables, name="MYINPUT")) #, name="myInputs"
+        if use_normInputLayer == True :
+            model.add(Input(shape=num_input_variables, name="MYINPUT")) #Inactive input layer
+            model.add(Lambda(normalize, arguments={'m': means, 'dev': stddev}, name="normalization")) #Normalization
+            model.add(Dense(64, kernel_initializer=my_init, activation='relu', use_bias=not use_batchNorm) ) #First dense layer
+        else :
+            model.add(Dense(64, kernel_initializer=my_init, activation='tanh', use_bias=not use_batchNorm, input_dim=num_input_variables, name="MYINPUT")) #, name="myInputs"
         if use_batchNorm==True:
             model.add(BatchNormalization())
         if use_dropout==True:
             model.add(Dropout(droprate))
-        model.add(Dense(64, kernel_initializer=my_init, activation='relu'))
+
+        model.add(Dense(64, kernel_initializer=my_init, use_bias=not use_batchNorm, activation='relu'))
         if use_batchNorm==True:
             model.add(BatchNormalization())
         if use_dropout==True:
             model.add(Dropout(droprate))
-        model.add(Dense(64, kernel_initializer=my_init, activation='relu'))
+
+        model.add(Dense(64, kernel_initializer=my_init, use_bias=not use_batchNorm, activation='relu'))
         if use_batchNorm==True:
             model.add(BatchNormalization())
         if use_dropout==True:
@@ -101,40 +106,48 @@ def Create_Model(outdir, DNN_name, nof_outputs, var_list):
             model.add(Dense(nof_outputs, kernel_initializer=my_init, activation='softmax', name="MYOUTPUT")) #, name="myOutputs"
        # //--------------------------------------------
 
-    #Model 2 -- more elaborate, overtrained
+    #Model 2
     elif model_choice == 2:
        # //--------------------------------------------
-       model.add(Dense(100, input_dim=num_input_variables, activation='tanh', kernel_initializer=my_init, name="MYINPUT") ) #Input layer
-       if use_batchNorm==True:
-           model.add(BatchNormalization())
-       if use_dropout==True:
-           model.add(Dropout(droprate))
+        if use_normInputLayer == True :
+            model.add(Input(shape=num_input_variables, name="MYINPUT")) #Inactive input layer
+            model.add(Lambda(normalize, arguments={'m': means, 'dev': stddev}, name="normalization")) #Normalization
+            model.add(Dense(100, kernel_initializer=my_init, activation='relu', use_bias=not use_batchNorm) ) #First dense layer
+        else :
+            model.add(Dense(100, kernel_initializer=my_init, activation='tanh', use_bias=not use_batchNorm, input_dim=num_input_variables, name="MYINPUT")) #, name="myInputs"
+        if use_batchNorm==True:
+            model.add(BatchNormalization())
+        if use_dropout==True:
+            model.add(Dropout(droprate))
 
-       model.add(Dense(100, activation='relu', kernel_initializer=my_init) ) #hidden layer
-       # model.add(LeakyReLU(alpha=0.1))
-       if use_batchNorm==True:
-           model.add(BatchNormalization())
-       if use_dropout==True:
-           model.add(Dropout(droprate))
+        model.add(Dense(100, input_dim=num_input_variables, activation='tanh', kernel_initializer=my_init, name="MYINPUT") ) #Input layer
+        if use_batchNorm==True:
+            model.add(BatchNormalization())
+        if use_dropout==True:
+            model.add(Dropout(droprate))
 
-       model.add(Dense(100, activation='relu', kernel_initializer=my_init) ) #hidden layer
-       # model.add(LeakyReLU(alpha=0.1))
-       if use_batchNorm==True:
-           model.add(BatchNormalization())
-       if use_dropout==True:
-           model.add(Dropout(droprate))
+        model.add(Dense(100, activation='relu', kernel_initializer=my_init) ) #hidden layer
+        if use_batchNorm==True:
+            model.add(BatchNormalization())
+        if use_dropout==True:
+            model.add(Dropout(droprate))
 
-       model.add(Dense(100, activation='relu', kernel_initializer=my_init) ) #hidden layer
-       # model.add(LeakyReLU(alpha=0.1))
-       if use_batchNorm==True:
-           model.add(BatchNormalization())
-       if use_dropout==True:
-           model.add(Dropout(droprate))
+        model.add(Dense(100, activation='relu', kernel_initializer=my_init) ) #hidden layer
+        if use_batchNorm==True:
+            model.add(BatchNormalization())
+        if use_dropout==True:
+            model.add(Dropout(droprate))
 
-       model.add(Dense(nof_outputs, activation='softmax', kernel_initializer=my_init, name="MYOUTPUT") ) #output layer
+        model.add(Dense(100, activation='relu', kernel_initializer=my_init) ) #hidden layer
+        if use_batchNorm==True:
+            model.add(BatchNormalization())
+        if use_dropout==True:
+            model.add(Dropout(droprate))
+
+        model.add(Dense(nof_outputs, activation='softmax', kernel_initializer=my_init, name="MYOUTPUT") ) #output layer
        # //--------------------------------------------
 
-    #Model 2 -- more elaborate, overtrained
+    #Model 3
     elif model_choice == 3:
         # //--------------------------------------------
         model.add(Dense(150, input_dim=num_input_variables, activation='tanh', kernel_initializer=my_init) ) #Input layer
@@ -178,59 +191,6 @@ def Create_Model(outdir, DNN_name, nof_outputs, var_list):
 
         model.add(Dense(nof_outputs, activation='softmax', kernel_initializer=my_init) ) #output layer
 # //--------------------------------------------
-
-
-    #Model 3 -- even more elaborate : advanced activation, etc.
-    elif model_choice == 4:
-        # //--------------------------------------------
-        model.add(Dense(150, input_dim=num_input_variables, activation='tanh', kernel_initializer=my_init) ) #Input layer
-        # model.add(Dense(100, input_dim=num_input_variables, kernel_regularizer=my_regul, kernel_initializer=my_init) ) #Input layer
-        # model.add(PReLU(alpha_initializer=my_init))
-        # model.add(Activation('selu'))
-        # if use_batchNorm==True:
-        #     model.add(BatchNormalization())
-        # if use_dropout==True:
-        #     model.add(Dropout(droprate))
-        # model.add(AlphaDropout(droprate))
-
-        model.add(Dense(150, kernel_initializer=my_init) ) #hidden layer
-        # model.add(PReLU(alpha_initializer=my_init))
-        model.add(LeakyReLU(alpha=0.1))
-        # model.add(Activation('selu'))
-        if use_batchNorm==True:
-            model.add(BatchNormalization())
-        if use_dropout==True:
-            model.add(Dropout(droprate))
-
-        model.add(Dense(150, kernel_initializer=my_init) ) #hidden layer
-        # model.add(PReLU(alpha_initializer=my_init))
-        model.add(LeakyReLU(alpha=0.1))
-        # model.add(Activation('selu'))
-        if use_batchNorm==True:
-            model.add(BatchNormalization())
-        if use_dropout==True:
-            model.add(Dropout(droprate))
-
-        model.add(Dense(150, kernel_initializer=my_init) ) #hidden layer
-        # model.add(PReLU(alpha_initializer=my_init))
-        model.add(LeakyReLU(alpha=0.1))
-        # model.add(Activation('selu'))
-        if use_batchNorm==True:
-            model.add(BatchNormalization())
-        if use_dropout==True:
-            model.add(Dropout(droprate))
-
-
-        model.add(Dense(100, kernel_initializer=my_init) ) #hidden layer
-        # model.add(PReLU(alpha_initializer=my_init))
-        model.add(LeakyReLU(alpha=0.1))
-        if use_batchNorm==True:
-            model.add(BatchNormalization())
-        if use_dropout==True:
-            model.add(Dropout(droprate))
-
-        model.add(Dense(nof_outputs, activation='softmax', kernel_initializer=my_init) ) #output layer
-       # //--------------------------------------------
 
     else:
         print("\n-- ERROR : wrong model_choice value !\n")

@@ -1,26 +1,21 @@
 //by Nicolas Tonon (DESY)
 
-//This code makes it possible to compare ROC curves
-//The histograms are either 1) produced from a TMVA output TTree, or 2) taken directly from a root file containing histograms
+//This code produces ROC curves and superimpose them on a plot
+//Mostly automated, use the main() to define all options and define the list of input files
+//The histograms are either produced :
+// 1) from a TMVA output TTree [BDT]
+// 2) from a root file created when training the neural network, using the train/test datasets [DNN]
+// 3) from my own root file containing my BDT or DNN templates, for validation [BDT/DNN] //Warning : this uses the full sample and not only the test set !
 
 //--------------------------------------------
 // == REMARKS ==
-// -- In TMVA files, TestTree contains only half of the events, whereas my user-histos use the full datasets... ?
-// -- In case we read user-histos, need to modify variable name !
-// -- /!\ ROC for TMVA training sample is wron for now ! Because the "weight" variable in TrainTree is incorrect (don't know what it means...)
-//==> Should use directly the training ROC histo ! (make TGraph from histo ? check)
-/**
-* == USAGE ==
-* # Should be pretty straightforward to obtain ROCs from TMVA TTree files :
-* -- Just fill the vectors correctly in main, make sure variable name is ok (hard-code if needed), ...
-*
-*  # To get ROC from user-file containing histograms :
-*  -- File should be produced with sufficient amount of bins for precision (make it consistent in main)
-*  -- Set correctly the name of object=histogram to retrieve : for my purposes, I automatically get the name from my ownn naming conventions (tHq analysis)
-*  -- If want to use just any histogram, should bypass this and hard-code the names of each histo to retrieve !
-*/
+// # To get ROC from user-file containing histograms :
+// -- File should be produced with sufficient amount of bins for precision (make it consistent in main)
+// -- Set correctly the name of object=histogram to retrieve
 
+// -- 'Custom' histogram mode does not work yet, because should list all bkg processes in order to get consistent bkg definition (or store a merged 'bkg' histo when creating templates)
 //--------------------------------------------
+
 #include "../Utils/Helper.h"
 
 #include <iostream>
@@ -54,9 +49,6 @@ using namespace std;
 
 
 
-
-
-
 //--------------------------------------------
 // ##     ## ######## ##       ########  ######## ########     ######## ##     ## ##    ##  ######   ######
 // ##     ## ##       ##       ##     ## ##       ##     ##    ##       ##     ## ###   ## ##    ## ##    ##
@@ -67,8 +59,11 @@ using namespace std;
 // ##     ## ######## ######## ##        ######## ##     ##    ##        #######  ##    ##  ######   ######
 //--------------------------------------------
 
+
+
 /**
- * Sum all histograms from a vector into a single histogram, passed as pointer in argument
+ * Sum all histograms from a vector into a single histogram, passed via pointer reference in argument
+ * Allows to sum several histos into a single 'signal' or 'bkg' histo
  */
 void Sum_Histograms(TH1F* &h, vector<TH1F*> v_histos)
 {
@@ -92,7 +87,7 @@ void Sum_Histograms(TH1F* &h, vector<TH1F*> v_histos)
 }
 
 /**
- * Returns a different color for each index
+ * Returns a color depending on index given in arg
  */
 int Get_Color(int index)
 {
@@ -150,14 +145,13 @@ void Apply_Cosmetics(TCanvas* &c1)
     return;
 }
 
+/**
+ * Change the numerical precision displayed
+ */
 double GetFloatPrecision(double value, double precision)
 {
     return (floor((value * pow(10, precision) + 0.5)) / pow(10, precision));
 }
-
-
-
-
 
 
 
@@ -171,8 +165,10 @@ double GetFloatPrecision(double value, double precision)
 //  ######   ########    ##       ##     ##  #######   ######
 //--------------------------------------------
 
+
+
 /**
- * Compute AUC (ROC integral) from histogram produced by TMVA (not available for Custom files)
+ * Compute AUC (ROC integral) from histogram produced by TMVA
  */
 double Get_AUC_From_TMVAfile(TString filename, TString variable, bool use_TrainSample)
 {
@@ -194,17 +190,12 @@ double Get_AUC_From_TMVAfile(TString filename, TString variable, bool use_TrainS
 
 	// cout<<"h->Integral() = "<<h->Integral()<<endl;
 	double AUC = roundf(h->Integral() ); //Change precision
-	AUC/= 100.; //Needs renorm.
+	AUC/= 100.; //Normalize
 
 	if(DEBUG) {cout<<"AUC = "<<AUC<<endl;}
 
 	return AUC;
 }
-
-
-
-
-
 
 
 
@@ -228,28 +219,31 @@ double Get_AUC_From_TMVAfile(TString filename, TString variable, bool use_TrainS
 
 
 /**
- * Get histogram from a TMVA output TTree, for given range, nbins, cuts, etc.
+ * Get histogram from a TMVA output TTree, for given cuts, etc.
  * @param h        histogram to be filled
  * @param t        TTree to read
  * @param variable variable to plot
  * @param cuts     cuts to apply -- "1" <-> no cut
  */
-bool Create_Histogram_From_TMVA_Tree(bool is_bkg, TH1F*& h, TString filename, TString variable, int nbins, double xmin, double xmax, bool use_TrainSample, TString cuts="1")
+bool Create_Histogram_From_TMVA_Tree(bool is_bkg, TH1F*& h, TString filename, TString variable, bool use_TrainSample, TString cuts="1")
 {
 	if(DEBUG) {cout<<FYEL("-- Create_Histogram_From_TMVA_Tree() --")<<endl;}
+
+    double xmin = -1; double xmax = +1; int nbins = 100; //Parameters of histogram ; BDT output usually between -1;+1
 
 	h = 0; //Pointer to histogram passed as argument, filled inside function
 
 	if(!Check_File_Existence(filename) ) {cout<<FRED("File "<<filename<<" not found ! Abort")<<endl; return 0;}
 	TFile* f = TFile::Open(filename);
 
-	//Hard-code tree name
+	//Hard-coded tree name
 	TString treename = "weights/TestTree";
 	if(use_TrainSample) {treename = "weights/TrainTree";}
 
 	TTree* t = (TTree*) f->Get(treename);
 	if(!t) {cout<<FRED("Null TTree '"<<treename<<"' ! Are you sure you are indeed reading a TMVA-produced file (else change option) ? Abort")<<endl; return 0;}
 
+    //Define root interactive command to draw desired histogram
 	variable = variable + " >> h(" + Convert_Number_To_TString(nbins) + "," + Convert_Number_To_TString(xmin) + "," + Convert_Number_To_TString(xmax) + ")";
     if(DEBUG) {cout<<"variable = "<<variable<<endl;}
 
@@ -259,7 +253,7 @@ bool Create_Histogram_From_TMVA_Tree(bool is_bkg, TH1F*& h, TString filename, TS
 	cuts = "weight * (" + cuts + " && classID==" + Convert_Number_To_TString(is_bkg) + ")";
     if(DEBUG) {cout<<"cuts = "<<cuts<<endl;}
 
-	//Produce histogram interactively
+	//Produce histogram (interactively)
 	t->Draw(variable, cuts);
 
 	//Retrieve generated histogram
@@ -274,6 +268,7 @@ bool Create_Histogram_From_TMVA_Tree(bool is_bkg, TH1F*& h, TString filename, TS
 		h->AddBinContent(1, underflow); //Add underflow
 		h->SetBinContent(0, 0); //Remove underflow
 	}
+
 	//Retrieve overflow content
 	double overflow = h->GetBinContent(nbins+1);
 	if(overflow>0)
@@ -300,70 +295,19 @@ bool Retrieve_Histogram_From_TMVA_File(TH1F*& h, TString filename, TString varia
 	if(!Check_File_Existence(filename) ) {cout<<FRED("File "<<filename<<" not found ! Abort")<<endl; return 0;}
 	TFile* f = TFile::Open(filename);
 
-	// variable = Get_VarName_From_FileName(filename, variable); //auto infer var name
-
+    //Hard-coded histogram name (naming conventions following those chosen in my TMVA training)
     TString dir_name = "weights/Method_BDT/" + variable; //Path of subdir, hard-coded
 	TString h_name = "MVA_" + variable + "_"; //Name of ROC histo, hard-coded
 
-	if(use_TrainSample) {h_name+= "trainingRejBvsS";} //Training ROC
-	else {h_name+= "rejBvsS";} //Testing ROC
+	if(use_TrainSample) {h_name+= "trainingRejBvsS";} //Training dataset ROC curve
+	else {h_name+= "rejBvsS";} //Testing dataset ROC curve
 
 	h = (TH1F*) f->Get(dir_name + "/" + h_name);
 	if(!h) {cout<<FRED("Histo "<<dir_name<<"/"<<h_name<<" not found ! Abort")<<endl; return 0;}
 
-	cout<<"Integral = "<<h->Integral()<<endl;
+	if(DEBUG) {cout<<"Integral = "<<h->Integral()<<endl;}
 
 	return true;
-}
-
-
-//  ####  #    #  ####  #####  ####  #    #
-// #    # #    # #        #   #    # ##  ##
-// #      #    #  ####    #   #    # # ## #
-// #      #    #      #   #   #    # #    #
-// #    # #    # #    #   #   #    # #    #
-//  ####   ####   ####    #    ####  #    #
-
-/**
- * Get histogram directly from root file (must have been produced before)
- * @param h          histogram to be filled
- * @param filename   path of TFile containing histogram
- * @param histo_name name of histogram to retrieve in file
- * NB : problem : THIS USES THE FULL SAMPLE, NOT JUST TEST SET ! Use other function to get test sample from Keras
- */
-bool Get_Histogram_From_CustomFile(TH1F*& h, TString filename, TString histo_name)
-{
-	if(DEBUG) {cout<<FYEL("-- Get_Histogram_From_CustomFile() --")<<endl;}
-
-	h = 0; //Init pointer to histogram passed as argument
-	if(!Check_File_Existence(filename) ) {cout<<FRED("File "<<filename<<" not found ! Abort")<<endl; return 0;}
-	TFile* f = TFile::Open(filename);
-
-	if(DEBUG) {cout<<"-- Opening histo : "<<histo_name<<endl;}
-
-	h = (TH1F*) f->Get(histo_name);
-	h->SetDirectory(0); //NECESSARY so that histo is not associated with TFile, and doesn't get deleted when file closed !
-	if(!h || h->GetEntries() == 0) {cout<<BOLD(FRED("Null or void histogram '"<<histo_name<<"' (from user-file) ! Abort !"))<<endl; return 0;}
-
-	//Retrieve underflow content
-	double underflow = h->GetBinContent(0);
-	if(underflow>0)
-	{
-		h->AddBinContent(1, underflow); //Add underflow
-		h->SetBinContent(0, 0); //Remove underflow
-	}
-	//Retrieve overflow content
-	int nbins = h->GetNbinsX();
-	double overflow = h->GetBinContent(nbins+1);
-	if(overflow>0)
-	{
-		h->AddBinContent(nbins, overflow); //Add overflow
-		h->SetBinContent(nbins+1, 0); //Remove overflow
-	}
-
-	f->Close();
-
-	return 1;
 }
 
 
@@ -374,6 +318,9 @@ bool Get_Histogram_From_CustomFile(TH1F*& h, TString filename, TString histo_nam
 // #   #  #      #   #  #    # #    #
 // #    # ###### #    # #    #  ####
 
+/**
+ * Get histograms produced during DNN training, containing ROC curves for train/test datasets
+ */
 bool Get_Histogram_From_KerasFile(TH1F*& h, TString filename, TString histo_name)
 {
 	if(DEBUG) {cout<<FYEL("-- Get_Histogram_From_KerasFile() --")<<endl;}
@@ -398,6 +345,7 @@ bool Get_Histogram_From_KerasFile(TH1F*& h, TString filename, TString histo_name
 		h->AddBinContent(1, underflow); //Add underflow
 		h->SetBinContent(0, 0); //Remove underflow
 	}
+
 	//Retrieve overflow content
 	int nbins = h->GetNbinsX();
 	double overflow = h->GetBinContent(nbins+1);
@@ -417,12 +365,59 @@ bool Get_Histogram_From_KerasFile(TH1F*& h, TString filename, TString histo_name
 }
 
 
+//  ####  #    #  ####  #####  ####  #    #
+// #    # #    # #        #   #    # ##  ##
+// #      #    #  ####    #   #    # # ## #
+// #      #    #      #   #   #    # #    #
+// #    # #    # #    #   #   #    # #    #
+//  ####   ####   ####    #    ####  #    #
 
 
+/**
+ * Get histogram directly from any root file -- if not following my naming conventions, must hard-code histo names !
+ * @param h          histogram to be filled
+ * @param filename   path of TFile containing histogram
+ * @param histo_name name of histogram to retrieve in file
+ * NB : problem : THIS USES THE FULL SAMPLE, NOT JUST TEST SET ! Use other function to get test sample from Keras
+ */
+bool Get_Histogram_From_CustomFile(TH1F*& h, TString filename, TString histo_name)
+{
+	if(DEBUG) {cout<<FYEL("-- Get_Histogram_From_CustomFile() --")<<endl;}
+    cout<<ITAL("Warning : function 'Get_Histogram_From_CustomFile()' used full sample, not only train/test dataset... !")<<endl;
 
+	h = 0; //Init pointer to histogram passed as argument
+	if(!Check_File_Existence(filename) ) {cout<<FRED("File "<<filename<<" not found ! Abort")<<endl; return 0;}
+	TFile* f = TFile::Open(filename);
 
+	if(DEBUG) {cout<<"-- Opening histo : "<<histo_name<<endl;}
 
+    if(!f->GetListOfKeys()->Contains(histo_name) ) {cout<<ITAL(DIM("Histogram '"<<histo_name<<"' : not found !"))<<endl; return false;}
 
+	h = (TH1F*) f->Get(histo_name);
+	h->SetDirectory(0); //NECESSARY so that histo is not associated with TFile, and doesn't get deleted when file closed !
+	if(!h || h->GetEntries() == 0) {cout<<BOLD(FRED("Null or void histogram '"<<histo_name<<"' (from user-file) ! Abort !"))<<endl; return 0;}
+
+	//Retrieve underflow content
+	double underflow = h->GetBinContent(0);
+	if(underflow>0)
+	{
+		h->AddBinContent(1, underflow); //Add underflow
+		h->SetBinContent(0, 0); //Remove underflow
+	}
+
+	//Retrieve overflow content
+	int nbins = h->GetNbinsX();
+	double overflow = h->GetBinContent(nbins+1);
+	if(overflow>0)
+	{
+		h->AddBinContent(nbins, overflow); //Add overflow
+		h->SetBinContent(nbins+1, 0); //Remove overflow
+	}
+
+	f->Close();
+
+	return true;
+}
 
 
 //--------------------------------------------
@@ -453,14 +448,14 @@ bool Get_Histogram_From_KerasFile(TH1F*& h, TString filename, TString histo_name
 //  ######  ####  ######      ##          ########  ##    ##  ######
 //--------------------------------------------
 
+
+
 /**
- * For each bin from signal/bkg histograms, will compute efficiency and store it in a TGraph (passed as arg)
+ * For each bin of input signal/bkg histograms, will compute corresponding efficiency and store it in a TGraph (passed as arg)
  */
 bool Produce_Efficiency_TGraph(TGraph* &g, double& AUC, TH1F* h_sig, TH1F* h_bkg)
 {
 	if(DEBUG) {cout<<FYEL("-- Produce_Efficiency_TGraph()")<<endl;}
-
-    AUC = 0;
 
 	if(!h_sig || h_sig->GetEntries() == 0) {cout<<BOLD(FRED("Null or void signal TGraph ! Abort !"))<<endl; return 0;}
 	if(!h_bkg || h_bkg->GetEntries() == 0) {cout<<BOLD(FRED("Null or void bkg TGraph ! Abort !"))<<endl; return 0;}
@@ -472,11 +467,13 @@ bool Produce_Efficiency_TGraph(TGraph* &g, double& AUC, TH1F* h_sig, TH1F* h_bkg
 	if(h_sig->GetNbinsX() != h_bkg->GetNbinsX()) {cout<<BOLD(FRED("Different nbins for sig & bkg histograms ! Abort"))<<endl;}
 	if(nbins < 50) {cout<<"Warning : only "<<nbins<<" bins in histograms (Low precision) !"<<endl;}
 
+    AUC = 0; //Also compute the area under curve
 	double integral_sig = h_sig->Integral();
 	double integral_bkg = h_bkg->Integral();
 	// cout<<"Integral sig = "<<integral_sig<<endl;
 	// cout<<"Integral bkg = "<<integral_bkg<<endl;
 
+    //For each bin, compute efficiency and store in TGraph
 	for (int ibin=1; ibin<nbins+1; ibin++)
 	{
 		//Compute efficiency for sig and bkg, from current bin to xmax
@@ -499,9 +496,8 @@ bool Produce_Efficiency_TGraph(TGraph* &g, double& AUC, TH1F* h_sig, TH1F* h_bkg
     AUC = g->Integral() + 0.5;
     // cout<<"AUC "<<AUC<<endl;
 
-	return 1;
+	return true;
 }
-
 
 
 
@@ -515,7 +511,12 @@ bool Produce_Efficiency_TGraph(TGraph* &g, double& AUC, TH1F* h_sig, TH1F* h_bkg
 //  ######   ########    ##       ##     ##  #######   ######   ######
 //--------------------------------------------
 
-void Get_ROC_Curves(vector<TGraph*>& v_graph, vector<double>& v_AUC, vector<TString>& v_label, vector<TString> v_filepath, vector<TString> v_isTMVA_file, vector<TString> v_Filelabel, vector<bool> v_isTrainSample, TString region, int nbins, double xmin, double xmax, vector<TString> v_processes, bool superimpose_allNodes_DNN, TString cuts="1")
+
+
+/**
+ * Get all ROC curves histograms
+ */
+void Get_ROC_Curves(vector<TGraph*>& v_graph, vector<double>& v_AUC, vector<TString>& v_label, vector<TString> v_filepath, vector<TString> v_isTMVA_file, vector<TString> v_Filelabel, vector<bool> v_isTrainSample, TString region, vector<TString> v_processes, bool superimpose_allNodes_DNN, TString lumiYear, TString cuts="1")
 {
 	if(!v_filepath.size() || !v_isTMVA_file.size() ) {cout<<FRED("Passed void vector as argument ! Abort !")<<endl; return;}
 
@@ -525,9 +526,9 @@ void Get_ROC_Curves(vector<TGraph*>& v_graph, vector<double>& v_AUC, vector<TStr
 	for(int ifile=0; ifile<v_filepath.size(); ifile++)
 	{
 		cout<<endl<<endl<<endl<<UNDL("* Open file "<<v_filepath[ifile]<<" :")<<endl;
-        if(v_isTMVA_file[ifile] != "TMVA" && v_isTMVA_file[ifile] != "Keras") {cout<<FRED("ERROR ! Wrong file type...")<<endl; return;}
+        if(v_isTMVA_file[ifile] != "TMVA" && v_isTMVA_file[ifile] != "Keras" && v_isTMVA_file[ifile] != "Custom") {cout<<FRED("ERROR ! Wrong file type...")<<endl; return;}
 
-        //-- For each sig & bkg process, get histogram
+        //-- For each sig & bkg process, get corresponding histogram
         for(int isig=0; isig<v_processes.size(); isig++)
 		{
             if(v_isTMVA_file[ifile] == "TMVA" && isig > 0) {break;} //TMVA file : don't support multiclass yet ; only consider first process (can define signal/bkg from there)
@@ -545,14 +546,19 @@ void Get_ROC_Curves(vector<TGraph*>& v_graph, vector<double>& v_AUC, vector<TStr
             {
                 v_h_bkg.resize(1); //Will consider 1 'background' proc
                 // v_AUC[index_tgraph] = Get_AUC_From_TMVAfile(v_filepath[ifile], v_processes[isig], v_isTrainSample[ifile]);
-                if(!Create_Histogram_From_TMVA_Tree(false, v_h_sig[0], v_filepath[ifile], v_processes[isig], nbins, xmin, xmax, v_isTrainSample[ifile], cuts) ) {return;}
+                if(!Create_Histogram_From_TMVA_Tree(false, v_h_sig[0], v_filepath[ifile], v_processes[isig], v_isTrainSample[ifile], cuts) ) {return;}
             }
             else if(v_isTMVA_file[ifile] == "Keras") //Retrieve directly histogram from file produced by DNN training python script
             {
                 v_h_bkg.resize(v_processes.size()-1); //Will consider as 'backgrounds' all the processes not considered as 'signal'
-                // v_AUC[index_tgraph] = 0;
-                TString hname_tmp = "hist_test_NODE_" + v_processes[isig] + "_CLASS_" + v_processes[isig];
+                TString hname_tmp = "hist_test_NODE_" + v_processes[isig] + "_CLASS_" + v_processes[isig]; //Performance for class A in node A
                 if(!Get_Histogram_From_KerasFile(v_h_sig[0], v_filepath[ifile], hname_tmp)) {return;} //Check naming convention used in pure-Keras NN
+            }
+            else if(v_isTMVA_file[ifile] == "Custom") //Retrieve directly histogram from custom user file
+            {
+                v_h_bkg.resize(v_processes.size()-1); //Will consider as 'backgrounds' all the processes not considered as 'signal'
+                TString hname_tmp = "DNN0_" + region + "_" + lumiYear + "__" + v_processes[isig]; //hardcode as needed
+                if(!Get_Histogram_From_CustomFile(v_h_sig[0], v_filepath[ifile], hname_tmp)) {return;}
             }
 
             for(int ibkg=0; ibkg<v_processes.size(); ibkg++)
@@ -562,22 +568,21 @@ void Get_ROC_Curves(vector<TGraph*>& v_graph, vector<double>& v_AUC, vector<TStr
 
                 if(v_isTMVA_file[ifile] == "TMVA") //Produce histo from TMVA TTree
     			{
-                    if(!Create_Histogram_From_TMVA_Tree(true, v_h_bkg[ibkg], v_filepath[ifile], v_processes[isig], nbins, xmin, xmax, v_isTrainSample[ifile], cuts) ) {return;}
+                    if(!Create_Histogram_From_TMVA_Tree(true, v_h_bkg[ibkg], v_filepath[ifile], v_processes[isig], v_isTrainSample[ifile], cuts) ) {return;}
     			}
     			else if(v_isTMVA_file[ifile] == "Keras") //Retrieve directly histogram from file produced by DNN training python script
     			{
-                    TString hname_tmp = "hist_test_NODE_" + v_processes[isig] + "_CLASS_" + v_processes[ibkg];
+                    TString hname_tmp = "hist_test_NODE_" + v_processes[isig] + "_CLASS_" + v_processes[ibkg]; //Performance for class A in node B
     				if(!Get_Histogram_From_KerasFile(v_h_bkg[ibkg], v_filepath[ifile], hname_tmp)) {return;} //Check naming convention used in pure-Keras NN
                 }
-                // else if(v_isTMVA_file[ifile] == "Custom") //Retrieve directly histogram from custom user file
-                // {
-                //     v_AUC.push_back(0);
-                // 	TString hname_tmp = "xxx"; //hardcode as needed
-                // 	if(!Get_Histogram_From_CustomFile(v_h_sig[0], v_filepath[ifile], hname_tmp)) {return;}
-                // }
+                else if(v_isTMVA_file[ifile] == "Custom") //Retrieve directly histogram from custom user file
+                {
+                	TString hname_tmp = "DNN" + Convert_Number_To_TString(isig) + "_" + region + "_" + lumiYear + "__" + v_processes[ibkg]; //hardcode as needed
+                	if(!Get_Histogram_From_CustomFile(v_h_bkg[ibkg], v_filepath[ifile], hname_tmp)) {return;}
+                }
             }
 
-            //xxx
+            //Sum histograms (many processes --> signal/bkg)
             TH1F* h_sig = 0;
             if(v_h_sig.size() > 1) {Sum_Histograms(h_sig, v_h_sig);}
             else if(v_h_sig.size() == 1) {h_sig = (TH1F*) v_h_sig[0]->Clone();}
@@ -607,8 +612,6 @@ void Get_ROC_Curves(vector<TGraph*>& v_graph, vector<double>& v_AUC, vector<TStr
 
 
 
-
-
 //--------------------------------------------
 //  ######  ##     ## ########  ######## ########  #### ##     ## ########   #######   ######  ########    ########   #######   ######
 // ##    ## ##     ## ##     ## ##       ##     ##  ##  ###   ### ##     ## ##     ## ##    ## ##          ##     ## ##     ## ##    ##
@@ -619,6 +622,11 @@ void Get_ROC_Curves(vector<TGraph*>& v_graph, vector<double>& v_AUC, vector<TStr
 //  ######   #######  ##        ######## ##     ## #### ##     ## ##         #######   ######  ########    ##     ##  #######   ######
 //--------------------------------------------
 
+
+
+/**
+ * Superimpose all ROC curves passed in arg on same plot
+ */
 void Superimpose_ROC_Curves(vector<TGraph*> v_graph, vector<TString> v_label, vector<double> v_AUC)
 {
     TCanvas* c = new TCanvas("", "", 1000, 800);
@@ -730,8 +738,6 @@ void Superimpose_ROC_Curves(vector<TGraph*> v_graph, vector<TString> v_label, ve
 
 
 
-
-
 //--------------------------------------------
 // ##     ##    ###    ##    ## ########    ########  ##        #######  ########
 // ###   ###   ## ##   ##   ##  ##          ##     ## ##       ##     ##    ##
@@ -742,7 +748,12 @@ void Superimpose_ROC_Curves(vector<TGraph*> v_graph, vector<TString> v_label, ve
 // ##     ## ##     ## ##    ## ########    ##        ########  #######     ##
 //--------------------------------------------
 
-void Make_Plot(vector<TString> v_filepath, vector<TString> v_Filelabel, vector<TString> v_isTMVA_file, vector<bool> v_isTrainSample, TString region, int nbins, double xmin, double xmax, vector<TString> v_processes, bool superimpose_allNodes_DNN, TString cuts="1")
+
+
+/**
+ * Main function producing all plots required in main()
+ */
+void Make_Plot(vector<TString> v_filepath, vector<TString> v_Filelabel, vector<TString> v_isTMVA_file, vector<bool> v_isTrainSample, TString region, vector<TString> v_processes, bool superimpose_allNodes_DNN, TString lumiYear, TString cuts="1")
 {
     cout<<endl<<YELBKG("                          ")<<endl<<endl;
 	cout<<FYEL("--- Will superimpose all ROC curves on plot ---")<<endl;
@@ -754,7 +765,7 @@ void Make_Plot(vector<TString> v_filepath, vector<TString> v_Filelabel, vector<T
 	vector<double> v_AUC;
     vector<TString> v_label;
 
-    Get_ROC_Curves(v_graph, v_AUC, v_label, v_filepath, v_isTMVA_file, v_Filelabel, v_isTrainSample, region, nbins, xmin, xmax, v_processes, superimpose_allNodes_DNN, cuts);
+    Get_ROC_Curves(v_graph, v_AUC, v_label, v_filepath, v_isTMVA_file, v_Filelabel, v_isTrainSample, region, v_processes, superimpose_allNodes_DNN, lumiYear, cuts);
 
     Superimpose_ROC_Curves(v_graph, v_label, v_AUC);
 
@@ -765,9 +776,9 @@ void Make_Plot(vector<TString> v_filepath, vector<TString> v_Filelabel, vector<T
 
 
 
-
-
-
+//--------------------------------------------
+//--------------------------------------------
+//--------------------------------------------
 
 
 
@@ -783,27 +794,23 @@ void Make_Plot(vector<TString> v_filepath, vector<TString> v_Filelabel, vector<T
 
 int main(int argc, char **argv)
 {
-	Load_Canvas_Style();
+	Load_Canvas_Style(); //Styling
 
-//-- Select options, etc.
+//-- Select options
 //--------------------------------------------
-	vector<TString> v_processes; //For DNNs, must declare all process classes to get correct background
+	vector<TString> v_processes; //For DNNs, must declare all process classes to define 'background' properly //Not used for BDT (signal vs bkg)
     v_processes.push_back("tZq");
     v_processes.push_back("ttZ");
     v_processes.push_back("Backgrounds");
 
-    TString lumiYear = "Run2";
+    TString lumiYear = "2016"; //'2016,'2017','2018','Run2'
 
-    bool superimpose_allNodes_DNN = false; //true <-> will plot 1 ROC per process class (for DNNs)
+    bool superimpose_allNodes_DNN = false; //true <-> will plot 1 ROC per process class (for DNN only)
 
     // TString channel = "";
-    TString region = "SR";
+    TString region = "SR"; //not used for now
 	TString cuts = "1"; //1 <-> No cut
-
-	int nbins = 100; //Choose nof bins to use to produce ROC (if use user-histos, make sure binning is same)
-	double xmin = -1; double xmax = 1; //Normally, BDT and NN range from -1 to +1
 //--------------------------------------------
-
 
 //-- Fill vectors
 //--------------------------------------------
@@ -813,7 +820,7 @@ int main(int argc, char **argv)
 
 	vector<TString> v_filepath; //Path of TFile containing TMVA TTree or histograms
 	vector<TString> v_Filelabel; //File label to be displayed on plot
-    vector<TString> v_isTMVA_file; //'TMVA' <-> looking for TMVA TTree ; 'Keras' <-> looking for histograms
+    vector<TString> v_isTMVA_file; //'TMVA' <-> looking for TMVA TTree ; 'Keras' <-> looking for histograms in file producing during Keras training ; 'Custom' <-> looking for my template histograms (or any hardcoded histo name...)
     vector<bool> v_isTrainSample; //True <-> looking for ROC from train sample ; else test sample
 //--------------------------------------------
 
@@ -825,15 +832,12 @@ int main(int argc, char **argv)
     v_filepath.push_back("../outputs/DNN_"+v_processes[0]+"_"+lumiYear+".root");
     v_Filelabel.push_back("DNN "+lumiYear);
     v_isTMVA_file.push_back("Keras"); v_isTrainSample.push_back(false);
-
 //--------------------------------------------
 
-
-//--------------------------------------------
-//-- Hard-coded from here
+//-- Run main function
 //--------------------------------------------
 
-	Make_Plot(v_filepath, v_Filelabel, v_isTMVA_file, v_isTrainSample, region, nbins, xmin, xmax, v_processes, superimpose_allNodes_DNN, cuts);
+	Make_Plot(v_filepath, v_Filelabel, v_isTMVA_file, v_isTrainSample, region, v_processes, superimpose_allNodes_DNN, lumiYear, cuts);
 
 //--------------------------------------------
 

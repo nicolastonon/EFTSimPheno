@@ -1211,11 +1211,10 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
                             // std::copy(var_list_floats.begin(), var_list_floats.end(), clfy1_inputs);
                             // cout<<"//-------------------------------------------- "<<endl;
                             // for(int i=0; i<var_list_floats.size(); i++) {cout<<"clfy1_inputs["<<i<<"] "<<clfy1_inputs[i]<<std::endl;}
-                            for(int i=0; i<var_list.size(); i++)
-                            {
-                                // clfy1_inputs[i] = Rescale_Input_Variable(clfy1_inputs[i], v_inputs_rescaling[i].first, v_inputs_rescaling[i].second);
-                                var_list_floats[i] = Rescale_Input_Variable(var_list_floats[i], v_inputs_rescaling[i].first, v_inputs_rescaling[i].second);
-                            }
+                            // for(int i=0; i<var_list.size(); i++)
+                            // {
+                            //     var_list_floats[i] = Rescale_Input_Variable(var_list_floats[i], v_inputs_rescaling[i].first, v_inputs_rescaling[i].second);
+                            // }
                             // for(int i=0; i<var_list_floats.size(); i++) {cout<<"clfy1_inputs["<<i<<"] "<<clfy1_inputs[i]<<std::endl;}
 
                             //Evaluate output nodes values

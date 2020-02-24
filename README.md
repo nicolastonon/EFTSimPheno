@@ -51,10 +51,10 @@ _____________________________________________________________________________
     * [Madgraph cards](https://github.com/nicolastonon/EFT-Simu-Pheno#Madgraph-cards)
     * [Gridpack generation](https://github.com/nicolastonon/EFT-Simu-Pheno#Gridpack-generation)
     * [Generate LHE events interactively](https://github.com/nicolastonon/EFT-Simu-Pheno#Generate-LHE-events-interactively)
-    * [Generate particle-level events](https://github.com/nicolastonon/EFT-Simu-Pheno#Generate-particle--level-events)
+    * [Generate particle-level events](https://github.com/nicolastonon/EFT-Simu-Pheno#Generate-particle-level-events)
       * [GEN-only](https://github.com/nicolastonon/EFT-Simu-Pheno#GEN-only)
-      * [miniAOD (Fast simulation)](https://github.com/nicolastonon/EFT-Simu-Pheno#Fast-simulation)
-      * [miniAOD (Full simulation)](https://github.com/nicolastonon/EFT-Simu-Pheno#Full-simulation)
+      * [miniAOD (Fast simulation)](https://github.com/nicolastonon/EFT-Simu-Pheno#miniaod-fast-simulation)
+      * [miniAOD (Full simulation)](https://github.com/nicolastonon/EFT-Simu-Pheno#miniaod-full-simulation)
 
 * [Pheno studies](https://github.com/nicolastonon/EFT-Simu-Pheno#Pheno-studies)
     * [GenAnalyzer](https://github.com/nicolastonon/EFT-Simu-Pheno#GenAnalyzer)
@@ -194,6 +194,8 @@ cmsRun GEN_cfg.py
 *[VALIDATED UNDER CMSSW_9_4_12]*
 
 With FastSim, several production steps can be chained together, and a simplified detector simulation is used.
+
+:information_source: NB : trigger collections are not used with FastSim and should not be read.*
 
 * Step 1 [GEN,SIM,DIGI]
 

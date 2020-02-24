@@ -1,4 +1,4 @@
-#xxx
+#Define the callbacks for the NN training
 
 # //--------------------------------------------
 from tensorflow.keras.callbacks import TensorBoard, EarlyStopping, LambdaCallback, LearningRateScheduler, ReduceLROnPlateau, Callback, ModelCheckpoint
@@ -6,8 +6,6 @@ import datetime
 from Utils.Helper import TimeHistory
 import os # mkdir
 # //--------------------------------------------
-# //--------------------------------------------
-
 
 # Define learning rate schedule
 def step_decay(epoch):
@@ -18,9 +16,6 @@ def step_decay(epoch):
     print("== Epoch "+str(epoch+1)+" : learning rate = "+str(lrate) )
 
     return lrate
-
-
-
 
 
 # //--------------------------------------------
@@ -37,6 +32,7 @@ def step_decay(epoch):
 # //--------------------------------------------
 # //--------------------------------------------
 
+#Not used
 class MyCustomCallback(Callback):
 
   def on_train_batch_begin(self, batch, logs=None):
@@ -54,7 +50,7 @@ class MyCustomCallback(Callback):
 # //--------------------------------------------
 # //--------------------------------------------
 
-
+#Set training checkpoints
 def Checkpoints(weight_dir):
 
     # Include the epoch in the file name (uses `str.format`)
@@ -73,7 +69,7 @@ def Checkpoints(weight_dir):
 # //--------------------------------------------
 # //--------------------------------------------
 
-
+#Get list of callbacks
 def Get_Callbacks(weight_dir):
 
     # batchLogCallback = LambdaCallback(on_batch_end=batchOutput) #Could be used to perform action at end of each batch

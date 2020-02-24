@@ -29,6 +29,7 @@ from Utils.ColoredPrintout import colors
 # //--------------------------------------------
 # //--------------------------------------------
 
+#Apply DNN model on train/test datasets to produce ROOT histograms which can later be used to plot ROC curves
 def Create_TrainTest_ROC_Histos(lumiName, nof_output_nodes, labels_list, list_predictions_train_allNodes_allClasses, list_predictions_test_allNodes_allClasses, list_PhysicalWeightsTrain_allClasses, list_PhysicalWeightsTest_allClasses, metrics):
 
     print(colors.fg.lightblue, "--- Create & store ROC histos...", colors.reset); print('\n')
@@ -85,6 +86,7 @@ def Create_TrainTest_ROC_Histos(lumiName, nof_output_nodes, labels_list, list_pr
 # //--------------------------------------------
 # //--------------------------------------------
 
+# Create standard control plots for each output node : ROC, accuracy, loss, etc.
 def Create_Control_Plots(nof_output_nodes, labels_list, list_predictions_train_allNodes_allClasses, list_predictions_test_allNodes_allClasses, list_PhysicalWeightsTrain_allClasses, list_PhysicalWeightsTest_allClasses, x_train, y_train, y_test, x_test, model, metrics, nof_outputs, weight_dir, startFromExistingModel, history=None):
 
     print('\n'); print(colors.fg.lightblue, "--- Create control plots...", colors.reset); print('\n')

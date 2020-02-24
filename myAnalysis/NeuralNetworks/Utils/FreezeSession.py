@@ -1,3 +1,5 @@
+#For later prediction using C++ API, it is necessary to freeze the graph and make it static (see online docs)
+
 import tensorflow
 
 def freeze_session(session, keep_var_names=None, output_names=None, clear_devices=True):
