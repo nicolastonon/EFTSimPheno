@@ -1,8 +1,8 @@
 # Auto generated configuration file
-# using: 
-# Revision: 1.19 
-# Source: /local/reps/CMSSW/CMSSW/Configuration/Applications/python/ConfigBuilder.py,v 
-# with command line options: Configuration/GenProduction/python/PrivProdFromGridpack.py --fileout file:LHE-GEN-SIM.root --python_filename LHE-GEN-SIM_cfg.py --mc --eventcontent RAWSIM,LHE --datatier GEN-SIM,LHE --conditions 93X_mc2017_realistic_v3 --beamspot Realistic25ns13TeVEarly2017Collision --step LHE,GEN,SIM --nThreads 8 --geometry DB:Extended --era Run2_2017 --customise Configuration/DataProcessing/Utils.addMonitoring --no_exec -n 10
+# using:
+# Revision: 1.19
+# Source: /local/reps/CMSSW/CMSSW/Configuration/Applications/python/ConfigBuilder.py,v
+# with command line options: Configuration/GenProduction/python/PrivProd.py --filein file:xxx.lhe --fileout file:GEN-SIM.root --python_filename GEN-SIM_cfg.py --mc --eventcontent RAWSIM --datatier GEN-SIM --conditions 93X_mc2017_realistic_v3 --beamspot Realistic25ns13TeVEarly2017Collision --step GEN,SIM --geometry DB:Extended --era Run2_2017 --customise Configuration/DataProcessing/Utils.addMonitoring --no_exec -n 10
 import FWCore.ParameterSet.Config as cms
 
 from Configuration.StandardSequences.Eras import eras
@@ -30,7 +30,13 @@ process.maxEvents = cms.untracked.PSet(
 )
 
 # Input source
-process.source = cms.Source("EmptySource")
+
+process.source = cms.Source("LHESource",
+    dropDescendantsOfDroppedBranches = cms.untracked.bool(False),
+    fileNames = cms.untracked.vstring('file:xxx.lhe'), #NB : when using CRAB, must use relative path '../xxx' so that file is found from created crabDir ! (interactively, use './' or full path)
+    inputCommands = cms.untracked.vstring('keep *',
+        'drop LHEXMLStringProduct_*_*_*')
+)
 
 process.options = cms.untracked.PSet(
 
@@ -38,7 +44,7 @@ process.options = cms.untracked.PSet(
 
 # Production Info
 process.configurationMetadata = cms.untracked.PSet(
-    annotation = cms.untracked.string('Configuration/GenProduction/python/PrivProdFromGridpack.py nevts:10'),
+    annotation = cms.untracked.string('Configuration/GenProduction/python/PrivProd.py nevts:10'),
     name = cms.untracked.string('Applications'),
     version = cms.untracked.string('$Revision: 1.19 $')
 )
@@ -56,18 +62,8 @@ process.RAWSIMoutput = cms.OutputModule("PoolOutputModule",
         filterName = cms.untracked.string('')
     ),
     eventAutoFlushCompressedSize = cms.untracked.int32(20971520),
-    fileName = cms.untracked.string('file:LHE-GEN-SIM.root'),
+    fileName = cms.untracked.string('file:GEN-SIM.root'),
     outputCommands = process.RAWSIMEventContent.outputCommands,
-    splitLevel = cms.untracked.int32(0)
-)
-
-process.LHEoutput = cms.OutputModule("PoolOutputModule",
-    dataset = cms.untracked.PSet(
-        dataTier = cms.untracked.string('LHE'),
-        filterName = cms.untracked.string('')
-    ),
-    fileName = cms.untracked.string('file:LHE-GEN-SIM_inLHE.root'),
-    outputCommands = process.LHEEventContent.outputCommands,
     splitLevel = cms.untracked.int32(0)
 )
 
@@ -81,34 +77,34 @@ process.GlobalTag = GlobalTag(process.GlobalTag, '93X_mc2017_realistic_v3', '')
 
 process.generator = cms.EDFilter("Pythia8HadronizerFilter",
     PythiaParameters = cms.PSet(
-        parameterSets = cms.vstring('pythia8CommonSettings', 
+        parameterSets = cms.vstring('pythia8CommonSettings',
             'pythia8CP5Settings'),
-        pythia8CP5Settings = cms.vstring('Tune:pp 14', 
-            'Tune:ee 7', 
-            'MultipartonInteractions:ecmPow=0.03344', 
-            'PDF:pSet=20', 
-            'MultipartonInteractions:bProfile=2', 
-            'MultipartonInteractions:pT0Ref=1.41', 
-            'MultipartonInteractions:coreRadius=0.7634', 
-            'MultipartonInteractions:coreFraction=0.63', 
-            'ColourReconnection:range=5.176', 
-            'SigmaTotal:zeroAXB=off', 
-            'SpaceShower:alphaSorder=2', 
-            'SpaceShower:alphaSvalue=0.118', 
-            'SigmaProcess:alphaSvalue=0.118', 
-            'SigmaProcess:alphaSorder=2', 
-            'MultipartonInteractions:alphaSvalue=0.118', 
-            'MultipartonInteractions:alphaSorder=2', 
-            'TimeShower:alphaSorder=2', 
+        pythia8CP5Settings = cms.vstring('Tune:pp 14',
+            'Tune:ee 7',
+            'MultipartonInteractions:ecmPow=0.03344',
+            'PDF:pSet=20',
+            'MultipartonInteractions:bProfile=2',
+            'MultipartonInteractions:pT0Ref=1.41',
+            'MultipartonInteractions:coreRadius=0.7634',
+            'MultipartonInteractions:coreFraction=0.63',
+            'ColourReconnection:range=5.176',
+            'SigmaTotal:zeroAXB=off',
+            'SpaceShower:alphaSorder=2',
+            'SpaceShower:alphaSvalue=0.118',
+            'SigmaProcess:alphaSvalue=0.118',
+            'SigmaProcess:alphaSorder=2',
+            'MultipartonInteractions:alphaSvalue=0.118',
+            'MultipartonInteractions:alphaSorder=2',
+            'TimeShower:alphaSorder=2',
             'TimeShower:alphaSvalue=0.118'),
-        pythia8CommonSettings = cms.vstring('Tune:preferLHAPDF = 2', 
-            'Main:timesAllowErrors = 10000', 
-            'Check:epTolErr = 0.01', 
-            'Beams:setProductionScalesFromLHEF = off', 
-            'SLHA:keepSM = on', 
-            'SLHA:minMassSM = 1000.', 
-            'ParticleDecays:limitTau0 = on', 
-            'ParticleDecays:tau0Max = 10', 
+        pythia8CommonSettings = cms.vstring('Tune:preferLHAPDF = 2',
+            'Main:timesAllowErrors = 10000',
+            'Check:epTolErr = 0.01',
+            'Beams:setProductionScalesFromLHEF = off',
+            'SLHA:keepSM = on',
+            'SLHA:minMassSM = 1000.',
+            'ParticleDecays:limitTau0 = on',
+            'ParticleDecays:tau0Max = 10',
             'ParticleDecays:allowPhotonRadiation = on')
     ),
     comEnergy = cms.double(13000.0),
@@ -119,41 +115,25 @@ process.generator = cms.EDFilter("Pythia8HadronizerFilter",
 )
 
 
-process.externalLHEProducer = cms.EDProducer("ExternalLHEProducer",
-    args = cms.vstring('../tllqdim6_slc6_amd64_gcc630_CMSSW_9_3_16_tarball.tar.xz'),
-    nEvents = cms.untracked.uint32(10),
-    numberOfParameters = cms.uint32(1),
-    outputFile = cms.string('cmsgrid_final.lhe'),
-    scriptName = cms.FileInPath('GeneratorInterface/LHEInterface/data/run_generic_tarball_cvmfs.sh')
-)
-
-
 # Path and EndPath definitions
-process.lhe_step = cms.Path(process.externalLHEProducer)
 process.generation_step = cms.Path(process.pgen)
 process.simulation_step = cms.Path(process.psim)
 process.genfiltersummary_step = cms.EndPath(process.genFilterSummary)
 process.endjob_step = cms.EndPath(process.endOfProcess)
 process.RAWSIMoutput_step = cms.EndPath(process.RAWSIMoutput)
-process.LHEoutput_step = cms.EndPath(process.LHEoutput)
 
 # Schedule definition
-process.schedule = cms.Schedule(process.lhe_step,process.generation_step,process.genfiltersummary_step,process.simulation_step,process.endjob_step,process.RAWSIMoutput_step,process.LHEoutput_step)
+process.schedule = cms.Schedule(process.generation_step,process.genfiltersummary_step,process.simulation_step,process.endjob_step,process.RAWSIMoutput_step)
 from PhysicsTools.PatAlgos.tools.helpers import associatePatAlgosToolsTask
 associatePatAlgosToolsTask(process)
-
-#Setup FWK for multithreaded
-process.options.numberOfThreads=cms.untracked.uint32(1)
-process.options.numberOfStreams=cms.untracked.uint32(0)
 # filter all path with the production filter sequence
 for path in process.paths:
-	if path in ['lhe_step']: continue
-	getattr(process,path)._seq = process.generator * getattr(process,path)._seq 
+	getattr(process,path)._seq = process.generator * getattr(process,path)._seq
 
 # customisation of the process.
 
 # Automatic addition of the customisation function from Configuration.DataProcessing.Utils
-from Configuration.DataProcessing.Utils import addMonitoring 
+from Configuration.DataProcessing.Utils import addMonitoring
 
 #call to customisation function addMonitoring imported from Configuration.DataProcessing.Utils
 process = addMonitoring(process)

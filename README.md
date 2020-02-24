@@ -51,10 +51,10 @@ _____________________________________________________________________________
     * [Madgraph cards](https://github.com/nicolastonon/EFT-Simu-Pheno#Madgraph-cards)
     * [Gridpack generation](https://github.com/nicolastonon/EFT-Simu-Pheno#Gridpack-generation)
     * [Generate LHE events interactively](https://github.com/nicolastonon/EFT-Simu-Pheno#Generate-LHE-events-interactively)
-    * [Generate miniAOD events](https://github.com/nicolastonon/EFT-Simu-Pheno#Generate-miniAOD-events)
+    * [Generate particle-level events](https://github.com/nicolastonon/EFT-Simu-Pheno#Generate-particle--level-events)
       * [GEN-only](https://github.com/nicolastonon/EFT-Simu-Pheno#GEN-only)
-      * [Fast simulation](https://github.com/nicolastonon/EFT-Simu-Pheno#Fast-simulation)
-      * [Full simulation](https://github.com/nicolastonon/EFT-Simu-Pheno#Full-simulation)
+      * [miniAOD (Fast simulation)](https://github.com/nicolastonon/EFT-Simu-Pheno#Fast-simulation)
+      * [miniAOD (Full simulation)](https://github.com/nicolastonon/EFT-Simu-Pheno#Full-simulation)
 
 * [Pheno studies](https://github.com/nicolastonon/EFT-Simu-Pheno#Pheno-studies)
     * [GenAnalyzer](https://github.com/nicolastonon/EFT-Simu-Pheno#GenAnalyzer)
@@ -77,7 +77,6 @@ _____________________________________________________________________________
 _____________________________________________________________________________
 
 # MC simulation
-
 
 ## Setup
 
@@ -136,7 +135,6 @@ nohup ./submit_cmsconnect_gridpack_generation.sh [name of process card without '
 
 :arrow_right: This outputs a gridpack with a name of the form 'PROCNAME_$SCRAM_ARCH_CMSSW_X_Y_Z_tarball.tar.xz'.
 
-
 ## Generate LHE events interactively
 
 You can run Madgraph directly, or generate events from the gridpack :
@@ -158,7 +156,7 @@ NCPU=1
 
 :arrow_right: This outputs a file in the LHE format named 'cmsgrid_final.lhe'.
 
-## Generate miniAOD events
+## Generate particle-level events
 
 CMSSW can act as a wrapper around various generators and chain their outputs together.
 This makes it quite  easy to run large-scale production from a gridpack to the finished (Mini/Nano)AOD file.
@@ -169,10 +167,14 @@ Once you have generated your gridpack, you may either want to :
 
 Moreover, you may run these steps either interactively or e.g. via CRAB (HTConder not tested yet). For more than ~1K events, using CRAB is mandatory.
 
+_____________________________________________________________________________
+
 Below you can find example `cmsDriver` commands to create python configuration files for each production step.
 Template for CRAB and python configuration files for each production step can be found in the [ProductionScripts](https://github.com/nicolastonon/EFT-Simu-Pheno/ProductionScripts) directory.
 
-:information_source: Type 'cmsDriver --help' to get infos on arguments.
+:information_source: *Type 'cmsDriver --help' to get infos on arguments.*
+
+:information_source: *Whenever you need to run on a long list of user input files (i.e. for all steps apart for the first one), you can use the [GenerateInputPathFile.py](https://github.com/nicolastonon/EFT-Simu-Pheno/ProductionScripts/ConfigFiles/FullSim/GenerateInputPathFile.py) script to generate the filelist to be read.*
 
 ### GEN-only
 
@@ -187,7 +189,7 @@ cmsRun GEN_cfg.py
 
 <!-- :clock430: *NB : for 10K events interactively, this step takes ~1h.* -->
 
-### Fast simulation
+### miniAOD [Fast simulation]
 
 *[VALIDATED UNDER CMSSW_9_4_12]*
 
@@ -230,7 +232,7 @@ cmsRun FASTSIM2_cfg.py
 ```
 
 
-### Full simulation
+### miniAOD [Full simulation]
 
 Here are the main production steps when using the full GEANT4 detector simulation.
 
@@ -251,7 +253,6 @@ cmsDriver.py Configuration/GenProduction/python/PrivProd.py \
 --geometry DB:Extended --era Run2_2017 \
 --customise Configuration/DataProcessing/Utils.addMonitoring \
 --no_exec -n 10
-
 
 cmsRun GEN-SIM_cfg.py
 ```
