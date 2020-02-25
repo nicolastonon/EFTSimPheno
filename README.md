@@ -175,7 +175,7 @@ Template for CRAB and python configuration files for each production step can be
 
 :information_source: *Type 'cmsDriver --help' to get infos on arguments.*
 
-:information_source: *Whenever you need to run on a long list of user input files (i.e. for all steps apart for the first one), you can use the [GenerateInputPathFile.py](https://github.com/nicolastonon/EFT-Simu-Pheno/ProductionScripts/ConfigFiles/FullSim/GenerateInputPathFile.py) script to generate the filelist to be read.*
+:information_source: *Whenever you need to run on a long list of user input files (i.e. for all steps apart for the first one), you can use the [GenerateInputPathFile.py](https://github.com/nicolastonon/EFT-Simu-Pheno/ProductionScripts/ConfigFiles/FullSim/GenerateInputPathFile.py) script to generate the filelist to be read. In the future, it's probably more convenient to instead publish datasets and read them in the following steps (see e.g. [here](https://github.com/Andrej-CMS/privateMCproduction/blob/example_private_production/crabconfig_GENSIM.py)).*
 
 ### GEN-only
 
