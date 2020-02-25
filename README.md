@@ -55,6 +55,7 @@ _____________________________________________________________________________
       * [GEN-only](https://github.com/nicolastonon/EFT-Simu-Pheno#GEN-only)
       * [miniAOD (Fast simulation)](https://github.com/nicolastonon/EFT-Simu-Pheno#miniaod-fast-simulation)
       * [miniAOD (Full simulation)](https://github.com/nicolastonon/EFT-Simu-Pheno#miniaod-full-simulation)
+      * [Final ntuples](https://github.com/nicolastonon/EFT-Simu-Pheno#Final-ntuples)
 
 * [Pheno studies](https://github.com/nicolastonon/EFT-Simu-Pheno#Pheno-studies)
     * [GenAnalyzer](https://github.com/nicolastonon/EFT-Simu-Pheno#GenAnalyzer)
@@ -82,9 +83,9 @@ _____________________________________________________________________________
 
 Depending on the production step, and the data-taking year you are considering, different CMSSW releases may be used.
 
-Example commands below are valid for 2017 MC production.
+The example commands below are valid for 2017 MC production.
 
-:construction: *Add commands for each year.*
+<!-- :construction: *Add commands for each year.* -->
 
 ```
 mkdir MyAnalysis
@@ -180,7 +181,12 @@ Template for CRAB and python configuration files for each production step can be
 
 - Create the config file 'GEN_cfg.py', read a LHE input file, shower events with a custom fragment :
 ```
-cmsDriver.py Configuration/GenProduction/python/PrivProd.py --mc --conditions auto:run2_mc -n 100 --era Run2_25ns --eventcontent RAWSIM --step GEN --datatier GEN-SIM --beamspot Realistic25ns13TeVEarly2017Collision --filein file:cmsgrid_final_tzq.lhe --fileout file:GEN.root --python_filename GEN_cfg.py --no_exec
+cmsDriver.py Configuration/GenProduction/python/PrivProd.py \
+--filein file:cmsgrid_final_tzq.lhe --fileout file:GEN.root \
+--python_filename GEN_cfg.py \
+--mc --conditions auto:run2_mc -n 100 --era Run2_25ns \
+--eventcontent RAWSIM --step GEN --datatier GEN-SIM \
+--beamspot Realistic25ns13TeVEarly2017Collision --no_exec
 
 cmsRun GEN_cfg.py
 ```
@@ -195,7 +201,7 @@ cmsRun GEN_cfg.py
 
 With FastSim, several production steps can be chained together, and a simplified detector simulation is used.
 
-:information_source: NB : trigger collections are not used with FastSim and should not be read.*
+:information_source: *NB : trigger collections are not used with FastSim and should not be read.*
 
 * Step 1 [GEN,SIM,DIGI]
 
@@ -280,7 +286,7 @@ cmsDriver.py Configuration/GenProduction/python/PrivProdFromGridpack.py \
 cmsRun LHE-GEN-SIM_cfg.py
 ```
 
-:heavy_exclamation_mark: Note that a different custom fragment [PrivProdFromGridpack.py](https://github.com/nicolastonon/EFT-Simu-Pheno/ProductionScripts/Fragments/PrivProdFromGridpack.py) is used, which includes a block to read the gridpack.
+:information_source: *Note that a different custom fragment [PrivProdFromGridpack.py](https://github.com/nicolastonon/EFT-Simu-Pheno/ProductionScripts/Fragments/PrivProdFromGridpack.py) is used, which includes a block to read the gridpack.*
 
 #### DIGI-RECO
 
@@ -330,6 +336,92 @@ cmsDriver.py --filein file:DIGI2.root --fileout file:miniAOD.root \
 --era Run2_2017 --no_exec
 
 cmsRun miniAOD_cfg.py
+```
+
+### Final ntuples
+
+The instructions below are relevant for use within the DESY Top-Z group only, and are kept to a minimum.
+
+Once produced, the private miniAOD samples should then be processed :
+- first with the [TopAnalysis](https://gitlab.cern.ch/cms-desy-top/TopAnalysis/tree/Trilepton) code, which produces flat TTrees out of miniAOD samples. Use the `Trilepton` branch and fork your own repository ;
+- then with the PoTATo private code. Create your own branch and fork your own repository.
+
+#### TopAnalysis
+
+- Main code : `TopAnalysis/plugins/NTupleWriter.cc` (compile with `scram b`).
+
+- Define the list of private input files e.g. in this way :
+```
+[Configuration/python/MC/TEST/test_cff.py]
+
+import FWCore.ParameterSet.Config as cms
+import FWCore.Utilities.FileUtils as FileUtils # see : https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuidePythonTips#Running_on_more_than_255_files
+
+mylist = FileUtils.loadListFromFile ('FULLPATH/inputs.txt')
+readFiles = cms.untracked.vstring(*mylist)
+
+maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
+secFiles = cms.untracked.vstring()
+
+source = cms.Source ("PoolSource",fileNames = readFiles, secondaryFileNames = secFiles)
+```
+
+where the list of private input files `inputs.txt` has been e.g. generated with the [GenerateInputPathFile.py](https://github.com/nicolastonon/EFT-Simu-Pheno/ProductionScripts/ConfigFiles/FullSim/GenerateInputPathFile.py) script.
+
+
+- You can modify options in `Configuration/analysis/common/ntuple_cfg.py`. Also reference the list of input files e.g. in this way :
+```
+[Configuration/analysis/common/files_test.txt]
+
+# Syntax:
+# (1) Number of Jobs
+# (2) cff file in TopAnalysis.Configuration containing the input ROOT files
+# (3) output ROOT file
+# (4) options for ntuple_cfg.py, first argument is sampleName
+
+100   MC.TEST.test_cff   ttlldim6.root   tzq,run=2017
+```
+
+- Run the HTCondor jobs :
+```
+./scripts/runall-condor.pl -d outputdir -f files_test.txt -c ntuple_cfg.py -s
+```
+
+- Once the jobs are done, run the following script to check the outputs and resubmit failed jobs :
+```
+nafJobSplitter-condor.pl -j check outputdir/naf_*/
+```
+
+- Finally, merge the outputs of all jobs :
+```
+hadd out.root outputdir/naf_*/*.root
+```
+
+#### PoTATo
+
+- Define the list of input files, e.g. in this way :
+```
+[nicolas/python/test.py]
+
+from common.python.InputFiles import InputFiles
+from common.python.SampleMode import Mode, Sample
+
+mytest = InputFiles('/afs/desy.de/user/n/ntonon/tzq.root', mode=Mode.ttHToNonbb_M125, sample=Sample.Fall17, jobs=0,)
+```
+
+- From the top directory, you can run the code interactively :
+```
+//Here : use 'nicolas' sub-dir, call 'Analyzer3l' analyzer, run on input files listed in 'nicolas/python/test.py', run with 2017 config, consider ttH process (naming, xsec, ...)
+
+./run analyze -m nicolas -a Analyzer3l -f test -sm Fall17 ttHToNonbb_M125 --max 100
+```
+
+- For large-scale production, run jobs on HTCondor. E.g. to process all the ntuples from the Ntuple_V05 campaign, do :
+```
+./submit analyze -m nicolas -a Analyzer3l -f AllSamples -v V05_X
+
+//Resubmit failed jobs
+./submit check directories nicolas/output/dirname
 ```
 
 # Pheno studies
