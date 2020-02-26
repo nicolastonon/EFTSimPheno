@@ -371,7 +371,7 @@ where the list of private input files `inputs.txt` has been e.g. generated with 
 
 - You can modify options in `Configuration/analysis/common/ntuple_cfg.py`. Also reference the list of input files e.g. in this way :
 ```
-[Configuration/analysis/common/files_test.txt]
+[Configuration/analysis/common/files_tllqdim6.txt]
 
 # Syntax:
 # (1) Number of Jobs
@@ -379,22 +379,21 @@ where the list of private input files `inputs.txt` has been e.g. generated with 
 # (3) output ROOT file
 # (4) options for ntuple_cfg.py, first argument is sampleName
 
-100   MC.TEST.test_cff   ttlldim6.root   tzq,run=2017
+#Example tllq/tzq
+50   MC.TEST.tllqdim6_cff   tllqdim6.root   tzq,run=2017,eftweights=True,fastsim=True
+
+#Example ttll/ttz
+50   MC.TEST.ttlldim6_cff   ttlldim6.root   ttbarz,run=2017,eftweights=True,fastsim=True
 ```
 
 - Run the HTCondor jobs :
 ```
-./scripts/runall-condor.pl -d outputdir -f files_test.txt -c ntuple_cfg.py -s
+./scripts/runall-condor.pl -d outputdir -f files_tllqdim6.txt -c ntuple_cfg.py -s
 ```
 
-- Once the jobs are done, run the following script to check the outputs and resubmit failed jobs :
+- Once the jobs are done, run the following script to check resubmit failed jobs or merge all the outputs :
 ```
 nafJobSplitter-condor.pl -j check outputdir/naf_*/
-```
-
-- Finally, merge the outputs of all jobs :
-```
-hadd out.root outputdir/naf_*/*.root
 ```
 
 #### PoTATo

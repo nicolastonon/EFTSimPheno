@@ -87,11 +87,9 @@ def Create_TrainTest_ROC_Histos(lumiName, nof_output_nodes, labels_list, list_pr
 # //--------------------------------------------
 
 # Create standard control plots for each output node : ROC, accuracy, loss, etc.
-def Create_Control_Plots(nof_output_nodes, labels_list, list_predictions_train_allNodes_allClasses, list_predictions_test_allNodes_allClasses, list_PhysicalWeightsTrain_allClasses, list_PhysicalWeightsTest_allClasses, x_train, y_train, y_test, x_test, model, metrics, nof_outputs, weight_dir, startFromExistingModel, history=None):
+def Create_Control_Plots(nof_output_nodes, labels_list, list_predictions_train_allNodes_allClasses, list_predictions_test_allNodes_allClasses, list_PhysicalWeightsTrain_allClasses, list_PhysicalWeightsTest_allClasses, x_train, y_train, y_test, x_test, model, metrics, nof_outputs, weight_dir, history=None):
 
     print('\n'); print(colors.fg.lightblue, "--- Create control plots...", colors.reset); print('\n')
-
-    if startFromExistingModel == False: #Don't plot loss/metrics for loaded model
 
  #       ####   ####   ####
  #      #    # #      #
@@ -100,32 +98,32 @@ def Create_Control_Plots(nof_output_nodes, labels_list, list_predictions_train_a
  #      #    # #    # #    #
  ######  ####   ####   ####
 
-        # Plotting the loss with the number of iterations
-        fig2 = plt.figure(2)
-        ax1 = fig2.gca()
-        timer = fig2.canvas.new_timer(interval = 1000) #creating a timer object and setting an interval of N milliseconds
-        timer.add_callback(close_event)
+    # Plotting the loss with the number of iterations
+    fig2 = plt.figure(2)
+    ax1 = fig2.gca()
+    timer = fig2.canvas.new_timer(interval = 1000) #creating a timer object and setting an interval of N milliseconds
+    timer.add_callback(close_event)
 
-        plt.plot(history.history['loss'], color='darkorange')
-        plt.plot(history.history['val_loss'], color='cornflowerblue')
-        # plt.plot(history.history['lr'], color='dimgrey')
-        plt.title('Loss VS Epoch')
-        plt.ylabel('Loss')
-        plt.xlabel('Epoch')
-        plt.legend(['Train', 'Test', 'lr'], loc='upper right')
-        ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
-        ax2.set_ylabel('lr')  # we already handled the x-label with ax1
-        ax2.tick_params(axis='y', color='dimgrey')
-        ax2.plot(history.history['lr'], color='dimgrey', linestyle='--')
+    plt.plot(history.history['loss'], color='darkorange')
+    plt.plot(history.history['val_loss'], color='cornflowerblue')
+    # plt.plot(history.history['lr'], color='dimgrey')
+    plt.title('Loss VS Epoch')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Test', 'lr'], loc='upper right')
+    ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+    ax2.set_ylabel('lr')  # we already handled the x-label with ax1
+    ax2.tick_params(axis='y', color='dimgrey')
+    ax2.plot(history.history['lr'], color='dimgrey', linestyle='--')
 
-        timer.start()
-        plt.show()
+    timer.start()
+    plt.show()
 
-        plotname = weight_dir + 'Loss_DNN.png'
-        fig2.savefig(plotname, bbox_inches='tight') #bbox_inches='tight' ensures that second y-axis is visible
-        # print("Saved Loss plot as : " + plotname)
-        print(colors.fg.lightgrey, "Saved Loss plot as :", colors.reset, plotname)
-        fig2.clear()
+    plotname = weight_dir + 'Loss_DNN.png'
+    fig2.savefig(plotname, bbox_inches='tight') #bbox_inches='tight' ensures that second y-axis is visible
+    # print("Saved Loss plot as : " + plotname)
+    print(colors.fg.lightgrey, "Saved Loss plot as :", colors.reset, plotname)
+    fig2.clear()
 
    ##    ####   ####  #    # #####    ##    ####  #   #
   #  #  #    # #    # #    # #    #  #  #  #    #  # #
@@ -134,31 +132,31 @@ def Create_Control_Plots(nof_output_nodes, labels_list, list_predictions_train_a
  #    # #    # #    # #    # #   #  #    # #    #   #
  #    #  ####   ####   ####  #    # #    #  ####    #
 
-        # Plotting the error with the number of iterations
-        fig3 = plt.figure(3)
-        ax1 = fig3.gca()
-        timer = fig3.canvas.new_timer(interval = 1000) #creating a timer object and setting an interval of N milliseconds
-        timer.add_callback(close_event)
+    # Plotting the error with the number of iterations
+    fig3 = plt.figure(3)
+    ax1 = fig3.gca()
+    timer = fig3.canvas.new_timer(interval = 1000) #creating a timer object and setting an interval of N milliseconds
+    timer.add_callback(close_event)
 
-        plt.plot(history.history[metrics], color='darkorange') #metrics name
-        plt.plot(history.history['val_'+metrics], color='cornflowerblue')
-        plt.title('Accuracy VS Epoch')
-        plt.ylabel('Accuracy')
-        plt.xlabel('Epoch')
-        plt.legend(['Train', 'Test', 'lr'], loc='lower right')
-        ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
-        ax2.set_ylabel('lr')  # we already handled the x-label with ax1
-        ax2.tick_params(axis='y', color='dimgrey')
-        ax2.plot(history.history['lr'], color='dimgrey', linestyle='--')
+    plt.plot(history.history[metrics], color='darkorange') #metrics name
+    plt.plot(history.history['val_'+metrics], color='cornflowerblue')
+    plt.title('Accuracy VS Epoch')
+    plt.ylabel('Accuracy')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Test', 'lr'], loc='lower right')
+    ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+    ax2.set_ylabel('lr')  # we already handled the x-label with ax1
+    ax2.tick_params(axis='y', color='dimgrey')
+    ax2.plot(history.history['lr'], color='dimgrey', linestyle='--')
 
-        timer.start()
-        plt.show()
+    timer.start()
+    plt.show()
 
-        plotname = weight_dir + 'Accuracy_DNN_.png'
-        fig3.savefig(plotname, bbox_inches='tight')
-        # print("Saved Accuracy plot as : " + plotname)
-        print(colors.fg.lightgrey, "Saved Accuracy plot as :", colors.reset, plotname)
-        fig3.clear()
+    plotname = weight_dir + 'Accuracy_DNN_.png'
+    fig3.savefig(plotname, bbox_inches='tight')
+    # print("Saved Accuracy plot as : " + plotname)
+    print(colors.fg.lightgrey, "Saved Accuracy plot as :", colors.reset, plotname)
+    fig3.clear()
 
     #ROC and overtraining => Plot for each node
     for i in range(nof_output_nodes):

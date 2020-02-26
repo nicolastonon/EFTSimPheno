@@ -55,7 +55,7 @@ np.set_printoptions(threshold=np.inf) #If activated, will print full numpy array
 # //--------------------------------------------
 
 #Call sub-function to read/store/shape the data
-def Get_Data_For_DNN_Training(weight_dir, lumi_years, ntuples_dir, processClasses_list, labels_list, var_list, cuts, nof_output_nodes, maxEvents_perClass, splitTrainEventFrac, nEventsTot_train, nEventsTot_test, lumiName, startFromExistingModel):
+def Get_Data_For_DNN_Training(weight_dir, lumi_years, ntuples_dir, processClasses_list, labels_list, var_list, cuts, nof_output_nodes, maxEvents_perClass, splitTrainEventFrac, nEventsTot_train, nEventsTot_test, lumiName):
 
     #Get data from TFiles
     list_x_allClasses, list_weights_allClasses = Read_Store_Data(lumi_years, ntuples_dir, processClasses_list, labels_list, var_list, cuts)
@@ -64,7 +64,10 @@ def Get_Data_For_DNN_Training(weight_dir, lumi_years, ntuples_dir, processClasse
     x, y, list_weights_allClasses = Shape_Data(list_x_allClasses, list_weights_allClasses, maxEvents_perClass, nof_output_nodes)
 
     #Transform the input features
-    x, means, stddev = Transform_Inputs(weight_dir, x, var_list, lumiName, startFromExistingModel)
+    x, means, stddev = Transform_Inputs(weight_dir, x, var_list, lumiName)
+
+    #Before we randomize the events, store the input values of the very first events (which belong to first process) --> Can use these known events for later validation/comparison
+    x_control_firstNEvents = x[0:10,:]
 
     #Compute event weights considering only abs(weights) => duplicate weight arrays to hold absolute values
     list_weights_allClasses_abs = []
@@ -87,7 +90,7 @@ def Get_Data_For_DNN_Training(weight_dir, lumi_years, ntuples_dir, processClasse
     print(colors.fg.lightblue, "-- Will use " + str(x_test.shape[0]) + " testing events !", colors.reset)
     print(colors.fg.lightblue, "===========\n", colors.reset)
 
-    return x_train, y_train, x_test, y_test, PhysicalWeights_train, PhysicalWeights_test, LearningWeights_train, LearningWeights_test, x, y, PhysicalWeights_allClasses, LearningWeights_allClasses, means, stddev
+    return x_train, y_train, x_test, y_test, PhysicalWeights_train, PhysicalWeights_test, LearningWeights_train, LearningWeights_test, x, y, PhysicalWeights_allClasses, LearningWeights_allClasses, means, stddev, x_control_firstNEvents
 # //--------------------------------------------
 # //--------------------------------------------
 
@@ -259,11 +262,10 @@ def Get_Events_Weights(processClasses_list, labels_list, list_weights_allClasses
         yield_abs_total+= list_weights_allClasses_abs[i].sum()
 
     #Compute scale factors to rescale each class to 'yield_abs_total'
-    np.set_printoptions(precision=1)
     list_SFs_allClasses = []
     for i in range(len(processClasses_list)):
         list_SFs_allClasses.append(yield_abs_total / list_yields_abs_allClasses[i])
-        print('Class', labels_list[i], ' / Class SF = ', list_SFs_allClasses[i], ' / Original yield = ', list_yields_abs_allClasses[i], ' ===>', list_yields_abs_allClasses[i]*list_SFs_allClasses[i])
+        print('Class', labels_list[i], ' / Scale factor = ', round(list_SFs_allClasses[i], 2), '===> Rescaled yield :', round(list_yields_abs_allClasses[i]*list_SFs_allClasses[i], 1) )
     print('\n')
 
     #Get array of reweighted 'training' weights, i.e. used for training only and which are not physical
@@ -301,7 +303,7 @@ def Get_Events_Weights(processClasses_list, labels_list, list_weights_allClasses
 
 #-- Transform the input features
 #-- Use it to access and store macro parameters related to input features and use them to define a normalization input layer in the DNN model
-def Transform_Inputs(weight_dir, x, var_list, lumiName, startFromExistingModel):
+def Transform_Inputs(weight_dir, x, var_list, lumiName):
 
     np.set_printoptions(precision=3)
 
@@ -335,25 +337,23 @@ def Transform_Inputs(weight_dir, x, var_list, lumiName, startFromExistingModel):
     # x = scaler.transform(x)
     # print('means', means); print('vars', vars); print('stddev', stddev); print('nsamples = ', nsamples)
 
-    if startFromExistingModel == False:
+    text_file = open(weight_dir + "DNN_infos.txt", "w")
 
-        text_file = open(weight_dir + "DNN_infos.txt", "w")
+    # Scaling in range [min;max]
+    # for ivar in range(len(var_list)):
+    #     text_file.write(var_list[ivar]); text_file.write(' ')
+    #     text_file.write(str(mins[ivar])); text_file.write(' ')
+    #     # text_file.write(str(means[ivar])); text_file.write(' ')
+    #     text_file.write(str(scales[ivar])); text_file.write('\n')
 
-        # Scaling in range [min;max]
-        # for ivar in range(len(var_list)):
-        #     text_file.write(var_list[ivar]); text_file.write(' ')
-        #     text_file.write(str(mins[ivar])); text_file.write(' ')
-        #     # text_file.write(str(means[ivar])); text_file.write(' ')
-        #     text_file.write(str(scales[ivar])); text_file.write('\n')
+    #Standard scaling
+    for ivar in range(len(var_list)):
+        text_file.write(var_list[ivar]); text_file.write(' ')
+        text_file.write(str(means[ivar])); text_file.write(' ')
+        text_file.write(str(stddev[ivar])); text_file.write('\n')
 
-        #Standard scaling
-        for ivar in range(len(var_list)):
-            text_file.write(var_list[ivar]); text_file.write(' ')
-            text_file.write(str(means[ivar])); text_file.write(' ')
-            text_file.write(str(stddev[ivar])); text_file.write('\n')
-
-        text_file.close()
-        print(colors.fg.lightgrey, '\n===> Saved DNN infos (input/output nodes names, rescaling values, etc.) in : ', weight_dir + "DNN_infos.txt \n", colors.reset)
+    text_file.close()
+    print(colors.fg.lightgrey, '\n===> Saved DNN infos (input/output nodes names, rescaling values, etc.) in : ', weight_dir + "DNN_infos.txt \n", colors.reset)
 
     # print('After transformation :', x[0:5,:])
 

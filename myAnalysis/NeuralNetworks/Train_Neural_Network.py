@@ -51,11 +51,11 @@ _nepochs = 20 #Number of training epochs (<-> nof times the full training datase
 _batchSize = 512 #Batch size (<-> nof events fed to the network before its parameter get updated)
 # _nof_output_nodes = 3 #1 (binary) or N (multiclass)
 
-_maxEvents_perClass = 100000 #max nof events to be used for each process ; -1 <-> all events
+_maxEvents_perClass = 1000 #max nof events to be used for each process ; -1 <-> all events
 _nEventsTot_train = -1; _nEventsTot_test = -1  #nof events to be used for training & testing ; -1 <-> use _maxEvents_perClass & _splitTrainEventFrac params instead
 _splitTrainEventFrac = 0.8 #Fraction of events to be used for training (1 <-> use all requested events for training)
 
-_startFromExistingModel = False #True <-> Skip training, load existing model and create perf plots
+# _startFromExistingModel = False #True <-> Skip training, load latest checkpoint model and create perf plots #not used yet
 # //--------------------------------------------
 
 # Define list of input variables
@@ -157,7 +157,7 @@ from Utils.Output_Plots_Histos import Create_TrainTest_ROC_Histos, Create_Contro
 # //--------------------------------------------
 
 #Main function, calling sub-functions to perform all necessary actions
-def Train_Test_Eval_PureKeras(_lumi_years, _processClasses_list, _labels_list, var_list, cuts, _nepochs, _batchSize, _maxEvents_perClass, _splitTrainEventFrac, _nEventsTot_train, _nEventsTot_test, _startFromExistingModel):
+def Train_Test_Eval_PureKeras(_lumi_years, _processClasses_list, _labels_list, var_list, cuts, _nepochs, _batchSize, _maxEvents_perClass, _splitTrainEventFrac, _nEventsTot_train, _nEventsTot_test):
 
  # #    # # #####
  # ##   # #   #
@@ -179,6 +179,9 @@ def Train_Test_Eval_PureKeras(_lumi_years, _processClasses_list, _labels_list, v
     #Top directory containing all input ntuples
     _ntuples_dir = "../input_ntuples/"
 
+    #Model output name
+    h5model_outname = weight_dir + 'model.h5'
+
     #Determine/store number of process classes
     _nof_output_nodes = len(_processClasses_list) #1 output node per class
     if _nof_output_nodes == 2: #Special case : 2 classes -> binary classification -> 1 output node only
@@ -199,7 +202,7 @@ def Train_Test_Eval_PureKeras(_lumi_years, _processClasses_list, _labels_list, v
 
     #Get data
     print(colors.fg.lightblue, "--- Read and shape the data...", colors.reset); print('\n')
-    x_train, y_train, x_test, y_test, PhysicalWeights_train, PhysicalWeights_test, LearningWeights_train, LearningWeights_test, x, y, PhysicalWeights_allClasses, LearningWeights_allClasses, means, stddev = Get_Data_For_DNN_Training(weight_dir, _lumi_years, _ntuples_dir, _processClasses_list, _labels_list, var_list, cuts, _nof_output_nodes, _maxEvents_perClass, _splitTrainEventFrac, _nEventsTot_train, _nEventsTot_test, lumiName, _startFromExistingModel)
+    x_train, y_train, x_test, y_test, PhysicalWeights_train, PhysicalWeights_test, LearningWeights_train, LearningWeights_test, x, y, PhysicalWeights_allClasses, LearningWeights_allClasses, means, stddev, x_control_firstNEvents = Get_Data_For_DNN_Training(weight_dir, _lumi_years, _ntuples_dir, _processClasses_list, _labels_list, var_list, cuts, _nof_output_nodes, _maxEvents_perClass, _splitTrainEventFrac, _nEventsTot_train, _nEventsTot_test, lumiName)
 
     print('\n'); print(colors.fg.lightblue, "--- Define the loss function & metrics...", colors.reset); print('\n')
     _loss, _optim, _metrics = Get_Loss_Optim_Metrics(_nof_output_nodes)
@@ -211,23 +214,23 @@ def Train_Test_Eval_PureKeras(_lumi_years, _processClasses_list, _labels_list, v
     model.compile(loss=_loss, optimizer=_optim, metrics=[_metrics]) #For multiclass classification
 
     #Define list of callbacks
-    callbacks_list, ckpt_path = Get_Callbacks(weight_dir)
-    ckpt_dir = os.path.dirname(ckpt_path)
+    callbacks_list = Get_Callbacks(weight_dir)
+    # ckpt_dir = os.path.dirname(ckpt_path)
     history = 0
 
-    if _startFromExistingModel == False: #True <-> don't train DNN, directly load existing DNN
+    #Fit model (TRAIN)
+    print('\n'); print(colors.fg.lightblue, "--- Train (fit) DNN on training sample...", colors.reset, " (may take a while)"); print('\n')
+    history = model.fit(x_train, y_train, validation_data=(x_test, y_test), epochs=_nepochs, batch_size=_batchSize, sample_weight=LearningWeights_train, callbacks=callbacks_list, shuffle=True, verbose=1)
 
-        #Fit model (TRAIN)
-        print('\n'); print(colors.fg.lightblue, "--- Train (fit) DNN on training sample...", colors.reset, " (may take a while)"); print('\n')
-        history = model.fit(x_train, y_train, validation_data=(x_test, y_test), epochs=_nepochs, batch_size=_batchSize, sample_weight=LearningWeights_train, callbacks=callbacks_list, shuffle=True, verbose=1)
-
-        #-- Can access weights and biases of any layer
-        # weights_layer, biases_layer = model.layers[0].get_weights(); print(weights_layer.shape); print(biases_layer.shape); print(weights_layer); print(biases_layer[0:2])
+    #-- Can access weights and biases of any layer
+    # weights_layer, biases_layer = model.layers[0].get_weights(); print(weights_layer.shape); print(biases_layer.shape); print(weights_layer); print(biases_layer[0:2])
 
     # else:
-        # Loads the latest checkpoint weights
-        # latest = tf.train.latest_checkpoint(checkpoint_dir)
-        # model.load_weights(latest)
+    #     # Loads the latest checkpoint weights
+    #     latest = tensorflow.train.latest_checkpoint(ckpt_dir)
+    #     tensorflow.keras.backend.set_learning_phase(0) # This line must be executed before loading Keras model (else mismatch between training/eval layers, e.g. Dropout)
+    #     model = load_model(h5model_outname) # model has to be re-loaded
+    #     model.load_weights(latest)
 
     # Evaluate the neural network's performance (evaluate metrics on validation or test dataset)
     print('\n'); print(colors.fg.lightblue, "--- Evaluate DNN performance on test sample...", colors.reset); print('\n')
@@ -242,20 +245,17 @@ def Train_Test_Eval_PureKeras(_lumi_years, _processClasses_list, _labels_list, v
  #    # #    #  #  #  #         #    # #    # #    # #      #
   ####  #    #   ##   ######    #    #  ####  #####  ###### ######
 
-    h5model_outname = weight_dir + 'model.h5'
+    print('\n'); print(colors.fg.lightblue, "--- Save model...", colors.reset);
 
-    if _startFromExistingModel == False: #True <-> don't train DNN, directly load existing DNN
-        print('\n'); print(colors.fg.lightblue, "--- Save model...", colors.reset);
+    #Serialize model to HDF5
+    model.save(h5model_outname)
 
-        #Serialize model to HDF5
-        model.save(h5model_outname)
+    # Save the model architecture
+    with open(weight_dir + 'arch_DNN.json', 'w') as json_file:
+        json_file.write(model.to_json())
 
-        # Save the model architecture
-        with open(weight_dir + 'arch_DNN.json', 'w') as json_file:
-            json_file.write(model.to_json())
-
-        #Save list of variables #Done in data transformation function now
-        # Write_Variables_To_TextFile(weight_dir, var_list)
+    #Save list of variables #Done in data transformation function now
+    # Write_Variables_To_TextFile(weight_dir, var_list)
 
 
  ###### #####  ###### ###### ###### ######     ####  #####    ##   #####  #    #
@@ -269,35 +269,34 @@ def Train_Test_Eval_PureKeras(_lumi_years, _processClasses_list, _labels_list, v
 
     with tensorflow.compat.v1.Session() as sess: #Must first open a new session #Can't manage to run code below without this... (why?)
 
+        print('\n'); print(colors.fg.lightblue, "--- Freeze graph...", colors.reset); print('\n')
+
         tensorflow.keras.backend.set_learning_phase(0) # This line must be executed before loading Keras model (else mismatch between training/eval layers, e.g. Dropout)
         model = load_model(h5model_outname) # model has to be re-loaded
 
-        if _startFromExistingModel == False: #True <-> don't train DNN, directly load existing DNN
-            print('\n'); print(colors.fg.lightblue, "--- Freeze graph...", colors.reset); print('\n')
+        # tensorflow.compat.v1.keras.backend.clear_session() #Closing the last session avoids that node names get a suffix appened when opening a new session #Does not work?
+        # sess = tensorflow.compat.v1.keras.backend.get_session()
+        # graph = sess.graph
 
-            # tensorflow.compat.v1.keras.backend.clear_session() #Closing the last session avoids that node names get a suffix appened when opening a new session #Does not work?
-            # sess = tensorflow.compat.v1.keras.backend.get_session()
-            # graph = sess.graph
+        inputs_names = [input.op.name for input in model.inputs]
+        outputs_names = [output.op.name for output in model.outputs]
+        # print('\ninputs: ', model.inputs)
+        print('\n')
+        print(colors.fg.lightgrey, '--> inputs_names: ', inputs_names[0], colors.reset, '\n')
+        # print('\noutputs: ', model.outputs)
+        print(colors.fg.lightgrey, '--> outputs_names: ', outputs_names[0], colors.reset, '\n')
+        # tf_node_list = [n.name for n in  tensorflow.compat.v1.get_default_graph().as_graph_def().node]; print('nodes list : ', tf_node_list)
+        frozen_graph = freeze_session(sess, output_names=[output.op.name for output in model.outputs])
+        tensorflow.io.write_graph(frozen_graph, weight_dir, 'model.pbtxt', as_text=True)
+        tensorflow.io.write_graph(frozen_graph, weight_dir, 'model.pb', as_text=False)
+        print('\n'); print(colors.fg.lightgrey, '===> Successfully froze graph :', colors.reset, weight_dir+'model.pb', '\n')
 
-            inputs_names = [input.op.name for input in model.inputs]
-            outputs_names = [output.op.name for output in model.outputs]
-            # print('\ninputs: ', model.inputs)
-            print('\n')
-            print(colors.fg.lightgrey, '--> inputs_names: ', inputs_names[0], colors.reset, '\n')
-            # print('\noutputs: ', model.outputs)
-            print(colors.fg.lightgrey, '--> outputs_names: ', outputs_names[0], colors.reset, '\n')
-            # tf_node_list = [n.name for n in  tensorflow.compat.v1.get_default_graph().as_graph_def().node]; print('nodes list : ', tf_node_list)
-            frozen_graph = freeze_session(sess, output_names=[output.op.name for output in model.outputs])
-            tensorflow.io.write_graph(frozen_graph, weight_dir, 'model.pbtxt', as_text=True)
-            tensorflow.io.write_graph(frozen_graph, weight_dir, 'model.pb', as_text=False)
-            print('\n'); print(colors.fg.lightgrey, '===> Successfully froze graph :', colors.reset, weight_dir+'model.pb', '\n')
-
-            #Also append the names of the input/output nodes in the file "DNN_info.txt" containing input features names, etc. (for later use in C++ code)
-            text_file = open(weight_dir + "DNN_infos.txt", "a") #Append mode
-            text_file.write(inputs_names[0]); text_file.write(' -1 -1 \n'); #use end values as flags to signal these lines
-            text_file.write(outputs_names[0]); text_file.write(' -2 -2 \n');
-            text_file.write(str(_nof_output_nodes)); text_file.write(' -3 -3 \n');
-            text_file.close()
+        #Also append the names of the input/output nodes in the file "DNN_info.txt" containing input features names, etc. (for later use in C++ code)
+        text_file = open(weight_dir + "DNN_infos.txt", "a") #Append mode
+        text_file.write(inputs_names[0]); text_file.write(' -1 -1 \n'); #use end values as flags to signal these lines
+        text_file.write(outputs_names[0]); text_file.write(' -2 -2 \n');
+        text_file.write(str(_nof_output_nodes)); text_file.write(' -3 -3 \n');
+        text_file.close()
 
 
  #####  ######  ####  #    # #      #####  ####
@@ -323,13 +322,14 @@ def Train_Test_Eval_PureKeras(_lumi_years, _processClasses_list, _labels_list, v
         #     auc_score_train = roc_auc_score(y_train, model.predict(x_train))
         #     print('\n'); print(colors.fg.lightgrey, '**** AUC scores ****', colors.reset)
         #     print(colors.fg.lightgrey, "-- TEST SAMPLE  \t==> " + str(auc_score), colors.reset)
-        #     print(colors.fg.lightgrey, "-- TRAIN SAMPLE \t==> " + str(auc_score_train), colors.reset); print('\n')
+        #     print(colors.fg.lightgrey, "-- TRAIN `SAMPLE \t==> " + str(auc_score_train), colors.reset); print('\n')
 
-        list_predictions_train_allNodes_allClasses, list_predictions_test_allNodes_allClasses, list_PhysicalWeightsTrain_allClasses, list_PhysicalWeightsTest_allClasses = Apply_Model_toTrainTestData(_nof_output_nodes, _processClasses_list, _labels_list, x_train, y_train, x_test, y_test, PhysicalWeights_train, PhysicalWeights_test, h5model_outname)
+        #Get control results
+        list_predictions_train_allNodes_allClasses, list_predictions_test_allNodes_allClasses, list_PhysicalWeightsTrain_allClasses, list_PhysicalWeightsTest_allClasses = Apply_Model_toTrainTestData(_nof_output_nodes, _processClasses_list, _labels_list, x_train, y_train, x_test, y_test, PhysicalWeights_train, PhysicalWeights_test, h5model_outname, x_control_firstNEvents)
 
         Create_TrainTest_ROC_Histos(lumiName, _nof_output_nodes, _labels_list, list_predictions_train_allNodes_allClasses, list_predictions_test_allNodes_allClasses, list_PhysicalWeightsTrain_allClasses, list_PhysicalWeightsTest_allClasses, _metrics)
 
-        Create_Control_Plots(_nof_output_nodes, _labels_list, list_predictions_train_allNodes_allClasses, list_predictions_test_allNodes_allClasses, list_PhysicalWeightsTrain_allClasses, list_PhysicalWeightsTest_allClasses, x_train, y_train, y_test, x_test, model, _metrics, _nof_output_nodes, weight_dir, _startFromExistingModel, history)
+        Create_Control_Plots(_nof_output_nodes, _labels_list, list_predictions_train_allNodes_allClasses, list_predictions_test_allNodes_allClasses, list_PhysicalWeightsTrain_allClasses, list_PhysicalWeightsTest_allClasses, x_train, y_train, y_test, x_test, model, _metrics, _nof_output_nodes, weight_dir, history)
 
     #End [with ... as sess]
 # //--------------------------------------------
@@ -371,9 +371,9 @@ def Train_Test_Eval_PureKeras(_lumi_years, _processClasses_list, _labels_list, v
 # //--------------------------------------------
 # //--------------------------------------------
 
-def Apply_Model_toTrainTestData(nof_output_nodes, processClasses_list, labels_list, x_train, y_train, x_test, y_test, PhysicalWeights_train, PhysicalWeights_test, savedModelName):
+def Apply_Model_toTrainTestData(nof_output_nodes, processClasses_list, labels_list, x_train, y_train, x_test, y_test, PhysicalWeights_train, PhysicalWeights_test, savedModelName, x_control_firstNEvents):
 
-    print(colors.fg.lightblue, "--- Apply model to train & test data...", colors.reset); print('\n')
+    print('\n', colors.fg.lightblue, "--- Apply model to train & test data...", colors.reset, " (may take a while)\n")
 
     # print('x_test:\n', x_test[:10]); print('y_test:\n', y_test[:10]); print('x_train:\n', x_train[:10]); print('y_train:\n', y_train[:10])
 
@@ -406,7 +406,6 @@ def Apply_Model_toTrainTestData(nof_output_nodes, processClasses_list, labels_li
     tensorflow.keras.backend.set_learning_phase(0) # This line must be executed before loading Keras model (else mismatch between training/eval layers, e.g. Dropout)
     model = load_model(savedModelName)
 
-
     #Application (can also use : predict_classes, predict_proba)
     list_predictions_train_allNodes_allClasses = []
     list_predictions_test_allNodes_allClasses = []
@@ -438,6 +437,16 @@ def Apply_Model_toTrainTestData(nof_output_nodes, processClasses_list, labels_li
     #                 true_label = labels_list[j]
     #     print("===> Outputs nodes predictions for %s event : %s" % (true_label, (list_predictions_test_allClasses[j])[i]) )
     # print("--------------\n")
+
+    # print(x_control_firstNEvents.shape)
+    # print(x_control_firstNEvents[i].shape)
+    # print(x_control_firstNEvents[i])
+    # print(model.predict(x_control_firstNEvents)[0])
+    #Print predictions for first few events of first process => can compare with predictions obtained for same DNN/events using another code
+    # for j in range(x_control_firstNEvents.shape[0]): #FIXME
+    #     print(j)
+    #     print(x_control_firstNEvents[j].shape)
+    #     print("===> Prediction for event", j," :", model.predict(x_control_firstNEvents[j]) )
 
     # return list_predictions_train_allClasses, list_predictions_test_allClasses, list_PhysicalWeightsTrain_allClasses, list_PhysicalWeightsTest_allClasses
     return list_predictions_train_allNodes_allClasses, list_predictions_test_allNodes_allClasses, list_PhysicalWeightsTrain_allClasses, list_PhysicalWeightsTest_allClasses
@@ -487,4 +496,4 @@ def Apply_Model_toTrainTestData(nof_output_nodes, processClasses_list, labels_li
     # nLep = "3l" if sys.argv[1] == True else False
 
 #----------  Manual call to DNN training function
-Train_Test_Eval_PureKeras(_lumi_years, _processClasses_list, _labels_list, var_list, cuts, _nepochs, _batchSize, _maxEvents_perClass, _splitTrainEventFrac, _nEventsTot_train, _nEventsTot_test, _startFromExistingModel)
+Train_Test_Eval_PureKeras(_lumi_years, _processClasses_list, _labels_list, var_list, cuts, _nepochs, _batchSize, _maxEvents_perClass, _splitTrainEventFrac, _nEventsTot_train, _nEventsTot_test)
