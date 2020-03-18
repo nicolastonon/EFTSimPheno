@@ -22,7 +22,7 @@ SRCS = $(wildcard *.cxx) #Source files are all files with .cxx extension
 HDRS = $(wildcard *.h) #Header files are all files with .h extension
 OBJS = $(SRCS:.cxx=.o) #Object files are all files with .o extension, which have same names as source files
 
-MAIN = main #Name of executable file
+MAIN = GenPlotter.exe #Name of executable file
 
 # //--------------------------------------------
 #Instructions

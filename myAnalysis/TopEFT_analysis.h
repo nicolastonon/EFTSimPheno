@@ -60,10 +60,10 @@
 #include "Utils/Helper.h" //Helper functions
 #include "Utils/TFModel.h" //Tensorflow functions
 
-//xxx
-#include "Utils/TH1EFT.h" //Tensorflow functions
-#include "Utils/WCPoint.h" //Tensorflow functions
-#include "Utils/WCFit.h" //Tensorflow functions
+//Custom classes for EFT (see https://github.com/Andrew42/EFTGenReader/blob/maste)
+#include "TH1EFT.h"
+#include "WCPoint.h"
+#include "WCFit.h"
 
 using namespace std;
 
@@ -72,7 +72,7 @@ class TopEFT_analysis
 	public :
 
 	TopEFT_analysis(); //Default constructor
-    TopEFT_analysis(vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<bool>, vector<TString>, TString, vector<TString>, bool, TString, TString, TString, bool, bool);
+    TopEFT_analysis(vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<TString>, vector<bool>, vector<TString>, TString, vector<TString>, bool, TString, TString, TString, bool);
 	~TopEFT_analysis(); //Default destructor
 
 //--- METHODS
@@ -84,9 +84,11 @@ class TopEFT_analysis
     void SetBranchAddress_SystVariationArray(TTree*, TString, vector<Double_t*>&, int); //Details in func comments
     void Merge_Templates_ByProcess(TString, TString, vector<TString>, bool=false);
 
+    void Fill_TH1EFT(TH1EFT*&, float, vector<string>, vector<float>, float);
+    void Test_TH1EFT();
+
 //--- MEMBERS
 	bool stop_program;
-
 
 	private :
 
@@ -138,7 +140,6 @@ class TopEFT_analysis
     bool is_blind;
     int nSampleGroups; //Nof sample groups (e.g. 'Rares',  ...)
     bool use_custom_colorPalette;
-    bool use_PrivateMC;
 
     //Systematics variations arrays //More details in comments of func Handle_SystVariationArray()
     double* array_PU;

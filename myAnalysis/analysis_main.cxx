@@ -16,8 +16,7 @@ int main(int argc, char **argv)
 
     //-- MAIN OPTIONS --
     TString signal_process = "tZq";
-    bool use_PrivateMC = false;
-    bool use_systematics = true; //true <-> will compute/store systematics selected below
+    bool use_systematics = false; //true <-> will compute/store systematics selected below
 
     //-- MVA
     TString classifier_name = "DNN"; //'BDT' or 'DNN'
@@ -48,8 +47,8 @@ int main(int argc, char **argv)
 //NB : years must be placed in the right order !
 
 	vector<TString> set_lumi_years;
-    set_lumi_years.push_back("2016");
-    // set_lumi_years.push_back("2017");
+    // set_lumi_years.push_back("2016");
+    set_lumi_years.push_back("2017");
     // set_lumi_years.push_back("2018");
 
 //-----------------------------------------------------------------------------------------
@@ -110,12 +109,13 @@ int main(int argc, char **argv)
     //DATA --- Single sample, in first position
     thesamplelist.push_back("DATA"); thesamplegroups.push_back("DATA");
 
-    //Private MC production //FIXME
-    // thesamplelist.push_back("PrivProdMC_tZq"); thesamplegroups.push_back("tZq");
+    //Private MC production including EFT weights
+    thesamplelist.push_back("PrivMC_tZq"); thesamplegroups.push_back("tZq_EFT");
+    // thesamplelist.push_back("PrivMC_ttZ"); thesamplegroups.push_back("ttZ_EFT");
 
     //Signal(s)
-    thesamplelist.push_back("tZq"); thesamplegroups.push_back("tZq");
-    thesamplelist.push_back("ttZ"); thesamplegroups.push_back("ttZ");
+    // thesamplelist.push_back("tZq"); thesamplegroups.push_back("tZq");
+    // thesamplelist.push_back("ttZ"); thesamplegroups.push_back("ttZ");
 
     //ttX
     thesamplelist.push_back("ttH"); thesamplegroups.push_back("ttX");
@@ -327,7 +327,7 @@ int main(int argc, char **argv)
     //  CREATE INSTANCE OF CLASS & INITIALIZE
     //#############################################
 
-    TopEFT_analysis* theAnalysis = new TopEFT_analysis(thesamplelist, thesamplegroups, theSystWeights, theSystTree, thechannellist, thevarlist, set_v_cut_name, set_v_cut_def, set_v_cut_IsUsedForBDT, set_v_add_var_names, plot_extension, set_lumi_years, show_pulls_ratio, region_choice, signal_process, classifier_name, use_custom_colorPalette, use_PrivateMC);
+    TopEFT_analysis* theAnalysis = new TopEFT_analysis(thesamplelist, thesamplegroups, theSystWeights, theSystTree, thechannellist, thevarlist, set_v_cut_name, set_v_cut_def, set_v_cut_IsUsedForBDT, set_v_add_var_names, plot_extension, set_lumi_years, show_pulls_ratio, region_choice, signal_process, classifier_name, use_custom_colorPalette);
     if(theAnalysis->stop_program) {return 1;}
 
     //#############################################

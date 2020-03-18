@@ -76,6 +76,9 @@ def Create_Model(outdir, DNN_name, nof_outputs, var_list, means, stddev):
 
     #Model 1 -- simple
     if model_choice == 1:
+
+        dense = Dense(64, kernel_initializer=my_init, use_bias=not use_batchNorm, activation='relu')
+
        # //--------------------------------------------
         if use_normInputLayer == True :
             model.add(Input(shape=num_input_variables, name="MYINPUT")) #Inactive input layer
@@ -88,13 +91,15 @@ def Create_Model(outdir, DNN_name, nof_outputs, var_list, means, stddev):
         if use_dropout==True:
             model.add(Dropout(droprate))
 
-        model.add(Dense(64, kernel_initializer=my_init, use_bias=not use_batchNorm, activation='relu'))
+        model.add(dense)
+        # model.add(Dense(64, kernel_initializer=my_init, use_bias=not use_batchNorm, activation='relu'))
         if use_batchNorm==True:
             model.add(BatchNormalization())
         if use_dropout==True:
             model.add(Dropout(droprate))
 
-        model.add(Dense(64, kernel_initializer=my_init, use_bias=not use_batchNorm, activation='relu'))
+        model.add(dense)
+        # model.add(Dense(64, kernel_initializer=my_init, use_bias=not use_batchNorm, activation='relu'))
         if use_batchNorm==True:
             model.add(BatchNormalization())
         if use_dropout==True:

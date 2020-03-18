@@ -54,8 +54,15 @@
 #include "TLegend.h"
 #include "TLine.h"
 #include "TGraphAsymmErrors.h"
+#include <TObjArray.h>
+#include <TObjString.h>
 
-//-- Basic helper functions
+//Custom classes for EFT (see https://github.com/Andrew42/EFTGenReader/blob/maste)
+// #include "TH1EFT.h"
+// #include "WCPoint.h"
+// #include "WCFit.h"
+
+//-- Low-level helper functions
     bool Check_File_Existence(const TString&);
     int MoveFile(TString, TString);
     int CopyFile(TString, TString);
@@ -68,8 +75,9 @@
     double Compute_RangeScaled_Value(double, double, double, double, double);
     double Compute_StdDevScaled_Value(double, double, double);
     bool Get_Dir_Content(std::string, std::vector<TString>&);
+    TString Split_TString_Into_Keys(TString, TString);
 
-//-- ROOT-cpecific helper functions
+//-- Basic analysis helper functions
     void Fill_Last_Bin_TH1F(TH1F*, double); //Increment last bin of histo by specified weight
     void Fill_First_Bin_TH1F(TH1F*, double); //Increment first bin of histo by specified weight
     void Load_Canvas_Style();
@@ -88,6 +96,7 @@
     float Count_Total_Nof_Entries(TString, TString, std::vector<TString>, std::vector<TString>, std::vector<TString>, std::vector<TString>, std::vector<TString>, bool, bool);
     TString Get_Modified_SystName(TString, TString);
     void Get_Pointer_GENHisto(TH1F*&, TString);
+    // void Fill_TH1EFT(TH1EFT*&, float, std::vector<std::string>, std::vector<float>, float);
 
 //--------------------------------------------
 	//Increment weight of first bin by 'weight'

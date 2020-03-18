@@ -155,7 +155,7 @@ def Create_Control_Plots(nof_output_nodes, labels_list, list_predictions_train_a
     plotname = weight_dir + 'Accuracy_DNN_.png'
     fig3.savefig(plotname, bbox_inches='tight')
     # print("Saved Accuracy plot as : " + plotname)
-    print(colors.fg.lightgrey, "Saved Accuracy plot as :", colors.reset, plotname)
+    print(colors.fg.lightgrey, "Saved Accuracy plot as :", colors.reset, plotname, '\n')
     fig3.clear()
 
     #ROC and overtraining => Plot for each node

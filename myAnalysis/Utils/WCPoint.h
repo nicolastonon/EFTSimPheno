@@ -21,7 +21,14 @@ public:
 
     WCPoint(){};
 
-    WCPoint(std::string _str,double _wgt=0.0) {
+    WCPoint(std::string _str, double _wgt=0.0) {
+        this->parseRwgtId(_str);
+        this->wgt = _wgt;
+    }
+
+    WCPoint(std::string _str, float _wgt=0.0)
+    {
+        // std::cout<<__LINE__<<std::endl;
         this->parseRwgtId(_str);
         this->wgt = _wgt;
     }
@@ -36,7 +43,9 @@ public:
         std::vector<std::string> words;
         split_string(_str,words,"_");
         this->inputs.clear();
-        for (uint i = 1; i < words.size(); i+= 2) {
+        for (uint i = 1; i < words.size(); i+= 2)
+        {
+            if(i+1 >= words.size()) {std::cout<<"Error : i > words.size()"<<std::endl; return;} //NT
             this->setStrength(words.at(i),std::stod(words.at(i+1)));
         }
     }
@@ -47,7 +56,7 @@ public:
 
     // Explicity set a single WC parameter strength
     void setStrength(std::string wc_name,double strength) {
-        this->inputs[wc_name] = strength;
+        this->inputs[wc_name] = strength; //NB : operator map[] inserts a new element in the map, and increases size by 1
     }
 
     // Sets all WCs to SM value (i.e. 0)

@@ -47,7 +47,8 @@ public:
         this->clear();
     }
 
-    std::string kSMstr = "sm";    // Need to figure out how to make this a global constant...
+    // std::string kSMstr = "sm";    // Need to figure out how to make this a global constant...
+    std::string kSMstr = "rwgt_SM"; //NT -- CHANGED
 
     void setTag(std::string _tag) {
         this->tag = _tag;

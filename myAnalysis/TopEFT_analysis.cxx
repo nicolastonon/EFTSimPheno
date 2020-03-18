@@ -13,6 +13,14 @@
 
 //--------------------------------------------
 
+/** NOTES **
+
+# Include private MC samples in code :
+- only select central/private via samplename => update all name checks
+- what if want to use both ? give priority in plots for central...?
+
+*/
+
 #include "TopEFT_analysis.h"
 
 #define MYDEBUG(msg) cout<<endl<<ITAL("-- DEBUG: " << __FILE__ << ":" << __LINE__ <<":")<<FRED(" " << msg  <<"")<<endl
@@ -33,7 +41,7 @@ using namespace std;
 /////////////////////////////////////////////////////////
 
 //Overloaded constructor
-TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> thesamplegroups, vector<TString> thesystlist, vector<TString> thesystTreelist, vector<TString> thechannellist, vector<TString> thevarlist, vector<TString> set_v_cut_name, vector<TString> set_v_cut_def, vector<bool> set_v_cut_IsUsedForBDT, vector<TString> set_v_add_var_names, TString theplotextension, vector<TString> set_lumi_years, bool show_pulls, TString region, TString signal_process, TString classifier_name, bool use_custom_colorPalette, bool use_PrivateMC)
+TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> thesamplegroups, vector<TString> thesystlist, vector<TString> thesystTreelist, vector<TString> thechannellist, vector<TString> thevarlist, vector<TString> set_v_cut_name, vector<TString> set_v_cut_def, vector<bool> set_v_cut_IsUsedForBDT, vector<TString> set_v_add_var_names, TString theplotextension, vector<TString> set_lumi_years, bool show_pulls, TString region, TString signal_process, TString classifier_name, bool use_custom_colorPalette)
 {
     //Canvas definition
     Load_Canvas_Style();
@@ -51,8 +59,6 @@ TopEFT_analysis::TopEFT_analysis(vector<TString> thesamplelist, vector<TString> 
 	this->region = region;
 
     this->signal_process = signal_process;
-
-    this->use_PrivateMC = use_PrivateMC;
 
 	// this->is_blind = is_blind;
 
@@ -537,7 +543,7 @@ void TopEFT_analysis::Train_BDT(TString channel, bool write_ranking_info)
             //Can hardcode here the backgrounds against which to train, instead of considering full list of samples
             if(signal_process == "tZq")
             {
-                if(!samplename_tmp.Contains("tZq") && !samplename_tmp.Contains("ttZ") && !samplename_tmp.Contains("ttH") && samplename_tmp.Contains("ttW") && samplename_tmp.Contains("WZ") && samplename_tmp.Contains("ZZ4l") && samplename_tmp.Contains("DY") && samplename_tmp.Contains("TTbar_DiLep") ) {continue;}
+                if(!samplename_tmp.Contains("tZq") && !samplename_tmp.EndsWith("ttZ") && !samplename_tmp.Contains("ttH") && samplename_tmp.Contains("ttW") && samplename_tmp.Contains("WZ") && samplename_tmp.Contains("ZZ4l") && samplename_tmp.Contains("DY") && samplename_tmp.Contains("TTbar_DiLep") ) {continue;}
             }
 
     		cout<<endl<<"-- Sample : "<<sample_list[isample]<<endl;
@@ -1013,6 +1019,9 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
     		file_input = TFile::Open(inputfile, "READ");
 
+            bool isPrivMC = false;
+            if(sample_list[isample].Contains("PrivMC")) {isPrivMC = true;}
+
     		//-- Loop on TTrees : first empty element corresponds to nominal TTree ; additional TTrees may correspond to JES/JER TTrees (defined in main)
     		//NB : only nominal TTree contains systematic weights ; others only contain the nominal weight (but variables have different values)
     		for(int itree=0; itree<systTree_list.size(); itree++)
@@ -1099,6 +1108,20 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
     			// tree->SetBranchStatus("mc_weight_originalValue", 1);
     			// tree->SetBranchAddress("mc_weight_originalValue", &mc_weight_originalValue);
 
+                //-- EFT reweights
+                vector<float>* v_wgts = 0;
+                vector<string>* v_ids = 0;
+                if(isPrivMC)
+                {
+                    v_wgts = new vector<float>;
+                    v_ids = new vector<string>;
+
+                    tree->SetBranchStatus("mc_EFTweights", 1);
+                    tree->SetBranchStatus("mc_EFTweightIDs", 1);
+                    tree->SetBranchAddress("mc_EFTweights", &v_wgts);
+                    tree->SetBranchAddress("mc_EFTweightIDs", &v_ids);
+                }
+
                 //Reserve 1 float for each systematic weight (also for nominal to keep ordering, but not used)
     			vector<Double_t*> v_double_systWeights(syst_list.size(), NULL);
     			for(int isyst=0; isyst<syst_list.size(); isyst++)
@@ -1111,8 +1134,11 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
                     SetBranchAddress_SystVariationArray(tree, syst_list[isyst], v_double_systWeights, isyst);
     			}
 
-    			//Reserve memory for 1 TH1F* per category, per systematic
+    			//Reserve memory for 1 TH1F per category, per systematic, per variable //v3 <-> vec of vec of vec
     			vector<vector<vector<TH1F*>>> v3_histo_chan_syst_var(channel_list.size());
+
+                //Idem for TH1EFT
+                vector<vector<vector<TH1EFT*>>> v3_TH1EFT_chan_syst_var(channel_list.size());
 
     			for(int ichan=0; ichan<channel_list.size(); ichan++)
     			{
@@ -1121,30 +1147,32 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
                     //Reserve memory for TH1Fs
     				if(sample_list[isample] == "DATA" || systTree_list[itree] != "") //1 single weight
     				{
-    					v3_histo_chan_syst_var[ichan].resize(1); //Cases for which we only need to store the nominal weight
+                        v3_histo_chan_syst_var[ichan].resize(1); //Cases for which we only need to store the nominal weight
+                        v3_TH1EFT_chan_syst_var[ichan].resize(1);
     				}
     				else //Subcategories -> 1 histo for nominal + 1 histo per systematic
     				{
-    					v3_histo_chan_syst_var[ichan].resize(syst_list.size());
+                        v3_histo_chan_syst_var[ichan].resize(syst_list.size());
+                        v3_TH1EFT_chan_syst_var[ichan].resize(syst_list.size());
     				}
 
     				//Init TH1Fs
     				for(int isyst=0; isyst<v3_histo_chan_syst_var[ichan].size(); isyst++)
     				{
-    					v3_histo_chan_syst_var[ichan][isyst].resize(total_var_list.size());
+                        v3_histo_chan_syst_var[ichan][isyst].resize(total_var_list.size());
+                        v3_TH1EFT_chan_syst_var[ichan][isyst].resize(total_var_list.size());
 
     					for(int ivar=0; ivar<total_var_list.size(); ivar++)
     					{
     						if(makeHisto_inputVars && !Get_Variable_Range(total_var_list[ivar], nbins, xmin, xmax)) {cout<<FRED("Unknown variable name : "<<total_var_list[ivar]<<"! (include it in function Get_Variable_Range() in Helper.cxx)")<<endl; continue;} //Get binning for this input variable
 
-    						v3_histo_chan_syst_var[ichan][isyst][ivar] = new TH1F("", "", nbins, xmin, xmax);
+                            v3_histo_chan_syst_var[ichan][isyst][ivar] = new TH1F("", "", nbins, xmin, xmax);
+
+                            if(isPrivMC) {v3_TH1EFT_chan_syst_var[ichan][isyst][ivar] = new TH1EFT("", "", nbins, xmin, xmax);}
+                            else {v3_TH1EFT_chan_syst_var[ichan][isyst][ivar] = NULL;}
     					}
     				} //syst
     			} //chan
-
-                // if(!draw_progress_bar) {cout<<endl<< "--- "<<sample_list[isample]<<" : Processing: " << tree->GetEntries() << " events" << std::endl;}
-                if(tree->GetEntries() > 50000) {cout<<endl<< "--- "<<sample_list[isample]<<" : Processing " << tree->GetEntries() << " events" << std::endl;}
-
 
 // ###### #    # ###### #    # #####    #       ####   ####  #####
 // #      #    # #      ##   #   #      #      #    # #    # #    #
@@ -1155,16 +1183,17 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
     			// cout<<"* Tree '"<<systTree_list[itree]<<"' :"<<endl;
 
-    			// int nentries = 100;
+    			// int nentries = 10;
     			int nentries = tree->GetEntries();
+
+                // if(!draw_progress_bar) {cout<<endl<< "--- "<<sample_list[isample]<<" : Processing: " << tree->GetEntries() << " events" << std::endl;}
+                cout<<endl<< "--- "<<sample_list[isample]<<" : Processing " << nentries << " events" << std::endl;
 
     			for(int ientry=0; ientry<nentries; ientry++)
     			{
     				// cout<<FGRN("ientry "<<ientry<<"")<<endl;
 
-                    //-- moved : only count events which pass the cuts !
-                    // ibar++;
-                    // if(draw_progress_bar && ibar%50000==0) {timer.DrawProgressBar(ibar, ""); cout<<ibar<<" / "<<total_nentries_toProcess<<endl; }
+                    if(isPrivMC && ientry%1000==0) {cout<<DIM("Entry "<<ientry<<"")<<endl;} //Very slow, print progress
 
     				std::fill(var_list_floats.begin(), var_list_floats.end(), 0); //Reset vectors reading inputs to 0
 
@@ -1216,13 +1245,14 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
                             //     var_list_floats[i] = Rescale_Input_Variable(var_list_floats[i], v_inputs_rescaling[i].first, v_inputs_rescaling[i].second);
                             // }
                             // for(int i=0; i<var_list_floats.size(); i++) {cout<<"clfy1_inputs["<<i<<"] "<<clfy1_inputs[i]<<std::endl;}
-
-                            //Evaluate output nodes values
                             // std::vector<float> clfy1_outputs = clfy1->evaluate(clfy1_inputs);
-                            std::vector<float> clfy1_outputs = clfy1->evaluate(var_list_floats);
                             // for(unsigned i=0; i<clfy1_outputs.size(); i++) {cout<<"clfy1_outputs["<<i<<"] "<<clfy1_outputs[i]<<endl;}
 
+                            //Evaluate output nodes values
+                            std::vector<float> clfy1_outputs = clfy1->evaluate(var_list_floats);
+
                             for(int ivar=0; ivar<total_var_list.size(); ivar++) {total_var_floats[ivar] = clfy1_outputs[ivar];}
+                            // cout<<"ientry "<<ientry<<" ==> "<<clfy1_outputs[0]<<endl;
                         }
                     }
                     // else
@@ -1286,6 +1316,11 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
                             for(int ivar=0; ivar<total_var_list.size(); ivar++)
                             {
                                 Fill_TH1F_UnderOverflow(v3_histo_chan_syst_var[ichan][isyst][ivar], total_var_floats[ivar], weight_tmp);
+
+                                if(isPrivMC)
+                                {
+                                    Fill_TH1EFT(v3_TH1EFT_chan_syst_var[ichan][isyst][ivar], total_var_floats[ivar], *v_ids, *v_wgts, weight_tmp);
+                                }
                             }
     					} //syst loop
 
@@ -1346,10 +1381,19 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
     						v3_histo_chan_syst_var[ichan][isyst][ivar]->Write(output_histo_name);
                             // cout<<"Wrote histo : "<<output_histo_name<<endl;
 
+                            if(isPrivMC)
+                            {
+                                output_histo_name = "TH1EFT_"+ output_histo_name;
+                                v3_TH1EFT_chan_syst_var[ichan][isyst][ivar]->Write(output_histo_name);
+                            }
+
     						delete v3_histo_chan_syst_var[ichan][isyst][ivar]; v3_histo_chan_syst_var[ichan][isyst][ivar] = NULL;
+                            if(v3_TH1EFT_chan_syst_var[ichan][isyst][ivar]) {delete v3_TH1EFT_chan_syst_var[ichan][isyst][ivar]; v3_TH1EFT_chan_syst_var[ichan][isyst][ivar] = NULL;}
     					} //var loop
     				} //syst loop
     			} //chan loop
+
+                if(isPrivMC) {delete v_wgts; delete v_ids;}
 
     			// cout<<"Done with "<<sample_list[isample]<<" sample"<<endl;
 
@@ -1409,6 +1453,8 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
     {
         Merge_Templates_ByProcess(output_file_name, template_name, total_var_list);
     }
+
+    // Test_TH1EFT(); //FIXME
 
 	return;
 }
@@ -1527,7 +1573,7 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
             //Did not even find my own file --> Can not plot anything !
 			if(!Check_File_Existence(input_name))
 			{
-				cout<<FRED("Did not find any file containing histos to plot ! Either the files do not exist, or their naming convention is wrong (check code) ! Abort !")<<endl;
+				cout<<FRED("Did not find any file containing histos to plot ! Either the files do not exist, or naming conventions are not respected... (check the code) ! Abort !")<<endl;
 				return;
 			}
 			else {cout<<FBLU("--> Using file ")<<input_name<<FBLU(" instead !")<<endl; usleep(3000000);}
@@ -1820,12 +1866,6 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
                     // cout<<"sample_list[isample] "<<sample_list[isample];
                     // cout<<" => color_list[isample] "<<color_list[isample]<<endl;
 
-    				// if((doNot_stack_signal && (samplename.Contains("tZq") || samplename.Contains("ttZ")) )) //Superimpose BSM signal
-    				// {
-    				// 	h_tmp->SetFillColor(0);
-    				// 	h_tmp->SetLineColor(color_list[isample]);
-    				// }
-
     				//Check color of previous *used* sample (up to 6, to account for potentially skipped samples)
     				for(int k=1; k<6; k++)
     				{
@@ -2025,7 +2065,7 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 				else {h_tzq->Add((TH1F*) v_MC_histo[i]->Clone());}
 				// if(doNot_stack_signal) continue; //don't stack
 			}
-			else if(MC_samples_legend[i].Contains("ttZ") )
+			else if(MC_samples_legend[i].EndsWith("ttZ") )
 			{
 				if(index_ttZ_sample<0) {index_ttZ_sample = i;}
 				if(!h_ttz) {h_ttz = (TH1F*) v_MC_histo[i]->Clone();}
@@ -2083,7 +2123,7 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 
             //Decide here which sample are mentioned in the legend
             if(MC_samples_legend[i].Contains("tZq")) {qw->AddEntry(v_MC_histo[i], "tZq", "f");}
-            else if(MC_samples_legend[i] == "ttZ") {qw->AddEntry(v_MC_histo[i], "t#bar{t}Z", "f");}
+            else if(MC_samples_legend[i].EndsWith("ttZ") ) {qw->AddEntry(v_MC_histo[i], "t#bar{t}Z", "f");}
             else if(MC_samples_legend[i] == "ttW") {qw->AddEntry(v_MC_histo[i], "t#bar{t}X", "f");}
             else if(MC_samples_legend[i] == "tHq") {qw->AddEntry(v_MC_histo[i], "tX", "f");}
 			else if(MC_samples_legend[i] == "WZ") {qw->AddEntry(v_MC_histo[i], "VV(V)", "f");}
@@ -2114,13 +2154,6 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 		for(int i=v_MC_histo.size()-1; i>=0; i--)
 		{
 			if(!v_MC_histo[i]) {continue;} //Some templates may be null
-
-            //-- If want to use full signal samples
-			// if(doNot_stack_signal)
-			// {
-			// 	if(i==index_tZq_sample || i==index_ttZ_sample) {continue;}
-			// 	if(MC_samples_legend[i].Contains("tZq") || MC_samples_legend[i].Contains("ttZ")) {continue;}
-			// }
 
 			stack_MC->Add(v_MC_histo[i]);
 			// cout<<"Stacking sample "<<MC_samples_legend[i]<<" / integral "<<v_MC_histo[i]->Integral()<<endl;
@@ -2679,6 +2712,7 @@ void TopEFT_analysis::Compare_TemplateShapes_Processes(TString template_name, TS
 	}
 
 //--------------------------------------------
+    //-- Hardcode samples here... or could filter the main sample list
 	vector<TString> v_samples; vector<TString> v_groups; vector<int> v_colors;
 	v_samples.push_back("tZq"); v_groups.push_back("tZq"); v_colors.push_back(kBlack);
 
@@ -2875,7 +2909,7 @@ void TopEFT_analysis::Compare_TemplateShapes_Processes(TString template_name, TS
 			if(v_syst[isyst] == "")
 			{
                 if(v_groups[isample].Contains("tZq")) {qw->AddEntry(v2_histos[isample][isyst], "tZq", "f");}
-                else if(v_groups[isample] == "ttZ") {qw->AddEntry(v2_histos[isample][isyst], "t#bar{t}Z", "f");}
+                else if(v_groups[isample].EndsWith("ttZ") ) {qw->AddEntry(v2_histos[isample][isyst], "t#bar{t}Z", "f");}
                 else if(v_groups[isample] == "ttW") {qw->AddEntry(v2_histos[isample][isyst], "t#bar{t}X", "f");}
                 else if(v_groups[isample] == "tHq") {qw->AddEntry(v2_histos[isample][isyst], "tX", "f");}
     			else if(v_groups[isample] == "WZ") {qw->AddEntry(v2_histos[isample][isyst], "VV(V)", "f");}
@@ -3219,4 +3253,116 @@ void TopEFT_analysis::Merge_Templates_ByProcess(TString filename, TString templa
 	cout<<endl<<FYEL("... Done")<<endl<<endl<<endl;
 
 	return;
+}
+
+
+
+
+//--------------------------------------------
+// ######## ########  ######  ######## #### ##    ##  ######
+//    ##    ##       ##    ##    ##     ##  ###   ## ##    ##
+//    ##    ##       ##          ##     ##  ####  ## ##
+//    ##    ######    ######     ##     ##  ## ## ## ##   ####
+//    ##    ##             ##    ##     ##  ##  #### ##    ##
+//    ##    ##       ##    ##    ##     ##  ##   ### ##    ##
+//    ##    ########  ######     ##    #### ##    ##  ######
+//--------------------------------------------
+
+
+void TopEFT_analysis::Fill_TH1EFT(TH1EFT*& h, float x, vector<string> v_ids, vector<float> v_wgts, float wgt_originalXWGTUP)
+{
+    bool debug = false;
+
+    float sm_wgt = 0.;
+    std::vector<WCPoint> wc_pts;
+
+    // if(isPrivMC) // Add EFT weights
+    {
+        for(int iwgt=0; iwgt<v_ids.size(); iwgt++)
+        {
+            // cout<<"v_ids[iwgt] "<<v_ids[iwgt]<<endl;
+
+            TString ts = v_ids[iwgt];
+            if(ts.Contains("rwgt_") && ts != "rwgt_1" && ts != "rwgt_sm" && ts != "rwgt_SM")
+            // std::size_t foundstr = v_ids[iwgt].find("rwgt_");// only save EFT weights
+            // if(foundstr != std::string::npos)
+            {
+                WCPoint wc_pt(v_ids[iwgt], v_wgts[iwgt]);
+                wc_pts.push_back(wc_pt);
+                if(wc_pt.isSMPoint()) {sm_wgt = v_wgts[iwgt];}
+            }
+        }
+    }
+    // else
+    // {
+    //     sm_wgt = wgt_originalXWGTUP;
+    //     WCPoint wc_pt("smpt", sm_wgt);
+    //     wc_pts.push_back(wc_pt);
+    // }
+
+    WCFit eft_fit(wc_pts, "");
+
+    if(debug) //Printout WC values, compare true weight to corresponding fit result
+    {
+        cout<<"eft_fit.size() "<<eft_fit.size()<<endl;
+        eft_fit.dump();
+
+        for (uint i=0; i < wc_pts.size(); i++)
+        {
+            WCPoint wc_pt = wc_pts.at(i);
+            double pt_wgt = wc_pt.wgt;
+            double fit_val = eft_fit.evalPoint(&wc_pt);
+            wc_pt.dump();
+            std::cout << std::setw(3) << i << ": " << std::setw(12) << pt_wgt << " | " << std::setw(12) << fit_val << " | " << std::setw(12) << (pt_wgt-fit_val) << std::endl;
+        }
+    }
+
+    h->Fill(x, 1.0 , eft_fit);
+
+    return;
+}
+
+void TopEFT_analysis::Test_TH1EFT()
+{
+    cout<<FMAG("Enter Test_TH1EFT() ")<<endl;
+
+    TString filename = "/home/ntonon/Postdoc/EFTSimulations/myAnalysis/outputs/Templates_DNN_SR_2017.root";
+    if(!Check_File_Existence(filename) ) {cout<<BOLD(FRED("File not found ("<<filename<<")"))<<endl; return;}
+    TFile* f = TFile::Open(filename, "READ");
+
+    TString th1eft_name = "TH1EFT_DNN0_SR_2017__PrivMC_tZq";
+    if(!file_input->GetListOfKeys()->Contains(th1eft_name)) {cout<<BOLD(FRED("Histo not found ("<<th1eft_name<<")"))<<endl; return;}
+    TH1EFT* h = (TH1EFT*) f->Get(th1eft_name);
+
+    // cout<<"h->IsA()->InheritsFrom(TH1EFT::Class()) "<<h->IsA()->InheritsFrom(TH1EFT::Class())<<endl;
+    // cout<<"h->GetEntries() "<<h->GetEntries()<<endl;
+    // cout<<"h->GetNbinsX() "<<h->GetNbinsX()<<endl;
+
+    h->DumpFits();
+
+    WCFit fit = h->GetSumFit();
+    vector<string> vname = fit.getNames();
+    vector<std::pair<int,int>> vpair = fit.getPairs();
+    vector<double> vcoeff = fit.getCoefficients();
+    for(int i=0; i<vname.size(); i++)
+    {
+        cout<<"vname[i] "<<vname[i]<<endl;
+    }
+    for(int i=0; i<vpair.size(); i++)
+    {
+        cout<<"vpair[i] first / second "<<vpair[i].first<<" / "<<vpair[i].second<<endl;
+    }
+    for(int i=0; i<vcoeff.size(); i++)
+    {
+        cout<<"vcoeff[i] "<<vcoeff[i]<<endl<<endl;
+    }
+
+    // WCPoint wcp("smpt", 1.);
+    // cout<<"fit.evalPoint(SM) "<<fit.evalPoint(&wcp)<<endl;
+    // wcp = WCPoint("rwgt_ctZ_2.0_ctW_2.0_cpQM_2.0_cpQ3_2.0_cpt_2.0", 1.);
+    // cout<<"fit.evalPoint(xx) "<<fit.evalPoint(&wcp)<<endl;
+    // wcp = WCPoint("rwgt_ctZ_3.0_ctW_3.0_cpQM_3.0_cpQ3_3.0_cpt_3.0", 1.);
+    // cout<<"fit.evalPoint(xx) "<<fit.evalPoint(&wcp)<<endl;
+
+    return;
 }

@@ -13,8 +13,8 @@ def Write_FilePaths(dirpath, filetype, nof_files):
 
 
 
-dirpath = "/store/user/ntonon/tllqdim6_v3/tllqdim6_v3/200220_233212/0000"
-filetype = "LHE-GEN-SIM"
-nof_files = 100
+dirpath = "/store/user/ntonon/tllqdim6_FASTSIM_v2/tllqdim6_FASTSIM_v2/200315_011949/0000/"
+filetype = "FASTSIM1"
+nof_files = 1000
 
 Write_FilePaths(dirpath, filetype, nof_files)

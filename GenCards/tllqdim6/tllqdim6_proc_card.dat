@@ -34,8 +34,8 @@ set stdout_level DEBUG
 # specify the decay for the final state particles
 define p = g u c d s u~ c~ d~ s~
 define j = g u c d s u~ c~ d~ s~
-define l+ = e+ mu+
-define l- = e- mu-
+define l+ = e+ mu+ ta+
+define l- = e- mu- ta-
 define vl = ve vm vt
 define vl~ = ve~ vm~ vt~
 

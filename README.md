@@ -166,7 +166,7 @@ Once you have generated your gridpack, you may either want to :
 1) simply generate events in LHE format and shower them (for phenomenology studies) ;
 2) generate events in LHE format, shower them, run the detector simulation, digitize the signals in the detector, emulate the trigger response, and reconstruct events in the miniAOD format (for final anlysis).
 
-Moreover, you may run these steps either interactively or e.g. via CRAB (HTConder not tested yet). For more than ~1K events, using CRAB is mandatory.
+Moreover, you may run these steps either interactively or e.g. via CRAB (HTCondor not tested yet). For more than ~1K events, running on the grid is necessary.
 
 _____________________________________________________________________________
 
@@ -175,7 +175,8 @@ Template for CRAB and python configuration files for each production step can be
 
 :information_source: *Type 'cmsDriver --help' to get infos on arguments.*
 
-:information_source: *Whenever you need to run on a long list of user input files (i.e. for all steps apart for the first one), you can use the [GenerateInputPathFile.py](https://github.com/nicolastonon/EFT-Simu-Pheno/ProductionScripts/ConfigFiles/FullSim/GenerateInputPathFile.py) script to generate the filelist to be read. In the future, it's probably more convenient to instead publish datasets and read them in the following steps (see e.g. [here](https://github.com/Andrej-CMS/privateMCproduction/blob/example_private_production/crabconfig_GENSIM.py)).*
+:information_source: *When running CRAB, it is most practical to set `config.Data.publication = True`. This way, a user-dataset is produced at each step and can be passed to the next step, with options `config.Data.inputDataset = '/DSname'` and `config.Data.inputDBS = 'phys03'`.
+Alternatively, you can use the [GenerateInputPathFile.py](https://github.com/nicolastonon/EFT-Simu-Pheno/ProductionScripts/ConfigFiles/FullSim/GenerateInputPathFile.py) script to generate the filelist to be read (pass it via `config.Data.userInputFiles = open('fullpath.txt').readlines()`).*
 
 ### GEN-only
 

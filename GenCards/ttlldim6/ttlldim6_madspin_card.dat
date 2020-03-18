@@ -19,7 +19,7 @@
 # set spinmode onshell          # Use one of the madspin special mode
  set max_weight_ps_point 400  # number of PS to estimate the maximum for each event
 
-set ms_dir MadspinDir
+set ms_dir ./MadspinDir
 
 decay t > w+ b DIM6<=1 FCNC=0, (w+ > all all DIM6=0 FCNC=0)
 decay t~ > w- b~ DIM6<=1 FCNC=0, (w- > all all DIM6=0 FCNC=0)

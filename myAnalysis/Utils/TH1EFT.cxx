@@ -1,10 +1,14 @@
+// https://root.cern.ch/root/html534/guides/users-guide/AddingaClass.html
+
 #include "TH1EFT.h"
 
+using namespace std;
+
 // ROOT needs this here:
-// ClassImp(TH1EFT);
+ClassImp(TH1EFT) //-- Needed to include custom class within ROOT
+
 TH1EFT::TH1EFT() {}
 TH1EFT::~TH1EFT() {}
-
 
 TH1EFT::TH1EFT(const char *name, const char *title, Int_t nbinsx, Double_t xlow, Double_t xup)
  : TH1D (name, title, nbinsx, xlow, xup)
@@ -15,6 +19,7 @@ TH1EFT::TH1EFT(const char *name, const char *title, Int_t nbinsx, Double_t xlow,
         this->hist_fits.push_back(new_fit);
     }
 }
+
 void TH1EFT::SetBins(Int_t nx, Double_t xmin, Double_t xmax)
 {
     // Use this function with care! Non-over/underflow bins are simply
@@ -28,10 +33,12 @@ void TH1EFT::SetBins(Int_t nx, Double_t xmin, Double_t xmax)
 
     TH1::SetBins(nx, xmin, xmax);
 }
+
 Bool_t TH1EFT::Add(const TH1 *h1, Double_t c1)
 {
     // check whether the object pointed to inherits from (or is a) TH1EFT:
-    if (h1->IsA()->InheritsFrom(TH1EFT::Class())) {
+    // if (true) { //Obtain class with IsA(), check if inherits from TH1EFT
+    if (h1->IsA()->InheritsFrom(TH1EFT::Class())) { //Obtain class with IsA(), check if inherits from TH1EFT //should not work without ClassDef/ClassImp... ?
         if (this->hist_fits.size() == ((TH1EFT*)h1)->hist_fits.size()) {
             for (unsigned int i = 0; i < this->hist_fits.size(); i++) {
                 // assumes this hist and the one whose fits we're adding have the same bins!
@@ -72,6 +79,7 @@ Int_t TH1EFT::Fill(Double_t x, Double_t w, WCFit fit)
 {
     Int_t bin_idx = this->FindFixBin(x) - 1;
     Int_t nhists  = this->hist_fits.size();
+
     if (bin_idx >= nhists) {
         // For now ignore events which enter overflow bin
         this->overflow_fit.addFit(fit);
@@ -134,25 +142,8 @@ void TH1EFT::Scale(WCPoint wc_pt)
         this->SetBinContent(i,new_content);
         this->SetBinError(i,new_error);
     }
-
 }
-// evalPointError disabled:
-/*
-void TH1EFT::Scale(WCPoint wc_pt)
-{
-    // Warning: calling GetEntries after a call to this function will return a
-    // non-zero value, even if the histogram was never filled.
 
-    for (Int_t i = 1; i <= this->GetNbinsX(); i++) {
-        Double_t old_content = this->GetBinContent(i);
-        Double_t new_content = this->GetBinContent(i,wc_pt);
-        Double_t old_error = this->GetBinError(i);
-        this->SetBinContent(i,new_content);
-        this->SetBinError(i,old_error*new_content/old_content);
-    }
-
-}
-*/
 // Uniformly scale all fits by amt
 void TH1EFT::ScaleFits(double amt)
 {
@@ -164,7 +155,11 @@ void TH1EFT::ScaleFits(double amt)
 // Display the fit parameters for all bins
 void TH1EFT::DumpFits()
 {
+    cout<<"this->hist_fits.size() "<<this->hist_fits.size()<<endl;
+
     for (uint i = 0; i < this->hist_fits.size(); i++) {
         this->hist_fits.at(i).dump();
     }
 }
+
+// */

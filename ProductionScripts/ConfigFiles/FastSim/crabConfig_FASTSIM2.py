@@ -1,7 +1,7 @@
 from WMCore.Configuration import Configuration
 config = Configuration()
 
-prodName = "xxx"
+prodName = "tllqdim6_FASTSIM2_v1"
 
 config.section_("General")
 config.General.requestName = prodName
@@ -16,18 +16,16 @@ config.JobType.maxMemoryMB = 2500
 config.JobType.maxJobRuntimeMin = 2750
 
 config.section_("Data")
-#Name of the private campaign. It is going to be published with /outputPrimaryDataset/username-outputDatasetTag/
-config.Data.userInputFiles = open('/afs/cern.ch/work/n/ntonon/public/TopEFT_MCSimulation/CMSSW_9_4_12/src/crabDir/workdir_ttlldim6/inputs_paths.txt').readlines() #Read list of input files generated using 'GenerateInputPathFile.py' script
-config.Data.outputPrimaryDataset = prodName
+config.Data.inputDataset = '/tllqdim6_FASTSIM_v2/ntonon-tllqdim6_FASTSIM_v2_AODSIMoutput-1c7e6583a97cb2a86562f09fca71c7fb/USER'
+config.Data.inputDBS = 'phys03' #Else, looking in DAS under prod/global
 config.Data.splitting = 'FileBased'
 config.Data.unitsPerJob = 1 #number of files per jobs
-config.Data.totalUnits = 200 #Nof files
+config.Data.totalUnits = 1000 #Nof files
 #publication on das under prod/phys03.
-config.Data.publication = False
+config.Data.publication = True
 #second part of the sample name
 config.Data.outputDatasetTag = prodName
 config.Data.ignoreLocality = True
-
 
 config.section_("Site")
 #site where you have your t2 account and grid storage

@@ -21,8 +21,8 @@ Block dim6
     7 0.000000e+00 # cpb
     8 0.000000e+00 # cptb
     9 0.000000e+00 # cptbI
-   10 3.000000e+00 # ctW
-   11 3.000000e+00 # ctZ
+   10 0.000000e+00 # ctW
+   11 0.000000e+00 # ctZ
    12 0.000000e+00 # ctWI
    13 0.000000e+00 # ctZI
    14 0.000000e+00 # cbW
@@ -463,7 +463,7 @@ Block fcnc
 ## INFORMATION FOR MASS
 ###################################
 Block mass
-    5 4.700000e+00 # MB
+    5 0.000000e+00 # MB
     6 1.720000e+02 # MT
    15 1.777000e+00 # MTA
    23 9.118760e+01 # MZ
@@ -498,7 +498,7 @@ Block sminputs
 ## INFORMATION FOR YUKAWA
 ###################################
 Block yukawa
-    5 4.700000e+00 # ymb
+    5 0.000000e+00 # ymb
     6 1.720000e+02 # ymt
    15 1.777000e+00 # ymtau
 

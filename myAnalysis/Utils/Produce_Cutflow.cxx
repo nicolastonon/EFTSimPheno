@@ -192,7 +192,6 @@ void Compute_Write_Yields(vector<TString> v_samples, vector<TString> v_label, TS
 
 		Double_t weight = 1., weight_avg = 0.;
         Float_t eventMCFactor;
-        //FIXME -- check channel value
 
         t->SetBranchStatus("eventWeight", 1);
 		t->SetBranchAddress("eventWeight", &weight);
@@ -239,7 +238,7 @@ void Compute_Write_Yields(vector<TString> v_samples, vector<TString> v_label, TS
 
 			// weight_avg+= weight;
 
-            if(v_label[isample] == "tZq" || v_label[isample] == "signal") //Signals, group together
+            if(v_label[isample].Contains("tZq") || v_label[isample] == "signal") //Signals, group together
 			{
 				yield_tmp+= weight;
 				statErr_tmp+= weight*weight;
@@ -336,7 +335,7 @@ int main(int argc, char **argv)
     //-- Default args (can be over-riden via command line args)
     TString signal = "tZq";
     TString region = "SR"; //SR
-    TString lumi = "all"; //2016,2017,2018,Run2,all
+    TString lumi = "all"; //2016,2017,2018,(Run2,all)
     TString channel = ""; //'',uuu,uue,eeu,eee
 
 	if(argc > 1)
@@ -346,7 +345,8 @@ int main(int argc, char **argv)
 
         if(argc > 2)
     	{
-            if(!strcmp(argv[2],"2016") || !strcmp(argv[2],"2017") || !strcmp(argv[2],"2018") || !strcmp(argv[2],"Run2")) {lumi = argv[2];}
+            if(!strcmp(argv[2],"2016") || !strcmp(argv[2],"2017") || !strcmp(argv[2],"2018") ) {lumi = argv[2];} //'Run2' not valid for now
+            // if(!strcmp(argv[2],"2016") || !strcmp(argv[2],"2017") || !strcmp(argv[2],"2018") || !strcmp(argv[2],"Run2")) {lumi = argv[2];}
     		else {cout<<"Wrong second arg !"<<endl; return 0;}
 
             if(argc > 3)
@@ -366,6 +366,9 @@ int main(int argc, char **argv)
 
     v_samples.push_back("tZq"); v_label.push_back("tZq");
     v_samples.push_back("ttZ"); v_label.push_back("ttZ");
+
+    v_samples.push_back("PrivMC_tZq"); v_label.push_back("PrivMC_tZq");
+    v_samples.push_back("PrivMC_ttZ"); v_label.push_back("PrivMC_ttZ");
 
     v_samples.push_back("ttH"); v_label.push_back("ttX");
     v_samples.push_back("ttW"); v_label.push_back("ttX");
@@ -403,7 +406,7 @@ int main(int argc, char **argv)
         Compute_Write_Yields(v_samples, v_label, region, signal, "2016", channel);
         Compute_Write_Yields(v_samples, v_label, region, signal, "2017", channel);
         Compute_Write_Yields(v_samples, v_label, region, signal, "2018", channel);
-        Compute_Write_Yields(v_samples, v_label, region, signal, "Run2", channel);
+        // Compute_Write_Yields(v_samples, v_label, region, signal, "Run2", channel); //should sum all years
     }
     else
     {

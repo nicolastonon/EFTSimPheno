@@ -14,6 +14,7 @@ LFLAGS = $(DEBUG) -lTMVA -lPyMVA
 LFLAGS+= -L/home/ntonon/Documents/Programmes/tensorflow/bazel-bin/tensorflow -Wl,--allow-multiple-definition -Wl,--whole-archive -ltensorflow_framework -Wl,--whole-archive -Wl,--no-as-needed -ltensorflow_cc #-lprotobuf
 
 INCFLAGS = -I./include
+INCFLAGS += -I./Utils
 INCFLAGS += -I/home/ntonon/Documents/Programmes/tensorflow
 INCFLAGS += -I/home/ntonon/Documents/Programmes/tensorflow/bazel-genfiles
 INCFLAGS += -I/home/ntonon/Documents/Programmes/tensorflow/bazel-tensorflow/external/eigen_archive
@@ -25,6 +26,10 @@ SRCS = $(wildcard *.cxx) #Source files are all files with .cxx extension
 HDRS = $(wildcard *.h) #Header files are all files with .h extension
 OBJS = $(SRCS:.cxx=.o) #Object files are all files with .o extension, which have same names as source files
 
+DICT = myDict.cxx
+
+LIB = myLib.so
+
 MY_ANALYSIS = analysis_main.exe #Name of executable file
 ROCS = ROCS/Compare_ROC_curves.exe
 PRODUCE_CUTFLOW = Produce_Cutflow.exe
@@ -32,13 +37,21 @@ PRODUCE_CUTFLOW = Produce_Cutflow.exe
 # .PHONY : $(wildcard *.o)  #Force to always recompile object
 
 #Instructions
-all: $(MY_ANALYSIS) $(ROCS) $(PRODUCE_CUTFLOW)
+all: $(LIB) $(MY_ANALYSIS) $(ROCS) $(PRODUCE_CUTFLOW)
+
+#Create dictionnary (contains custom classes def.) and rootmap --> Necessary so that ROOT recognizes custom classes
+$(LIB): Utils/WCPoint.h Utils/WCFit.h Utils/TH1EFT.h Utils/LinkDef.h
+	@echo "-- Creating dictionnary $(DICT) --"
+	@rootcling -f $(DICT) -rml myLib.so -rmf myLib.rootmap -c -p Utils/TH1EFT.h Utils/LinkDef.h
+	@echo "-- Creating shared library $(LIB) --"
+	@$(CC) $(INCFLAGS) $(ROOTFLAGS) $(DICT) Utils/TH1EFT.cxx -shared -o $(LIB)
+	@echo ""
 
 #Obtain executables from object files
-$(MY_ANALYSIS): Utils/CMSSW_TensorFlow.o Utils/TFModel.o Utils/Helper.o analysis_main.o TopEFT_analysis.o
+$(MY_ANALYSIS): Utils/TH1EFT.cxx Utils/CMSSW_TensorFlow.o Utils/TFModel.o Utils/Helper.o analysis_main.o TopEFT_analysis.o
 	@echo "###################################"
 	@echo "-- Creating executable ./$(MY_ANALYSIS) --"
-	@$(CC) $^ -o $@ $(ROOTFLAGS) $(LFLAGS) $(INCFLAGS) -I./Utils
+	@$(CC) $^ -o $@ $(ROOTFLAGS) $(LFLAGS) $(INCFLAGS) -L. $(LIB)
 	@echo "-- Done --"
 	@echo "###################################""#"
 	@echo ""
@@ -81,4 +94,4 @@ $(PRODUCE_CUTFLOW):	Utils/Produce_Cutflow.o Utils/Helper.o
 
 #Erase all objects and executable
 clean:
-	@-rm -f *.o *.exe Utils/*.o ROCS/*.o ROCS/*.exe
+	@-rm -f *.o *.exe Utils/*.o ROCS/*.o ROCS/*.exe $(LIB) $(DICT) myDict* myLib*

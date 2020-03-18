@@ -3,13 +3,13 @@
 using namespace std;
 
 //--------------------------------------------
-//  ######   ######## ##    ## ######## ########  ####  ######
-// ##    ##  ##       ###   ## ##       ##     ##  ##  ##    ##
-// ##        ##       ####  ## ##       ##     ##  ##  ##
-// ##   #### ######   ## ## ## ######   ########   ##  ##
-// ##    ##  ##       ##  #### ##       ##   ##    ##  ##
-// ##    ##  ##       ##   ### ##       ##    ##   ##  ##    ##
-//  ######   ######## ##    ## ######## ##     ## ####  ######
+// ##        #######  ##      ##         ##       ######## ##     ## ######## ##
+// ##       ##     ## ##  ##  ##         ##       ##       ##     ## ##       ##
+// ##       ##     ## ##  ##  ##         ##       ##       ##     ## ##       ##
+// ##       ##     ## ##  ##  ## ####### ##       ######   ##     ## ######   ##
+// ##       ##     ## ##  ##  ##         ##       ##        ##   ##  ##       ##
+// ##       ##     ## ##  ##  ##         ##       ##         ## ##   ##       ##
+// ########  #######   ###  ###          ######## ########    ###    ######## ########
 
 // ##     ## ######## ##       ########  ######## ########
 // ##     ## ##       ##       ##     ## ##       ##     ##
@@ -251,7 +251,23 @@ bool Get_Dir_Content(string dir, vector<TString> &files)
     return true;
 }
 
+//Split a long TString in smaller TStrings which are all separated by a common delimiter
+//Only to remember the logic, no useful return for now (could return the array, but then loose control of the dynamic pointer...)
+TString Split_TString_Into_Keys(TString ts, TString delim)
+{
+    TObjArray *tx = ts.Tokenize("_");
+    // tx->Print();
 
+    for(Int_t i = 0; i < tx->GetEntries(); i++)
+    {
+        TString tmp = ((TObjString *)(tx->At(i)))->String();
+        std::cout << tmp << std::endl;
+    }
+
+    delete tx;
+
+    return ts;
+}
 
 
 
@@ -260,21 +276,21 @@ bool Get_Dir_Content(string dir, vector<TString> &files)
 
 
 //--------------------------------------------
-// ########   #######   #######  ########
-// ##     ## ##     ## ##     ##    ##
-// ##     ## ##     ## ##     ##    ##
-// ########  ##     ## ##     ##    ##
-// ##   ##   ##     ## ##     ##    ##
-// ##    ##  ##     ## ##     ##    ##
-// ##     ##  #######   #######     ##
+// ########     ###     ######  ####  ######
+// ##     ##   ## ##   ##    ##  ##  ##    ##
+// ##     ##  ##   ##  ##        ##  ##
+// ########  ##     ##  ######   ##  ##
+// ##     ## #########       ##  ##  ##
+// ##     ## ##     ## ##    ##  ##  ##    ##
+// ########  ##     ##  ######  ####  ######
 
-//  ######  ########  ########  ######  #### ######## ####  ######
-// ##    ## ##     ## ##       ##    ##  ##  ##        ##  ##    ##
-// ##       ##     ## ##       ##        ##  ##        ##  ##
-//  ######  ########  ######   ##        ##  ######    ##  ##
-//       ## ##        ##       ##        ##  ##        ##  ##
-// ##    ## ##        ##       ##    ##  ##  ##        ##  ##    ##
-//  ######  ##        ########  ######  #### ##       ####  ######
+// ##     ## ######## ##       ########  ######## ########
+// ##     ## ##       ##       ##     ## ##       ##     ##
+// ##     ## ##       ##       ##     ## ##       ##     ##
+// ######### ######   ##       ########  ######   ########
+// ##     ## ##       ##       ##        ##       ##   ##
+// ##     ## ##       ##       ##        ##       ##    ##
+// ##     ## ######## ######## ##        ######## ##     ##
 
 // ######## ##     ## ##    ##  ######
 // ##       ##     ## ###   ## ##    ##
@@ -680,8 +696,8 @@ void Get_Samples_Colors(vector<int>& v_colors, std::vector<TColor*>& v_custom_co
         for(int isample=0; isample<v_samples.size(); isample++)
 		{
             //Signals
-            if(v_samples[isample] == "tZq") {v_colors[isample] = v_custom_colors[0]->GetNumber();}
-            else if(v_samples[isample] == "ttZ") {v_colors[isample] = v_custom_colors[1]->GetNumber();}
+            if(v_samples[isample] == "tZq" || v_samples[isample] == "PrivMC_tZq") {v_colors[isample] = v_custom_colors[0]->GetNumber();}
+            else if(v_samples[isample] == "ttZ" || v_samples[isample] == "PrivMC_ttZ") {v_colors[isample] = v_custom_colors[1]->GetNumber();}
 
             //ttX
             else if(v_samples[isample] == "ttH") {v_colors[isample] = v_custom_colors[2]->GetNumber();}
@@ -723,9 +739,9 @@ void Get_Samples_Colors(vector<int>& v_colors, std::vector<TColor*>& v_custom_co
 		for(int isample=0; isample<v_samples.size(); isample++)
 		{
             //Signals
-            if(v_samples[isample] == "tZq") {v_colors[isample] = kOrange+10;}
+            if(v_samples[isample] == "tZq" || v_samples[isample] == "PrivMC_tZq") {v_colors[isample] = kOrange+10;}
             // if(v_samples[isample] == "tZq") {v_colors[isample] = test.GetNumber();}
-            else if(v_samples[isample] == "ttZ") {v_colors[isample] = kOrange+6;}
+            else if(v_samples[isample] == "ttZ" || v_samples[isample] == "PrivMC_ttZ") {v_colors[isample] = kOrange+6;}
 
             //ttX
             else if(v_samples[isample] == "ttH") {v_colors[isample] = kGreen-5;}
@@ -979,9 +995,65 @@ void Get_Pointer_GENHisto(TH1F*& h, TString variable)
 
     TFile* f = TFile::Open(input_file_name);
 
-    TString hname = "Z_pt_tzq_sm"; //FIXME -- hardcoded for testing
+    TString hname = "Z_pt_tzq_sm"; //-- hardcoded for testing
     if(!f->GetListOfKeys()->Contains(hname) ) {cout<<ITAL("Histogram '"<<hname<<"' : not found...")<<endl; return;}
     h = (TH1F*) f->Get(hname);
 
     return;
 }
+
+//TESTING
+/*
+void Fill_TH1EFT(TH1EFT*& h, float x, vector<string> v_ids, vector<float> v_wgts, float wgt_originalXWGTUP)
+{
+    bool debug = false;
+
+    float sm_wgt = 0.;
+    std::vector<WCPoint> wc_pts;
+
+    // if(isPrivMC) // Add EFT weights
+    {
+        for(int iwgt=0; iwgt<v_ids.size(); iwgt++)
+        {
+            // cout<<"v_ids[iwgt] "<<v_ids[iwgt]<<endl;
+
+            TString ts = v_ids[iwgt];
+            if(ts.Contains("rwgt_") && ts != "rwgt_1" && ts != "rwgt_SM" && ts != "rwgt_sm") //FIXME
+            // std::size_t foundstr = v_ids[iwgt].find("rwgt_");// only save EFT weights
+            // if(foundstr != std::string::npos)
+            {
+                WCPoint wc_pt(v_ids[iwgt], v_wgts[iwgt]);
+                wc_pts.push_back(wc_pt);
+                if(wc_pt.isSMPoint()) {sm_wgt = v_wgts[iwgt];}
+            }
+        }
+    }
+    // else
+    // {
+    //     sm_wgt = wgt_originalXWGTUP;
+    //     WCPoint wc_pt("smpt", sm_wgt);
+    //     wc_pts.push_back(wc_pt);
+    // }
+
+    WCFit eft_fit(wc_pts, "");
+
+    if(debug) //Printout WC values, compare true weight to corresponding fit result
+    {
+        cout<<"eft_fit.size() "<<eft_fit.size()<<endl;
+        eft_fit.dump();
+
+        for (uint i=0; i < wc_pts.size(); i++)
+        {
+            WCPoint wc_pt = wc_pts.at(i);
+            double pt_wgt = wc_pt.wgt;
+            double fit_val = eft_fit.evalPoint(&wc_pt);
+            wc_pt.dump();
+            std::cout << std::setw(3) << i << ": " << std::setw(12) << pt_wgt << " | " << std::setw(12) << fit_val << " | " << std::setw(12) << (pt_wgt-fit_val) << std::endl;
+        }
+    }
+
+    h->Fill(x, 1.0 , eft_fit);
+
+    return;
+}
+*/

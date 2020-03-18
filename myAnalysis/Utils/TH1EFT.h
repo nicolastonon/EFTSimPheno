@@ -9,6 +9,8 @@
 #include "WCFit.h"
 #include "WCPoint.h"
 
+using namespace std;
+
 class TH1EFT : public TH1D
 {
     public:
@@ -42,13 +44,13 @@ class TH1EFT : public TH1D
         Bool_t Add(const TH1 *h1, Double_t c1=1); // overriding virtual function from TH1
         Long64_t Merge(TCollection* list);
 
-        // ClassDef(TH1EFT,1); // Needed to include custom class within ROOT //Bug undefined ref ?
+        ClassDef(TH1EFT,1) // Needed to include custom class within ROOT
 };
 
+/*
 // ROOT needs this here:
-// ClassImp(TH1EFT); //-- Needed to include custom class within ROOT //Bug undefined ref ?
+// ClassImp(TH1EFT) //-- Needed to include custom class within ROOT
 
-// /*
 TH1EFT::TH1EFT() {}
 TH1EFT::~TH1EFT() {}
 
@@ -61,6 +63,7 @@ TH1EFT::TH1EFT(const char *name, const char *title, Int_t nbinsx, Double_t xlow,
         this->hist_fits.push_back(new_fit);
     }
 }
+
 void TH1EFT::SetBins(Int_t nx, Double_t xmin, Double_t xmax)
 {
     // Use this function with care! Non-over/underflow bins are simply
@@ -120,6 +123,7 @@ Int_t TH1EFT::Fill(Double_t x, Double_t w, WCFit fit)
 {
     Int_t bin_idx = this->FindFixBin(x) - 1;
     Int_t nhists  = this->hist_fits.size();
+
     if (bin_idx >= nhists) {
         // For now ignore events which enter overflow bin
         this->overflow_fit.addFit(fit);
@@ -200,6 +204,6 @@ void TH1EFT::DumpFits()
     }
 }
 
-// */
+*/
 
 #endif

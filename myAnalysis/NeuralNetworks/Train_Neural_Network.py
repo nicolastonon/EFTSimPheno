@@ -28,12 +28,14 @@
 # -- Choose here what data you want to consider (separate ntuples per year) ; same convention as for main analysis code
 # Naming convention enforced : 2016+2017 <-> "201617" ; etc.; 2016+2017+2018 <-> "Run2" # NB : years must be placed in the right order !
 _lumi_years = []
-_lumi_years.append("2016")
-# _lumi_years.append("2017")
+# _lumi_years.append("2016")
+_lumi_years.append("2017")
 # _lumi_years.append("2018")
 
 #Signal process must be first
-_processClasses_list = [["tZq"],
+_processClasses_list = [
+                ["PrivMC_tZq"],
+                # ["tZq"],
                 # ["ttZ"]]
                 ["ttZ"], ["ttW", "ttH", "WZ", "ZZ4l", "DY", "TTbar_DiLep"]]
                 # ["ttZ", "ttW", "ttH", "WZ", "ZZ4l", "DY", "TTbar_DiLep",]]
@@ -438,15 +440,10 @@ def Apply_Model_toTrainTestData(nof_output_nodes, processClasses_list, labels_li
     #     print("===> Outputs nodes predictions for %s event : %s" % (true_label, (list_predictions_test_allClasses[j])[i]) )
     # print("--------------\n")
 
-    # print(x_control_firstNEvents.shape)
-    # print(x_control_firstNEvents[i].shape)
-    # print(x_control_firstNEvents[i])
-    # print(model.predict(x_control_firstNEvents)[0])
-    #Print predictions for first few events of first process => can compare with predictions obtained for same DNN/events using another code
-    # for j in range(x_control_firstNEvents.shape[0]): #FIXME
-    #     print(j)
-    #     print(x_control_firstNEvents[j].shape)
-    #     print("===> Prediction for event", j," :", model.predict(x_control_firstNEvents[j]) )
+    #-- Print predictions for first few events of first process => can compare with predictions obtained for same DNN/events using another code
+    # for j in range(x_control_firstNEvents.shape[0]):
+    #     print(x_control_firstNEvents[j])
+    #     print("===> Prediction for event", j," :", model.predict(x_control_firstNEvents)[j][0], '\n')
 
     # return list_predictions_train_allClasses, list_predictions_test_allClasses, list_PhysicalWeightsTrain_allClasses, list_PhysicalWeightsTest_allClasses
     return list_predictions_train_allNodes_allClasses, list_predictions_test_allNodes_allClasses, list_PhysicalWeightsTrain_allClasses, list_PhysicalWeightsTest_allClasses

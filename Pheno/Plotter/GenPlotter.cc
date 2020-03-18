@@ -775,7 +775,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
 int main()
 {
     vector<TString> v_process;
-    // v_process.push_back("ttz");
+    v_process.push_back("ttz");
     v_process.push_back("tzq");
     // v_process.push_back("tllq");
     // v_process.push_back("ttll");
@@ -789,11 +789,11 @@ int main()
     // v_var.push_back("Top_eta"); v_min_max.push_back(std::make_pair(-5, 5));
     // v_var.push_back("Top_m"); v_min_max.push_back(std::make_pair(0, 300));
     // v_var.push_back("TopZsystem_m"); v_min_max.push_back(std::make_pair(250, 1000));
-    v_var.push_back("LeadingTop_pt"); v_min_max.push_back(std::make_pair(0, 500));
-    v_var.push_back("LeadingTop_eta"); v_min_max.push_back(std::make_pair(-5, 5));
-    v_var.push_back("Zreco_dPhill"); v_min_max.push_back(std::make_pair(0, 6));
-    v_var.push_back("cosThetaStarPol_Z"); v_min_max.push_back(std::make_pair(-1, 1));
-    v_var.push_back("cosThetaStarPol_Top"); v_min_max.push_back(std::make_pair(-1, 1));
+    // v_var.push_back("LeadingTop_pt"); v_min_max.push_back(std::make_pair(0, 500));
+    // v_var.push_back("LeadingTop_eta"); v_min_max.push_back(std::make_pair(-5, 5));
+    // v_var.push_back("Zreco_dPhill"); v_min_max.push_back(std::make_pair(0, 6));
+    // v_var.push_back("cosThetaStarPol_Z"); v_min_max.push_back(std::make_pair(-1, 1));
+    // v_var.push_back("cosThetaStarPol_Top"); v_min_max.push_back(std::make_pair(-1, 1));
 
     vector<TString> v_reweight_names; vector<int> v_colors;
     v_reweight_names.push_back("sm"); //Nominal SM weight -- keep
@@ -802,10 +802,10 @@ int main()
     // v_reweight_names.push_back("ctz_0p5");
     // v_reweight_names.push_back("ctz_1p0");
     // v_reweight_names.push_back("ctz_1p5");
-    v_reweight_names.push_back("ctz_2p0");
+    // v_reweight_names.push_back("ctz_2p0");
     // v_reweight_names.push_back("ctz_2p5");
-    // v_reweight_names.push_back("ctz_3p0");
-    v_reweight_names.push_back("ctz_4p0");
+    v_reweight_names.push_back("ctz_3p0");
+    // v_reweight_names.push_back("ctz_4p0");
     // v_reweight_names.push_back("ctz_5p0");
     // v_reweight_names.push_back("ctz_8p0");
     // v_reweight_names.push_back("ctz_10p0");

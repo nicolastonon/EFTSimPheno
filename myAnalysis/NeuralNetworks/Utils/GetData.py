@@ -1,4 +1,5 @@
 # Read ROOT files, shape/transform the data (x : input features, y : labels), compute event reweights, ...
+#NB : if want to add a validation test, could simply split the test sample again with train_test_split...
 
 # //--------------------------------------------
 #Filtering out manually some unimportant warnings
@@ -124,8 +125,9 @@ def Read_Store_Data(lumi_years, ntuples_dir, processClasses_list, labels_list, v
         print('Ntuple dir. '+ntuples_dir+' not found ! Abort !')
         exit(1)
 
-    list_x_allClasses = [] #List of x-arrays (holding input variables values), for all considered years
-    list_weights_allClasses = [] #xxx
+    list_x_allClasses = [] #List of x-arrays storing the values of input variables for all events, for all considered years
+    list_weights_allClasses = [] #Idem to store central event weights
+    list_EFTreweights_allClasses = [] #Idem to store EFT reweights
 
     for procClass, label in zip(processClasses_list, labels_list): #NB : can not use keyword 'class'
 
@@ -133,6 +135,7 @@ def Read_Store_Data(lumi_years, ntuples_dir, processClasses_list, labels_list, v
 
         list_x_proc = []
         list_weights_proc = []
+        list_EFTreweights_proc = []
         for process in procClass:
 
             print('\n', colors.fg.pink, '* Process :', colors.reset, process)
@@ -152,9 +155,12 @@ def Read_Store_Data(lumi_years, ntuples_dir, processClasses_list, labels_list, v
 
                 list_x_proc.append(tree2array(tree, branches=var_list, selection=cuts))
                 list_weights_proc.append(tree2array(tree, branches="eventWeight", selection=cuts))
+                # if procname contains privprod inly
+                # list_EFTreweights_proc.append(tree2array(tree, branches="mc_EFTweights", selection=cuts))
 
         list_x_allClasses.append(np.concatenate(list_x_proc))
         list_weights_allClasses.append(np.concatenate(list_weights_proc))
+        # list_EFTreweights_allClasses.append(np.concatenate(list_EFTreweights_proc))
 
     print('\n\n')
 
