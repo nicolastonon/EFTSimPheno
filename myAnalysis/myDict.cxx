@@ -102,7 +102,7 @@ namespace ROOT {
       ::WCFit *ptr = 0;
       static ::TVirtualIsAProxy* isa_proxy = new ::TIsAProxy(typeid(::WCFit));
       static ::ROOT::TGenericClassInfo 
-         instance("WCFit", "Utils/WCFit.h", 19,
+         instance("WCFit", "Utils/WCFit.h", 21,
                   typeid(::WCFit), ::ROOT::Internal::DefineBehavior(ptr, ptr),
                   &WCFit_Dictionary, isa_proxy, 4,
                   sizeof(::WCFit) );

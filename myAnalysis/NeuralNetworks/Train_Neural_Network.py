@@ -34,8 +34,8 @@ _lumi_years.append("2017")
 
 #Signal process must be first
 _processClasses_list = [
-                ["PrivMC_tZq"],
-                # ["tZq"],
+                # ["PrivMC_tZq"],
+                ["tZq"],
                 # ["ttZ"]]
                 ["ttZ"], ["ttW", "ttH", "WZ", "ZZ4l", "DY", "TTbar_DiLep"]]
                 # ["ttZ", "ttW", "ttH", "WZ", "ZZ4l", "DY", "TTbar_DiLep",]]
@@ -49,11 +49,11 @@ cuts = "passedBJets==1" #Event selection, both for train/test ; "1" <-> no cut
 
 #--- Training options
 # //--------------------------------------------
-_nepochs = 20 #Number of training epochs (<-> nof times the full training dataset is shown to the NN)
+_nepochs = 50 #Number of training epochs (<-> nof times the full training dataset is shown to the NN)
 _batchSize = 512 #Batch size (<-> nof events fed to the network before its parameter get updated)
 # _nof_output_nodes = 3 #1 (binary) or N (multiclass)
 
-_maxEvents_perClass = 1000 #max nof events to be used for each process ; -1 <-> all events
+_maxEvents_perClass = -1 #max nof events to be used for each process ; -1 <-> all events
 _nEventsTot_train = -1; _nEventsTot_test = -1  #nof events to be used for training & testing ; -1 <-> use _maxEvents_perClass & _splitTrainEventFrac params instead
 _splitTrainEventFrac = 0.8 #Fraction of events to be used for training (1 <-> use all requested events for training)
 

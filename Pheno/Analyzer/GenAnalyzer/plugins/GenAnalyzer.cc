@@ -1,13 +1,7 @@
 /*
-## QUESTIONS ##
-
--
-
-*/
-/*
 ## NOTES ##
-
 - Considering at most 1 top + 1 antitop per event
+-
 */
 
 // -*- C++ -*-
@@ -93,7 +87,6 @@
 // the template argument to the base class so the class inherits
 // from  edm::one::EDAnalyzer<>
 // This will improve performance in multithreaded jobs.
-
 
 using namespace std;
 using namespace reco;
@@ -218,6 +211,9 @@ class GenAnalyzer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
         std::vector<std::string> v_weightIds_;
         std::vector<float> v_weights_;
 
+        //Others
+        int index_Higgs;
+
         //Also store the total sums of weights (SWE), in histogram
         TH1F* h_SWE;
 };
@@ -313,6 +309,8 @@ GenAnalyzer::GenAnalyzer(const edm::ParameterSet& iConfig) :
     tree_->Branch("mc_weight_originalValue" , &mc_weight_originalValue);
     tree_->Branch("originalXWGTUP" , &originalXWGTUP);
 
+    tree_->Branch("index_Higgs" , &index_Higgs) ;
+
     // min_pt_jet  = iConfig.getParameter<double> ("min_pt_jet");
     // min_pt_lep  = iConfig.getParameter<double> ("min_pt_lep");
     // max_eta_jet = iConfig.getParameter<double> ("max_eta_jet");
@@ -338,13 +336,13 @@ GenAnalyzer::~GenAnalyzer()
 }
 
 //--------------------------------------------
-//    ###    ##    ##    ###    ##       ##    ## ######## ########
-//   ## ##   ###   ##   ## ##   ##        ##  ##       ##  ##
-//  ##   ##  ####  ##  ##   ##  ##         ####       ##   ##
-// ##     ## ## ## ## ##     ## ##          ##       ##    ######
-// ######### ##  #### ######### ##          ##      ##     ##
-// ##     ## ##   ### ##     ## ##          ##     ##      ##
-// ##     ## ##    ## ##     ## ########    ##    ######## ########
+//    ###    ##    ##    ###    ##       ##    ## ######## ######## ########
+//   ## ##   ###   ##   ## ##   ##        ##  ##       ##  ##       ##     ##
+//  ##   ##  ####  ##  ##   ##  ##         ####       ##   ##       ##     ##
+// ##     ## ## ## ## ##     ## ##          ##       ##    ######   ########
+// ######### ##  #### ######### ##          ##      ##     ##       ##   ##
+// ##     ## ##   ### ##     ## ##          ##     ##      ##       ##    ##
+// ##     ## ##    ## ##     ## ########    ##    ######## ######## ##     ##
 //--------------------------------------------
 
 // ------------ method called for each event  ------------
@@ -352,19 +350,19 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
 {
     bool debug = false;
 
- // # #    # # #####
- // # ##   # #   #
- // # # #  # #   #
- // # #  # # #   #
- // # #   ## #   #
- // # #    # #   #
+ //  ####  ###### ##### #    # #####
+ // #      #        #   #    # #    #
+ //  ####  #####    #   #    # #    #
+ //      # #        #   #    # #####
+ // #    # #        #   #    # #
+ //  ####  ######   #    ####  #
 
     // Event info
     int runNumber_ = iEvent.id().run();
     int lumiBlock_ = iEvent.id().luminosityBlock();
     int eventNumber_ = iEvent.id().event();
 
-    if(debug && eventNumber_ > 5) {return;} //Only debug first events
+    if(debug && eventNumber_ > 10) {return;} //Only debug first events
     if(debug) {cout<<endl<<endl<<endl<<"====== EVENT "<<eventNumber_<<" ======"<<endl;}
 
     // Initial-state info
@@ -441,6 +439,8 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
     mc_weight = 0;
     mc_weight_originalValue = 0;
     originalXWGTUP = 0;
+
+    index_Higgs = -1;
 //--------------------------------------------
 
 
@@ -491,11 +491,13 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
         {
             const LHEEventProduct::WGT& wgt = lheEventProductHandle->weights().at(w);
             // wgt.wgt * mc_weight_originalValue / originalXWGTUP;
+
             // cout<<"-- wgt = "<<wgt.wgt<<endl;
             // cout<<"id = "<<wgt.id<<endl;
 
             TString ts_id = wgt.id;
-            if(ts_id.Contains("ctz", TString::kIgnoreCase) || ts_id.Contains("ctw", TString::kIgnoreCase) || ts_id.Contains("sm", TString::kIgnoreCase) )
+            // if(ts_id.Contains("ctz", TString::kIgnoreCase) || ts_id.Contains("ctw", TString::kIgnoreCase) || ts_id.Contains("sm", TString::kIgnoreCase) )
+            if(ts_id.Contains("rwgt_", TString::kIgnoreCase) )
             {
                 // cout<<endl<<"-- wgt = "<<wgt.wgt<<endl;
                 // cout<<"id = "<<wgt.id<<endl;
@@ -560,16 +562,6 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
             genParticlesPhi_.push_back(phiGen);
             genParticlesMass_.push_back(mGen);
 
-            if(debug)
-            {
-                //if(abs(idGen) != 11 && abs(idGen) != 13 && abs(idGen) != 23 && abs(idGen) != 24 && abs(idGen) != 6) {continue;}
-
-                cout<<endl<<"* ID "<<idGen<<endl;
-                cout<<"* mother ID "<<getMotherId(genParticlesHandle, p)<<endl;
-                cout<<"* statusGen "<<statusGen<<endl;
-                cout<<"* isPromptFinalStateGen "<<isPromptFinalStateGen<<endl;
-            }
-
             //Access particle's mother infos
             const reco::GenParticle* mom = GenAnalyzer::getMother(p); //Get particle's mother genParticle
             int mother_index = getMotherIndex(genParticlesHandle, p); //Get particle's mother index
@@ -606,6 +598,35 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
                 }
             }
             */
+
+            if(debug)
+            {
+                if(abs(idGen) != 11 && abs(idGen) != 13 && abs(idGen) != 15 && abs(idGen) != 23 && abs(idGen) != 24 && abs(idGen) != 6 && abs(idGen) != 5) {continue;} //FIXME
+
+                cout<<endl<<"* ID "<<idGen<<endl;
+                cout<<"* mother ID "<<getMotherId(genParticlesHandle, p)<<endl;
+                cout<<"* statusGen "<<statusGen<<endl;
+                cout<<"* isPromptFinalStateGen "<<isPromptFinalStateGen<<endl;
+                cout<<"* isDirectPromptTauDecayProductFinalState "<<isDirectPromptTauDecayProductFinalState<<endl;
+
+                for(unsigned int idaughter=0; idaughter<daughter_index.size(); idaughter++)
+                {
+                    const GenParticle & daughter = (*genParticlesHandle)[daughter_index[idaughter]];
+
+                    // cout<<"...Daughter index = "<<daughter_index[idaughter]<<endl;
+                    cout<<"...Daughter ID = "<<daughter.pdgId()<<endl;
+                }
+            }
+            isPromptFinalStateGen+= isDirectPromptTauDecayProductFinalState; //only check value of 'isPromptFinalStateGen', but care about both cases
+
+ // #####  ######  ####   ####
+ // #    # #      #    # #    #
+ // #    # #####  #      #    #
+ // #####  #      #      #    #
+ // #   #  #      #    # #    #
+ // #    # ######  ####   ####
+
+            if(abs(idGen) == 25) {index_Higgs = i;} //Look for presence of Higgs bosons in sample
 
            //-- Particle reco
            // if(isPromptFinalStateGen) //not true for b from top
@@ -776,11 +797,12 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
             recoilJet_phi_ = recoilJet.Phi();
         }
 
+        //NB -- we look for tops and Z bosons via stable final state electrons/muons. So a Z->qq decay will not be found
         if(debug)
         {
-            if(index_Z < 0) {cout<<FRED("Z BOSON NOT FOUND !")<<endl;}
-            if(index_top < 0) {cout<<FRED("TOP NOT FOUND !")<<endl;}
-            if(index_antitop < 0) {cout<<FRED("ANTITOP NOT FOUND !")<<endl;}
+            if(index_Z < 0) {cout<<FRED("LEPTONIC (e,u) Z BOSON NOT FOUND !")<<endl;}
+            if(index_top < 0) {cout<<FRED("LEPTONIC (e,u) TOP NOT FOUND !")<<endl;}
+            if(index_antitop < 0) {cout<<FRED("LEPTONIC (e,u) ANTITOP NOT FOUND !")<<endl;}
         }
 
        //--Printout daughter infos
@@ -835,6 +857,7 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
  // #    # #      #   ## #    # #        #   #    #
  //  ####  ###### #    #  ####  ######   #    ####
 
+    /*
     if(genJetsHandle.isValid())
     {
         int nGenJet = genJetsHandle->size();
@@ -848,6 +871,7 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
             genJetsMass_.push_back(genJet.energy());
         }
     }
+    */
 
     //-- enforce presence of real Z...
     // cout<<"index_Z "<<index_Z<<endl;
@@ -964,6 +988,17 @@ void GenAnalyzer::fillDescriptions(edm::ConfigurationDescriptions& descriptions)
   //desc.addUntracked<edm::InputTag>("tracks","ctfWithMaterialTracks");
   //descriptions.addDefault(desc);
 }
+
+
+
+
+
+
+
+
+
+
+
 
 //--------------------------------------------
 // ##     ## ######## ##       ########  ######## ########

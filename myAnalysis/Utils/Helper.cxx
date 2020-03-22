@@ -871,6 +871,57 @@ bool Get_Variable_Range(TString var, int& nbins, double& xmin, double& xmax)
 	return true;
 }
 
+//Return beautified variable name
+TString Get_Variable_Name(TString var)
+{
+    // l -> italic l, different font
+    // add [GeV] units for some vars ?
+    // 'l' for LateX curvy l ; but belongs to TMathText, and not compatible with TLatex '#' chars?
+    //'#leftrightarrow' : <->
+    //Big delimiters : #leftX, #rightX, with X=|,(,{,[ (and opposite for right)
+
+    if(var == "maxDijetDelR") {return "max. #DeltaR(j,j)";}
+    if(var == "dEtaFwdJetBJet") {return "#Delta#eta#left(j^{fwd},b#right)";}
+    if(var == "dEtaFwdJetClosestLep") {return "#Delta#eta#left(j^{fwd},l^{closest}#right)";}
+    if(var == "mHT") {return "m_{HT}";}
+    if(var == "mTW") {return "m_{T}^{W}";}
+    if(var == "Mass_3l") {return "m_{3l}";}
+    if(var == "forwardJetAbsEta") {return "#left|#eta#left(j^{fwd}#right)#right|";}
+    if(var == "jPrimeAbsEta") {return "#left|#eta(j')#right|";}
+    if(var == "maxDeepCSV") {return "max. DeepCSV";}
+    if(var == "delRljPrime") {return "#DeltaR(j',l)";}
+    if(var == "lAsymmetry") {return "q_{l} #upoint #left|#eta(l)#right|";}
+    if(var == "maxDijetMass") {return "max. m_{j,j}";}
+    if(var == "maxDelPhiLL") {return "max. #Delta#phi(l,l)";}
+    if(var == "metEt") {return "E_{T}^{miss}";}
+    if(var == "recoZ_Mass") {return "m_{Z}";}
+    if(var == "Mass_tZ") {return "m_{tZ}";}
+    if(var == "maxDijetPt") {return "max. p_{T}(j,j)";}
+    if(var == "maxDijetDelPhi") {return "max #Delta#phi(j,j)";}
+    if(var == "minDelRbL") {return "min. #DeltaR(b,l)";}
+    if(var == "Top_delRbl") {return "#DeltaR#left(l^{t},b^{t}#right)";}
+    if(var == "Top_delRbW") {return "#DeltaR#left(W^{t},b^{t}#right)";}
+    if(var == "cosThetaStarPol") {return "cos#left(#theta^{*}_{pol}#right)";}
+    if(var == "cosThetaStar") {return "cos#left(#theta^{*}#right)";}
+
+    //GenPlotter variables
+    if(var == "Z_pt") {return "p_{T}(Z)";}
+    if(var == "Z_eta") {return "#eta(Z)";}
+    if(var == "Z_m") {return "m(Z)";}
+    if(var == "Zreco_m") {return "m(Z_{reco})";}
+    if(var == "Top_pt") {return "p_{T}(t)";}
+    if(var == "Top_eta") {return "#eta(t)";}
+    if(var == "Top_m") {return "m(t)";}
+    if(var == "TopZsystem_m") {return "m(tZ)";}
+    if(var == "LeadingTop_pt") {return "p_{T}(t^{lead})";}
+    if(var == "LeadingTop_eta") {return "#eta(t^{lead})";}
+    if(var == "Zreco_dPhill") {return "#Delta#Phi_{ll}";}
+    if(var == "cosThetaStarPol_Z") {return "cos(#theta^{*}_{Z})";}
+    if(var == "cosThetaStarPol_Top") {return "cos(#theta^{*}_{t})";}
+
+    return var;
+}
+
 //Get name of category, depending on desired region, sample, etc.
 TString Get_Category_Boolean_Name()
 {

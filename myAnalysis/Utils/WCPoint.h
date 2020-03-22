@@ -26,9 +26,9 @@ public:
         this->wgt = _wgt;
     }
 
+    //Overloaded with float
     WCPoint(std::string _str, float _wgt=0.0)
     {
-        // std::cout<<__LINE__<<std::endl;
         this->parseRwgtId(_str);
         this->wgt = _wgt;
     }
@@ -45,7 +45,7 @@ public:
         this->inputs.clear();
         for (uint i = 1; i < words.size(); i+= 2)
         {
-            if(i+1 >= words.size()) {std::cout<<"Error : i > words.size()"<<std::endl; return;} //NT
+            if(i+1 >= words.size()) {std::cout<<"Error : i > words.size() ! Full string : "<<_str<<std::endl; return;} //NT
             this->setStrength(words.at(i),std::stod(words.at(i+1)));
         }
     }

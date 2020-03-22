@@ -1022,6 +1022,19 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
             bool isPrivMC = false;
             if(sample_list[isample].Contains("PrivMC")) {isPrivMC = true;}
 
+            vector<float> v_SWE; //Store Sums of Weights (SWE) for all reweight points -- for private MC samples only
+            // if(isPrivMC) //Not available yet
+            // {
+            //     //Read and store sums of weights (SWE)
+            //     TH1F* h_SWE = (TH1F*) f->Get("h_SWE");
+            //     for(int ibin=0; ibin<h_SWE->GetNbinsX(); ibin++)
+            //     {
+            //         v_SWE.push_back(h_SWE->GetBinContent(ibin+1)); //1 SWE stored for each stored weight
+            //         // cout<<"v_SWE[ibin] = "<<v_SWE[ibin]<<endl;
+            //     }
+            //     delete h_SWE;
+            // }
+
     		//-- Loop on TTrees : first empty element corresponds to nominal TTree ; additional TTrees may correspond to JES/JER TTrees (defined in main)
     		//NB : only nominal TTree contains systematic weights ; others only contain the nominal weight (but variables have different values)
     		for(int itree=0; itree<systTree_list.size(); itree++)
@@ -1100,11 +1113,11 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
                 //--- Event weights
                 double eventWeight;
                 float eventMCFactor;
-    			float mc_weight_originalValue;
                 tree->SetBranchStatus("eventWeight", 1);
     			tree->SetBranchAddress("eventWeight", &eventWeight);
                 tree->SetBranchStatus("eventMCFactor", 1);
     			tree->SetBranchAddress("eventMCFactor", &eventMCFactor);
+                // float mc_weight_originalValue;
     			// tree->SetBranchStatus("mc_weight_originalValue", 1);
     			// tree->SetBranchAddress("mc_weight_originalValue", &mc_weight_originalValue);
 
@@ -1319,7 +1332,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
 
                                 if(isPrivMC)
                                 {
-                                    Fill_TH1EFT(v3_TH1EFT_chan_syst_var[ichan][isyst][ivar], total_var_floats[ivar], *v_ids, *v_wgts, weight_tmp);
+                                    Fill_TH1EFT(v3_TH1EFT_chan_syst_var[ichan][isyst][ivar], total_var_floats[ivar], v_ids, v_wgts, v_SWE, weight_tmp);
                                 }
                             }
     					} //syst loop
@@ -1454,7 +1467,7 @@ void TopEFT_analysis::Produce_Templates(TString template_name, bool makeHisto_in
         Merge_Templates_ByProcess(output_file_name, template_name, total_var_list);
     }
 
-    // Test_TH1EFT(); //FIXME
+    // Test_TH1EFT();
 
 	return;
 }
@@ -2388,7 +2401,7 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 		if(show_pulls_ratio) {histo_ratio_data->GetYaxis()->SetTitle("Pulls");}
 		else {histo_ratio_data->GetYaxis()->SetTitle("Data/MC");}
 		histo_ratio_data->GetYaxis()->SetTickLength(0.);
-		histo_ratio_data->GetXaxis()->SetTitleOffset(1);
+		// histo_ratio_data->GetXaxis()->SetTitleOffset(1); //FIXME
 		histo_ratio_data->GetYaxis()->SetTitleOffset(1.2);
 		histo_ratio_data->GetYaxis()->SetLabelSize(0.048);
 		histo_ratio_data->GetXaxis()->SetLabelFont(42);
@@ -2415,10 +2428,7 @@ void TopEFT_analysis::Draw_Templates(bool drawInputVars, TString channel, TStrin
 			histo_ratio_data->SetMaximum(2.2);
 		}
 
-		if(drawInputVars)
-		{
-			histo_ratio_data->GetXaxis()->SetTitle(total_var_list[ivar]);
-		}
+		if(drawInputVars) {histo_ratio_data->GetXaxis()->SetTitle(Get_Variable_Name(total_var_list[ivar]));}
 		else
 		{
             // histo_ratio_data->GetXaxis()->SetTitle(classifier_name+" (vs "+template_name + ")");
@@ -3269,36 +3279,35 @@ void TopEFT_analysis::Merge_Templates_ByProcess(TString filename, TString templa
 //--------------------------------------------
 
 
-void TopEFT_analysis::Fill_TH1EFT(TH1EFT*& h, float x, vector<string> v_ids, vector<float> v_wgts, float wgt_originalXWGTUP)
+void TopEFT_analysis::Fill_TH1EFT(TH1EFT*& h, float x, vector<string>* v_ids, vector<float>* v_wgts, vector<float> v_SWE, float wgt_nominal)
 {
     bool debug = false;
 
     float sm_wgt = 0.;
     std::vector<WCPoint> wc_pts;
 
-    // if(isPrivMC) // Add EFT weights
+    for(int iwgt=0; iwgt<v_ids->size(); iwgt++)
     {
-        for(int iwgt=0; iwgt<v_ids.size(); iwgt++)
-        {
-            // cout<<"v_ids[iwgt] "<<v_ids[iwgt]<<endl;
+        // cout<<"v_ids->at(iwgt) "<<v_ids->at(iwgt)<<endl;
 
-            TString ts = v_ids[iwgt];
-            if(ts.Contains("rwgt_") && ts != "rwgt_1" && ts != "rwgt_sm" && ts != "rwgt_SM")
-            // std::size_t foundstr = v_ids[iwgt].find("rwgt_");// only save EFT weights
-            // if(foundstr != std::string::npos)
-            {
-                WCPoint wc_pt(v_ids[iwgt], v_wgts[iwgt]);
-                wc_pts.push_back(wc_pt);
-                if(wc_pt.isSMPoint()) {sm_wgt = v_wgts[iwgt];}
-            }
+        TString ts = v_ids->at(iwgt);
+        //Logic : first store the SM weight (first element of reweight list) --> Then compute ratio of each reweight w.r.t. SM reweight, and use it to rescale nominal event weight accordingly
+        if(!ts.CompareTo("rwgt_sm", TString::kIgnoreCase)) //Store SM weight manually
+        {
+            sm_wgt = v_wgts->at(iwgt);
+            // sm_wgt = v_wgts->at(iwgt)/(originalXWGTUP * v_SWE[iwgt]);
+        }
+        else if(ts.Contains("rwgt_") && ts != "rwgt_1") //Other reweights
+        {
+            WCPoint wc_pt(v_ids->at(iwgt), wgt_nominal*v_wgts->at(iwgt)/sm_wgt); //(nominal event weight) * (EFT reweight/SM reweight) ... ? Need to account for different SWEs ?
+            wc_pts.push_back(wc_pt);
         }
     }
-    // else
-    // {
-    //     sm_wgt = wgt_originalXWGTUP;
-    //     WCPoint wc_pt("smpt", sm_wgt);
-    //     wc_pts.push_back(wc_pt);
-    // }
+
+    //-- Include 'manually' the SM WCPoint as first element (not included automatically because named 'SM' and not via its operator values)
+    wc_pts.insert(wc_pts.begin(), wc_pts[0]); //Duplicate the first element
+    wc_pts[0].setSMPoint(); //Set (new) first element to SM coeffs (all null)
+    wc_pts[0].wgt = sm_wgt; //Set (new) first element to SM weight
 
     WCFit eft_fit(wc_pts, "");
 
@@ -3317,7 +3326,7 @@ void TopEFT_analysis::Fill_TH1EFT(TH1EFT*& h, float x, vector<string> v_ids, vec
         }
     }
 
-    h->Fill(x, 1.0 , eft_fit);
+    h->Fill(x, wgt_nominal , eft_fit); //default = SM
 
     return;
 }
@@ -3331,7 +3340,7 @@ void TopEFT_analysis::Test_TH1EFT()
     TFile* f = TFile::Open(filename, "READ");
 
     TString th1eft_name = "TH1EFT_DNN0_SR_2017__PrivMC_tZq";
-    if(!file_input->GetListOfKeys()->Contains(th1eft_name)) {cout<<BOLD(FRED("Histo not found ("<<th1eft_name<<")"))<<endl; return;}
+    if(!f->GetListOfKeys()->Contains(th1eft_name)) {cout<<BOLD(FRED("Histo not found ("<<th1eft_name<<")"))<<endl; return;}
     TH1EFT* h = (TH1EFT*) f->Get(th1eft_name);
 
     // cout<<"h->IsA()->InheritsFrom(TH1EFT::Class()) "<<h->IsA()->InheritsFrom(TH1EFT::Class())<<endl;

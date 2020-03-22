@@ -21,8 +21,8 @@
 
 set ms_dir ./MadspinDir
 
-decay t > w+ b DIM6<=1 FCNC=0, (w+ > all all DIM6=0 FCNC=0)
-decay t~ > w- b~ DIM6<=1 FCNC=0, (w- > all all DIM6=0 FCNC=0)
+decay t > w+ b DIM6=0 FCNC=0, w+ > all all DIM6=0 FCNC=0
+decay t~ > w- b~ DIM6=0 FCNC=0, w- > all all DIM6=0 FCNC=0
 decay w+ > all all DIM6=0 FCNC=0
 decay w- > all all DIM6=0 FCNC=0
 

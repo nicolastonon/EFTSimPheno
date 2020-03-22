@@ -131,6 +131,8 @@ Double_t TH1EFT::GetBinContent(Int_t bin, WCPoint wc_pt)
 
     return scale_value;
 }
+
+//NB : only name of WCPoint matters (not its weight)
 void TH1EFT::Scale(WCPoint wc_pt)
 {
     // Warning: calling GetEntries after a call to this function will return a

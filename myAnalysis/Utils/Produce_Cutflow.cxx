@@ -60,8 +60,6 @@ void Compute_Write_Yields(vector<TString> v_samples, vector<TString> v_label, TS
 	cout<<"(region : "<<region<<" / lumi : "<<lumi<<" / channel : "<<channel<<")"<<endl;
     cout<<endl<<YELBKG("                          ")<<endl<<endl;
 
-	TString dir_ntuples = "./input_ntuples/" + lumi + "/";
-
     mkdir("../outputs/", 0777);
     mkdir("../outputs/cutflow", 0777);
     // mkdir("../outputs/cutflow/latex", 0777);
@@ -72,6 +70,10 @@ void Compute_Write_Yields(vector<TString> v_samples, vector<TString> v_label, TS
     // TString outname_latex = "../outputs/cutflow/latex/Yields_"+region+"_"+lumi;
     // if(channel != "") {outname_latex+= "_" + channel;}
     // outname_latex+= ".txt";
+
+    vector<TString> v_years; //'Run2' -> Sum all 3 years
+    if(lumi == "Run2") {v_years.push_back("2016"); v_years.push_back("2017"); v_years.push_back("2018");}
+    else {v_years.push_back(lumi);}
 
     if(group_samples_together == false)
     {
@@ -147,141 +149,152 @@ void Compute_Write_Yields(vector<TString> v_samples, vector<TString> v_label, TS
 	double statErr_tmp = 0;
 	double statErr_signals = 0;
 
-	//FIRST LOOP ON SAMPLES : check here if files are missing ; else, may interfer with summing of several processes (TTZ, Rares, ...)
-	for(int isample=0; isample<v_samples.size(); isample++)
-	{
-		TString filepath = dir_ntuples + v_samples[isample]+".root";
-		// cout<<"-- File "<<filepath<<endl;
-		if(!Check_File_Existence(filepath) )
-		{
-			//ERASE MISSING SAMPLES FROM VECTORS
-			v_samples.erase(v_samples.begin() + isample);
-			v_label.erase(v_label.begin() + isample);
+ // #   # ######   ##   #####     #       ####   ####  #####
+ //  # #  #       #  #  #    #    #      #    # #    # #    #
+ //   #   #####  #    # #    #    #      #    # #    # #    #
+ //   #   #      ###### #####     #      #    # #    # #####
+ //   #   #      #    # #   #     #      #    # #    # #
+ //   #   ###### #    # #    #    ######  ####   ####  #
 
-			cout<<FRED("File "<<filepath<<" not found ! Erased index '"<<isample<<"' from vectors")<<endl;
-		}
-	}
+    for(int iyear=0; iyear<v_years.size(); iyear++)
+    {
+        TString dir_ntuples = "./input_ntuples/" + v_years[iyear] + "/";
 
-//  ####    ##   #    # #####  #      ######    #       ####   ####  #####
-// #       #  #  ##  ## #    # #      #         #      #    # #    # #    #
-//  ####  #    # # ## # #    # #      #####     #      #    # #    # #    #
-//      # ###### #    # #####  #      #         #      #    # #    # #####
-// #    # #    # #    # #      #      #         #      #    # #    # #
-//  ####  #    # #    # #      ###### ######    ######  ####   ####  #
+    	//FIRST LOOP ON SAMPLES : check here if files are missing ; else, may interfer with summing of several processes (TTZ, Rares, ...)
+    	for(int isample=0; isample<v_samples.size(); isample++)
+    	{
+    		TString filepath = dir_ntuples + v_samples[isample]+".root";
+    		// cout<<"-- File "<<filepath<<endl;
+    		if(!Check_File_Existence(filepath) )
+    		{
+    			//ERASE MISSING SAMPLES FROM VECTORS
+    			v_samples.erase(v_samples.begin() + isample);
+    			v_label.erase(v_label.begin() + isample);
 
-	for(int isample=0; isample<v_samples.size(); isample++)
-	{
-		TString filepath = dir_ntuples + v_samples[isample]+".root";
-		cout<<"-- File "<<filepath<<endl;
+    			cout<<FRED("File "<<filepath<<" not found ! Erased index '"<<isample<<"' from vectors")<<endl;
+    		}
+    	}
 
-		if(!Check_File_Existence(filepath) )
-		{
-			cout<<FRED("File "<<filepath<<" not found !")<<endl;
-			continue;
-		}
+    //  ####    ##   #    # #####  #      ######    #       ####   ####  #####
+    // #       #  #  ##  ## #    # #      #         #      #    # #    # #    #
+    //  ####  #    # # ## # #    # #      #####     #      #    # #    # #    #
+    //      # ###### #    # #####  #      #         #      #    # #    # #####
+    // #    # #    # #    # #      #      #         #      #    # #    # #
+    //  ####  #    # #    # #      ###### ######    ######  ####   ####  #
 
-		// cout<<FBLU("Sample : "<<v_samples[isample]<<"")<<endl;
+    	for(int isample=0; isample<v_samples.size(); isample++)
+    	{
+    		TString filepath = dir_ntuples + v_samples[isample]+".root";
+    		cout<<"-- File "<<filepath<<endl;
 
-        TString treename = "result";
-		TFile* f = new TFile(filepath);
-		TTree* t = 0;
-        t = (TTree*) f->Get(treename);
-        if(!t) {cout<<FRED("Tree '"<<treename<<"' not found ! Skip !")<<endl; continue;}
+    		if(!Check_File_Existence(filepath) )
+    		{
+    			cout<<FRED("File "<<filepath<<" not found !")<<endl;
+    			continue;
+    		}
 
-        t->SetBranchStatus("*", 0); //disable all branches, speed up
+    		// cout<<FBLU("Sample : "<<v_samples[isample]<<"")<<endl;
 
-		Double_t weight = 1., weight_avg = 0.;
-        Float_t eventMCFactor;
+            TString treename = "result";
+    		TFile* f = new TFile(filepath);
+    		TTree* t = 0;
+            t = (TTree*) f->Get(treename);
+            if(!t) {cout<<FRED("Tree '"<<treename<<"' not found ! Skip !")<<endl; continue;}
 
-        t->SetBranchStatus("eventWeight", 1);
-		t->SetBranchAddress("eventWeight", &weight);
-        t->SetBranchStatus("eventMCFactor", 1);
-		t->SetBranchAddress("eventMCFactor", &eventMCFactor);
+            t->SetBranchStatus("*", 0); //disable all branches, speed up
 
-        bool passedBJets;
-        t->SetBranchStatus("passedBJets", 1);
-		t->SetBranchAddress("passedBJets", &passedBJets);
+    		Double_t weight = 1., weight_avg = 0.;
+            Float_t eventMCFactor;
 
-        float chan;
-        t->SetBranchStatus("channel", 1);
-        t->SetBranchAddress("channel", &chan);
+            t->SetBranchStatus("eventWeight", 1);
+    		t->SetBranchAddress("eventWeight", &weight);
+            t->SetBranchStatus("eventMCFactor", 1);
+    		t->SetBranchAddress("eventMCFactor", &eventMCFactor);
 
- // ###### #    # ###### #    # #####    #       ####   ####  #####
- // #      #    # #      ##   #   #      #      #    # #    # #    #
- // #####  #    # #####  # #  #   #      #      #    # #    # #    #
- // #      #    # #      #  # #   #      #      #    # #    # #####
- // #       #  #  #      #   ##   #      #      #    # #    # #
- // ######   ##   ###### #    #   #      ######  ####   ####  #
+            bool passedBJets;
+            t->SetBranchStatus("passedBJets", 1);
+    		t->SetBranchAddress("passedBJets", &passedBJets);
 
-		int nentries = t->GetEntries();
-		for(int ientry=0; ientry<nentries; ientry++)
-		{
-			weight=1.; eventMCFactor = 1.;
+            float chan;
+            t->SetBranchStatus("channel", 1);
+            t->SetBranchAddress("channel", &chan);
 
-			t->GetEntry(ientry);
+     // ###### #    # ###### #    # #####    #       ####   ####  #####
+     // #      #    # #      ##   #   #      #      #    # #    # #    #
+     // #####  #    # #####  # #  #   #      #      #    # #    # #    #
+     // #      #    # #      #  # #   #      #      #    # #    # #####
+     // #       #  #  #      #   ##   #      #      #    # #    # #
+     // ######   ##   ###### #    #   #      ######  ####   ####  #
 
-            if(!passedBJets) {continue;}
+    		int nentries = t->GetEntries();
+    		for(int ientry=0; ientry<nentries; ientry++)
+    		{
+    			weight=1.; eventMCFactor = 1.;
 
-            if(channel == "uuu" && chan != 0) {continue;}
-            if(channel == "uue" && chan != 1) {continue;}
-            if(channel == "eeu" && chan != 2) {continue;}
-            if(channel == "eee" && chan != 3) {continue;}
+    			t->GetEntry(ientry);
 
-			if(isnan(weight*eventMCFactor) || isinf(weight*eventMCFactor))
-			{
-				cout<<BOLD(FRED("* Found event with weight*eventMCFactor = "<<weight<<"*"<<eventMCFactor<<" ; remove it..."))<<endl; continue;
-			}
-            // else if(!weight*eventMCFactor) {cout<<"weight*eventMCFactor = "<<weight<<"*"<<eventMCFactor<<" ! Is it expected ?"<<endl;}
+                if(!passedBJets) {continue;}
 
-            //After sanity checks, can compute final event weight
-            weight*= eventMCFactor;
+                if(channel == "uuu" && chan != 0) {continue;}
+                if(channel == "uue" && chan != 1) {continue;}
+                if(channel == "eeu" && chan != 2) {continue;}
+                if(channel == "eee" && chan != 3) {continue;}
 
-			// weight_avg+= weight;
+    			if(isnan(weight*eventMCFactor) || isinf(weight*eventMCFactor))
+    			{
+    				cout<<BOLD(FRED("* Found event with weight*eventMCFactor = "<<weight<<"*"<<eventMCFactor<<" ; remove it..."))<<endl; continue;
+    			}
+                // else if(!weight*eventMCFactor) {cout<<"weight*eventMCFactor = "<<weight<<"*"<<eventMCFactor<<" ! Is it expected ?"<<endl;}
 
-            if(v_label[isample].Contains("tZq") || v_label[isample] == "signal") //Signals, group together
-			{
-				yield_tmp+= weight;
-				statErr_tmp+= weight*weight;
-				yield_signals+= weight;
-				statErr_signals+= weight*weight;
+                //After sanity checks, can compute final event weight
+                weight*= eventMCFactor;
 
-				// cout<<"yield_signals "<<yield_signals<<endl;
-			}
-			else if(v_samples[isample] != "DATA") //Backgrounds
-			{
-				// if(isample > 0 && v_samples[isample] == "Fakes_MC" && v_label[isample]==v_label[isample-1]) {yield_tmp-= weight;} //substract Fakes_MC to DD Fakes
-				// else {yield_tmp+= weight; statErr_tmp+= weight*weight;}
-                yield_tmp+= weight; statErr_tmp+= weight*weight;
-                yield_bkg+= weight;
-			}
-			else if(v_samples[isample] == "DATA") //DATA
-			{
-				yield_DATA+= weight;
-				// statErr_DATA+= weight;
-			}
+    			// weight_avg+= weight;
 
-			// cout<<"yield_tmp "<<yield_tmp<<endl;
-			// cout<<"weight_avg "<<setprecision(15)<<weight_avg / nentries<<endl;
-		} //event loop
+                if(v_label[isample].Contains("tZq") || v_label[isample] == "signal") //Signals, group together
+    			{
+    				yield_tmp+= weight;
+    				statErr_tmp+= weight*weight;
+    				yield_signals+= weight;
+    				statErr_signals+= weight*weight;
 
-		// cout<<"yield_bkg = "<<yield_bkg<<endl;
-		// cout<<"yield_tmp "<<yield_tmp<<endl;
+    				// cout<<"yield_signals "<<yield_signals<<endl;
+    			}
+    			else if(v_samples[isample] != "DATA") //Backgrounds
+    			{
+    				// if(isample > 0 && v_samples[isample] == "Fakes_MC" && v_label[isample]==v_label[isample-1]) {yield_tmp-= weight;} //substract Fakes_MC to DD Fakes
+    				// else {yield_tmp+= weight; statErr_tmp+= weight*weight;}
+                    yield_tmp+= weight; statErr_tmp+= weight*weight;
+                    yield_bkg+= weight;
+    			}
+    			else if(v_samples[isample] == "DATA") //DATA
+    			{
+    				yield_DATA+= weight;
+    				// statErr_DATA+= weight;
+    			}
 
-		//Check if restart counter, or merge processes
-		if(v_samples[isample] != "DATA" && isample < v_label.size()-1 && v_label[isample] != v_label[isample+1])
-		{
-			file_out<<"--------------------------------------------"<<endl;
-			file_out<<left<<setw(25)<<v_label[isample]<<setprecision(4)<<yield_tmp;
-			// file_out<<v_label[isample]<<"\\t"<<yield_tmp;
+    			// cout<<"yield_tmp "<<yield_tmp<<endl;
+    			// cout<<"weight_avg "<<setprecision(15)<<weight_avg / nentries<<endl;
+    		} //event loop
 
-			file_out<<" (+/- "<<statErr_tmp<<" stat.)"<<endl;
-			// cout<<left<<setw(25)<<v_label[isample]<<yield_tmp<<endl;
+    		// cout<<"yield_bkg = "<<yield_bkg<<endl;
+    		// cout<<"yield_tmp "<<yield_tmp<<endl;
 
-			yield_tmp = 0; //Reset after writing to file
-			statErr_tmp = 0;
-		} //write result
+    		//Check if restart counter, or merge processes
+    		if(v_samples[isample] != "DATA" && isample < v_label.size()-1 && v_label[isample] != v_label[isample+1])
+    		{
+    			file_out<<"--------------------------------------------"<<endl;
+    			file_out<<left<<setw(25)<<v_label[isample]<<setprecision(4)<<yield_tmp;
+    			// file_out<<v_label[isample]<<"\\t"<<yield_tmp;
 
-	} //sample loop
+    			file_out<<" (+/- "<<statErr_tmp<<" stat.)"<<endl;
+    			// cout<<left<<setw(25)<<v_label[isample]<<yield_tmp<<endl;
+
+    			yield_tmp = 0; //Reset after writing to file
+    			statErr_tmp = 0;
+    		} //write result
+    	} //sample loop
+    } //year loop
 
 	file_out<<endl<<"____________________________________________"<<endl;
 	file_out<<"____________________________________________"<<endl;
@@ -332,6 +345,8 @@ void Compute_Write_Yields(vector<TString> v_samples, vector<TString> v_label, TS
 
 int main(int argc, char **argv)
 {
+    cout<<FYEL("USAGE : ./Produce_Cutflow.exe [SR] [2016,2017,2018,all,Run2] [uuu,eeu,uue,eee]")<<endl<<endl;
+
     //-- Default args (can be over-riden via command line args)
     TString signal = "tZq";
     TString region = "SR"; //SR
@@ -345,8 +360,7 @@ int main(int argc, char **argv)
 
         if(argc > 2)
     	{
-            if(!strcmp(argv[2],"2016") || !strcmp(argv[2],"2017") || !strcmp(argv[2],"2018") ) {lumi = argv[2];} //'Run2' not valid for now
-            // if(!strcmp(argv[2],"2016") || !strcmp(argv[2],"2017") || !strcmp(argv[2],"2018") || !strcmp(argv[2],"Run2")) {lumi = argv[2];}
+            if(!strcmp(argv[2],"2016") || !strcmp(argv[2],"2017") || !strcmp(argv[2],"2018") || !strcmp(argv[2],"Run2")) {lumi = argv[2];}
     		else {cout<<"Wrong second arg !"<<endl; return 0;}
 
             if(argc > 3)
@@ -367,8 +381,8 @@ int main(int argc, char **argv)
     v_samples.push_back("tZq"); v_label.push_back("tZq");
     v_samples.push_back("ttZ"); v_label.push_back("ttZ");
 
-    v_samples.push_back("PrivMC_tZq"); v_label.push_back("PrivMC_tZq");
-    v_samples.push_back("PrivMC_ttZ"); v_label.push_back("PrivMC_ttZ");
+    // v_samples.push_back("PrivMC_tZq"); v_label.push_back("PrivMC_tZq");
+    // v_samples.push_back("PrivMC_ttZ"); v_label.push_back("PrivMC_ttZ");
 
     v_samples.push_back("ttH"); v_label.push_back("ttX");
     v_samples.push_back("ttW"); v_label.push_back("ttX");
@@ -406,12 +420,9 @@ int main(int argc, char **argv)
         Compute_Write_Yields(v_samples, v_label, region, signal, "2016", channel);
         Compute_Write_Yields(v_samples, v_label, region, signal, "2017", channel);
         Compute_Write_Yields(v_samples, v_label, region, signal, "2018", channel);
-        // Compute_Write_Yields(v_samples, v_label, region, signal, "Run2", channel); //should sum all years
+        Compute_Write_Yields(v_samples, v_label, region, signal, "Run2", channel); //should sum all years
     }
-    else
-    {
-        Compute_Write_Yields(v_samples, v_label, region, signal, lumi, channel);
-    }
+    else {Compute_Write_Yields(v_samples, v_label, region, signal, lumi, channel);}
 
 	return 0;
 }

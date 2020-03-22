@@ -15,12 +15,15 @@ ROOTFLAGS = `root-config --glibs --cflags`
 
 # LFLAGS = $(DEBUG) -L/home/ntonon/myroot/lib -lTMVA
 LFLAGS = $(DEBUG) -lTMVA
+LFLAGS+= -L/home/ntonon/Postdoc/EFTSimulations/Pheno/Plotter/Makefile
 
 INCFLAGS = -I.
 
 SRCS = $(wildcard *.cxx) #Source files are all files with .cxx extension
 HDRS = $(wildcard *.h) #Header files are all files with .h extension
 OBJS = $(SRCS:.cxx=.o) #Object files are all files with .o extension, which have same names as source files
+
+LIB = /home/ntonon/Postdoc/EFTSimulations/myAnalysis/myLib.so #Re-use same library generated for main analysis code (to import custom classes)
 
 MAIN = GenPlotter.exe #Name of executable file
 
@@ -29,10 +32,10 @@ MAIN = GenPlotter.exe #Name of executable file
 all: $(MAIN)
 
 #Obtain executables from object files
-$(MAIN): GenPlotter.cc
+$(MAIN): GenPlotter.cc $(LIB)
 	@echo "###################################""#"
 	@echo "-- Creating executable ./$(MAIN) --"
-	@$(CC) GenPlotter.cc -o $@ $(ROOTFLAGS) $(LFLAGS) $(INCFLAGS)
+	@$(CC) GenPlotter.cc -o $@ $(ROOTFLAGS) $(LFLAGS) $(INCFLAGS) $(LIB)
 	@echo "-- Done --"
 	@echo "###################################""#"
 	@echo ""
@@ -46,4 +49,4 @@ $(MAIN): GenPlotter.cc
 
 #Erase all objects and executable
 clean:
-	@-rm main
+	@-rm $(MAIN)

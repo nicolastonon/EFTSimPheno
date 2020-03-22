@@ -27,8 +27,8 @@ define l- = e- mu- ta-
 define vl = ve vm vt
 define vl~ = ve~ vm~ vt~
 
-decay t > w+ b  DIM6<=1 FCNC=0, (w+ > l+ vl DIM6=0 FCNC=0)
-decay t~ > w- b~  DIM6<=1 FCNC=0, (w- > l- vl~ DIM6=0 FCNC=0)
+decay t > w+ b DIM6=0 FCNC=0, w+ > l+ vl DIM6=0 FCNC=0
+decay t~ > w- b~ DIM6=0 FCNC=0, w- > l- vl~ DIM6=0 FCNC=0
 
 # running the actual code
 launch
