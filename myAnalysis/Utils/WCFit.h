@@ -265,6 +265,8 @@ public:
             x1 = (n1 == kSMstr) ? 1.0 : pt->getStrength(n1);  // Hard set SM value to 1.0 (<-> i.e. 'rwgt_SM' WC can only be set to 1 !)
             x2 = (n2 == kSMstr) ? 1.0 : pt->getStrength(n2);  // Hard set SM value to 1.0 (<-> i.e. 'rwgt_SM' WC can only be set to 1 !)
             v += x1*x2*c;
+
+            //Useful for fit debugging -> can cross check each coeff
             // cout<<"x1 ("<<n1<<") "<<x1<<endl;
             // cout<<"x2 ("<<n2<<") "<<x2<<endl;
             // cout<<"c "<<c<<endl;

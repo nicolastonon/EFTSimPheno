@@ -1,3 +1,9 @@
+/**
+ * Compare distributions obtained under the SM or EFT hypotheses
+ * Input root file obtained with the GenAnalyzer code
+ * Also other functions : plot xsec vs operators, etc.
+*/
+
 /* BASH COLORS */
 #define RST   "[0m"
 #define KRED  "[31m"
@@ -25,6 +31,8 @@
 #include <sys/stat.h> // to be able to check file existence
 #include <dirent.h> //list dir content
 
+#include "TF1.h"
+#include "TF2.h"
 #include <TLatex.h>
 #include <TChain.h>
 #include <TFile.h>
@@ -40,7 +48,9 @@
 #include "TLine.h"
 #include "THStack.h"
 #include "TString.h"
+#include "TH2F.h"
 #include "TObject.h"
+#include "TGraph.h"
 
 #include <iostream>
 #include <cstdlib>
@@ -61,7 +71,22 @@
 //Ex : assert(test > 0 && "Error message");
 #include <sys/stat.h> // to be able to use mkdir
 
+//Hardcoded values if want to plot real nof events... (corresponding to cuts applied in GenAnalyzer)
+#define xsec_tllq 30.5
+#define xsec_ttll 281
+#define lumi 41.5
+
 using namespace std;
+
+
+
+
+
+
+
+
+
+
 
 //--------------------------------------------
 // ##     ## ######## ##       ########  ######## ########
@@ -135,7 +160,7 @@ void Load_Canvas_Style()
 	gStyle->SetPadBottomMargin(0.13);
 	gStyle->SetPadLeftMargin(0.16);
 	gStyle->SetPadRightMargin(0.03);
-	gStyle->SetOptTitle(0);
+	gStyle->SetOptTitle(1); //CHANGED //Main title
 	gStyle->SetTitleFont(42);
 	gStyle->SetTitleColor(1);
 	gStyle->SetTitleTextColor(1);
@@ -247,14 +272,20 @@ inline void Fill_TH1F_UnderOverflow(TH1F* h, double value, double weight)
     if(value >= h->GetXaxis()->GetXmax() ) {h->Fill(h->GetXaxis()->GetXmax() - (h->GetXaxis()->GetBinWidth(1) / 2), weight);} //overflow in last bin
     else if(value <= h->GetXaxis()->GetXmin() ) {h->Fill(h->GetXaxis()->GetXmin() + (h->GetXaxis()->GetBinWidth(1) / 2), weight);} //underflow in first bin
     else {h->Fill(value, weight);}
+    return;
+};
 
+inline void Fill_TH1EFT_UnderOverflow(TH1EFT* h, double value, float weight, WCFit fit)
+{
+    if(value >= h->GetXaxis()->GetXmax() ) {h->Fill(h->GetXaxis()->GetXmax() - (h->GetXaxis()->GetBinWidth(1) / 2), weight, fit);} //overflow in last bin
+    else if(value <= h->GetXaxis()->GetXmin() ) {h->Fill(h->GetXaxis()->GetXmin() + (h->GetXaxis()->GetBinWidth(1) / 2), weight, fit);} //underflow in first bin
+    else {h->Fill(value, weight, fit);}
     return;
 };
 
 inline void Fill_TH1F_NoUnderOverflow(TH1F* h, double value, double weight)
 {
     if(value < h->GetXaxis()->GetXmax() && value > h->GetXaxis()->GetXmin() ) {h->Fill(value, weight);}
-
     return;
 };
 
@@ -300,48 +331,57 @@ int Get_Color(int index)
 }
 
 
-//--------------------------------------------
-// ######## ######## ########    ######## ##     ## ##    ##  ######   ######
-// ##       ##          ##       ##       ##     ## ###   ## ##    ## ##    ##
-// ##       ##          ##       ##       ##     ## ####  ## ##       ##
-// ######   ######      ##       ######   ##     ## ## ## ## ##        ######
-// ##       ##          ##       ##       ##     ## ##  #### ##             ##
-// ##       ##          ##       ##       ##     ## ##   ### ##    ## ##    ##
-// ######## ##          ##       ##        #######  ##    ##  ######   ######
-//--------------------------------------------
+ // ###### ###### #####    ###### #    # #    #  ####   ####
+ // #      #        #      #      #    # ##   # #    # #
+ // #####  #####    #      #####  #    # # #  # #       ####
+ // #      #        #      #      #    # #  # # #           #
+ // #      #        #      #      #    # #   ## #    # #    #
+ // ###### #        #      #       ####  #    #  ####   ####
 
-void Fill_TH1EFT(TH1EFT*& h, float x, vector<string>* v_reweights_ids, vector<float>* v_reweights_floats, float originalXWGTUP, vector<float> v_SWE)
+/**
+ * For given event, create the WCFit object and fill the TH1EFT with it
+*/
+void Fill_TH1EFT(TH1EFT*& h, float x, vector<string>* v_reweights_ids, vector<float>* v_reweights_floats, float originalXWGTUP, vector<float> v_SWE, float weight_SF=0, bool show_overflow=false)
 {
     bool debug = false;
-
-    float sm_wgt = 0.;
-    // int idx_sm = -1;
+//--------------------------------------------
+    float sm_wgt = 0.; //Weight of SM point
+    // float sm_swe = 0.; //SWE of SM point
     std::vector<WCPoint> wc_pts;
 
     // if(isPrivMC) // Add EFT weights
     {
-        for(int iwgt=0; iwgt<v_reweights_ids->size(); iwgt++)
+        for(int iwgt=1; iwgt<v_reweights_ids->size(); iwgt++) //First weight is always 'rwgt_1' (corresponding to originalXWGTUP weight ?)
         {
-            // cout<<"v_reweights_ids->at(iwgt) "<<v_reweights_ids->at(iwgt)<<" / w = "<<v_reweights_floats->at(iwgt)<<endl;
+            // cout<<"v_reweights_ids->at(iwgt) "<<v_reweights_ids->at(iwgt)<<" / w = "<<v_reweights_floats->at(iwgt)<<" / v_SWE[iwgt] "<<v_SWE[iwgt]<<endl;
 
             TString ts = v_reweights_ids->at(iwgt);
             if(ts.Contains("rwgt_") && ts != "rwgt_1" && !ts.Contains("_sm", TString::kIgnoreCase))
             // std::size_t foundstr = v_reweights_ids[iwgt].find("rwgt_");// only save EFT weights
             // if(foundstr != std::string::npos)
             {
-                // WCPoint wc_pt(v_reweights_ids[iwgt], v_wgts[iwgt]);
-                WCPoint wc_pt(v_reweights_ids->at(iwgt), v_reweights_floats->at(iwgt)/(originalXWGTUP * v_SWE[iwgt]));
+                //FIXME -- which is correct ?
+                float w = v_reweights_floats->at(iwgt);
+                // float w = v_reweights_floats->at(iwgt)/(originalXWGTUP * v_SWE[iwgt]);
+                // float w = v_reweights_floats->at(iwgt) / v_SWE[iwgt];
+                // float w = v_reweights_floats->at(iwgt) / originalXWGTUP;
+
+                WCPoint wc_pt(v_reweights_ids->at(iwgt), w);
 
                 wc_pts.push_back(wc_pt);
-                // if(wc_pt.isSMPoint()) {sm_wgt = v_wgts[iwgt];}
-
             }
             else if(!ts.CompareTo("rwgt_sm", TString::kIgnoreCase)) //Store SM weight manually
             {
-                // idx_sm = iwgt;
-                sm_wgt = v_reweights_floats->at(iwgt)/(originalXWGTUP * v_SWE[iwgt]);
+
+                float w = v_reweights_floats->at(iwgt);
+                // float w = v_reweights_floats->at(iwgt)/(originalXWGTUP * v_SWE[iwgt]);
+                // float w = v_reweights_floats->at(iwgt) / v_SWE[iwgt];
+                // float w = v_reweights_floats->at(iwgt) / originalXWGTUP;
+
+                sm_wgt = w;
+                // sm_swe = v_SWE[iwgt];
             }
-        }
+        } //weights loop
 
         //-- Include 'manually' the SM point as first element (not included automatically because named 'SM' and not via its operator values)
         wc_pts.insert(wc_pts.begin(), wc_pts[0]); //Duplicate the first element
@@ -365,33 +405,55 @@ void Fill_TH1EFT(TH1EFT*& h, float x, vector<string>* v_reweights_ids, vector<fl
             std::cout << "===> " << std::setw(3) << i << ": " << std::setw(12) << wc_pt.wgt << " | " << std::setw(12) << fit_val << " | " << std::setw(12) << (wc_pt.wgt-fit_val) << std::endl; //Printout : i / true weight / evaluated weight / diff
         }
 
-        cout<<endl<<endl<<endl;
-        WCPoint wcp;
-        string name = "rwgt_ctz_0_ctw_0_cpqm_0_cpq3_0_cpt_0";
-        wcp = WCPoint(name, 0.);
-        wcp.dump();
-        cout<<"eft_fit.evalPoint(SM) => "<<eft_fit.evalPoint(&wcp)<<endl;
-        name = "rwgt_ctz_3.0_ctw_3.0_cpqm_3.0_cpq3_3.0_cpt_3.0";
-        wcp = WCPoint(name, 0.);
-        wcp.dump();
-        cout<<"eft_fit.evalPoint("<<name<<") => "<<eft_fit.evalPoint(&wcp)<<endl;
-        name = "rwgt_ctz_2.0_ctw_2.0_cpqm_2.0_cpq3_2.0_cpt_2.0";
-        wcp = WCPoint(name, 0.);
-        wcp.dump();
-        cout<<"eft_fit.evalPoint("<<name<<") => "<<eft_fit.evalPoint(&wcp)<<endl;
-        name = "rwgt_ctz_2.0_ctw_2.0_cpqm_2.0_cpq3_2.0_cpt_-2.0";
-        wcp = WCPoint(name, 0.);
-        wcp.dump();
-        cout<<"eft_fit.evalPoint("<<name<<") => "<<eft_fit.evalPoint(&wcp)<<endl;
+        // cout<<endl<<endl<<endl;
+        // WCPoint wcp;
+        // string name = "rwgt_ctz_0_ctw_0_cpqm_0_cpq3_0_cpt_0";
+        // wcp = WCPoint(name, 0.);
+        // wcp.dump();
+        // cout<<"eft_fit.evalPoint(SM) => "<<eft_fit.evalPoint(&wcp)<<endl;
+        // name = "rwgt_ctz_3.0_ctw_3.0_cpqm_3.0_cpq3_3.0_cpt_3.0";
+        // wcp = WCPoint(name, 0.);
+        // wcp.dump();
+        // cout<<"eft_fit.evalPoint("<<name<<") => "<<eft_fit.evalPoint(&wcp)<<endl;
+        // name = "rwgt_ctz_2.0_ctw_2.0_cpqm_2.0_cpq3_2.0_cpt_2.0";
+        // wcp = WCPoint(name, 0.);
+        // wcp.dump();
+        // cout<<"eft_fit.evalPoint("<<name<<") => "<<eft_fit.evalPoint(&wcp)<<endl;
+        // name = "rwgt_ctz_2.0_ctw_2.0_cpqm_2.0_cpq3_2.0_cpt_-2.0";
+        // wcp = WCPoint(name, 0.);
+        // wcp.dump();
+        // cout<<"eft_fit.evalPoint("<<name<<") => "<<eft_fit.evalPoint(&wcp)<<endl;
 
         // cout<<"originalXWGTUP "<<originalXWGTUP<<endl;
         cout<<endl<<endl<<endl;
     }
 
-    h->Fill(x, sm_wgt, eft_fit); //Fill with SM weight by default
+    //Fill with SM weight by default
+    if(show_overflow) {Fill_TH1EFT_UnderOverflow(h, x, sm_wgt, eft_fit);}
+    else {h->Fill(x, sm_wgt, eft_fit);}
 
     return;
 }
+
+/**
+ * Parameterization of the xsec as a function of operator1 (x) and operator2 (y). See definition of each coeff
+ */
+Double_t EFT_Fit_Parameterization(Double_t* val, Double_t* par)
+{
+   Float_t x = val[0];
+   Float_t y = val[1];
+
+   return (par[0] + x*par[1] + y*par[2] + x*y*par[3] + x*x*par[4] + y*y*par[5]) / par[0];
+}
+
+
+
+
+
+
+
+
+
 
 
 
@@ -416,7 +478,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
 
 //--------------------------------------------
     bool normalize = true; //true <--> scale all histos to 1
-    bool show_overflow = false; //true <--> include under- and over-flow in bins 0 and nbins+1
+    bool show_overflow = true; //true <--> include under- and over-flow (from bins 0 and nbins+1)
 //--------------------------------------------
 
     //For each var, each process and each reweight, fill/store an histo
@@ -428,10 +490,10 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
 
     vector<vector<vector<int>>> v3_nentries_var_proc_bin(v_var.size()); //For each bin of each var of each process, count nof entries -- for debug, understand uncerts.
 
-    double debug_uncert;
+    double debug_uncert=0;
 
     //Allocate memory to histos
-    const int nbins_histos = 10;
+    const int nbins_histos = 20;
     for(int ivar=0; ivar<v_var.size(); ivar++)
     {
         v3_histos_var_proc_reweight[ivar].resize(v_process.size());
@@ -474,6 +536,10 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
         if(t == 0) {cout<<endl<<BOLD(FRED("--- Tree not found ! Exit !"))<<endl<<endl; return;}
 
         cout<<FBLU("Process : "<<v_process[iproc]<<" // Reading file : ")<<filepath<<endl<<endl;
+
+        //Try to get proper event normalization ? (but depends on cuts in GenAnalyzer)
+        float weight_SF = xsec_tllq * lumi;
+        if(v_process[iproc] == "tllq" || v_process[iproc] == "ttz") {weight_SF = xsec_ttll * lumi;}
 
         //Read branches
         vector<float>* v_reweights_floats = new vector<float>(v_reweightNames_fromMG.size());
@@ -525,7 +591,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
      // #       #  #  #      #   ##   #   #    #    #      #    # #    # #
      // ######   ##   ###### #    #   #    ####     ######  ####   ####  #
 
-     // int nentries = 1000;
+        // int nentries = 100;
         int nentries = t->GetEntries();
         cout<<FMAG("Processing "<<nentries<<" entries...")<<endl;
         for(int ientry=0; ientry<nentries; ientry++)
@@ -573,38 +639,23 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
                                 continue;
                             }
 
-                            if(show_overflow) {Fill_TH1F_UnderOverflow(v3_histos_var_proc_reweight[ivar][iproc][iweight], v_var_floats[ivar], v_reweights_floats->at(iweightid)/(mc_weight_originalValue * v_SWE[iweightid]));}
-                            else {Fill_TH1F_NoUnderOverflow(v3_histos_var_proc_reweight[ivar][iproc][iweight], v_var_floats[ivar], v_reweights_floats->at(iweightid)/(mc_weight_originalValue * v_SWE[iweightid]));}
+                            float w = v_reweights_floats->at(iweightid)/(mc_weight_originalValue * v_SWE[iweightid]);
+                            // float w = weight_SF * v_reweights_floats->at(iweightid)/ v_SWE[iweightid];
+
+                            if(show_overflow) {Fill_TH1F_UnderOverflow(v3_histos_var_proc_reweight[ivar][iproc][iweight], v_var_floats[ivar], w);}
+                            // else {Fill_TH1F_NoUnderOverflow(v3_histos_var_proc_reweight[ivar][iproc][iweight], v_var_floats[ivar], w);}
+                            else {v3_histos_var_proc_reweight[ivar][iproc][iweight]->Fill(v_var_floats[ivar], w);}
 
                             // cout<<"v3_histos_var_proc_reweight[ivar][iproc][iweight]->Integral() "<<v3_histos_var_proc_reweight[ivar][iproc][iweight]->Integral()<<endl;
 
-                            // Fill_TH1F_UnderOverflow(v3_histos_var_proc_reweight[ivar][iproc][iweight], v_var_floats[ivar], v_reweights_floats->at(iweightid)/mc_weight_originalValue);
-                            // cout<<"+ "<<v_reweights_floats->at(iweightid)/mc_weight_originalValue<<endl;
-
                             //DEBUG uncert : compute error of 1 bin myself to make sure it's OK
                             if(!ivar && !iproc && !iweight && v3_histos_var_proc_reweight[0][0][0]->GetXaxis()->FindBin(v_var_floats[ivar]) == 1) {debug_uncert+= pow(v_reweights_floats->at(iweightid)/mc_weight_originalValue, 2);}
-
-                            // if(v_reweightNames_fromMG[iweight] == "ctz_4p0")
-                            // if(v_reweightNames_fromMG[iweight] == "sm")
-                            // if(v_reweights_floats->at(iweightid)/mc_weight_originalValue > 100)
-                            // {
-                            //     cout<<"v_var_floats[ivar] = "<<v_var_floats[ivar]<<" / SF = "<<v_reweights_floats->at(iweightid)/mc_weight_originalValue<<endl;
-                            // }
-
-                            // if(v_reweightNames_fromMG[iweight] == "ctz_3p0")
-                            // {
-                            //     cout<<"3p0 reweight = "<<v_reweights_floats->at(iweightid)/mc_weight_originalValue<<endl;
-                            // }
-                            // else if(v_reweightNames_fromMG[iweight] == "sm")
-                            // {
-                            //     cout<<"sm reweight = "<<v_reweights_floats->at(iweightid)/mc_weight_originalValue<<endl;
-                            // }
                         }
 
                     } //Loop on event weights -- for matching
                 } //Loop on selected weights -- for matching
 
-                Fill_TH1EFT(v2_TH1EFT_var_proc[ivar][iproc], v_var_floats[ivar], v_reweights_ids, v_reweights_floats, originalXWGTUP, v_SWE);
+                Fill_TH1EFT(v2_TH1EFT_var_proc[ivar][iproc], v_var_floats[ivar], v_reweights_ids, v_reweights_floats, originalXWGTUP, v_SWE, weight_SF, show_overflow);
 
                 // cout<<"v2_TH1EFT_var_proc[ivar][iproc]->Integral() "<<v2_TH1EFT_var_proc[ivar][iproc]->Integral()<<endl;
             } //Loop on vars
@@ -614,7 +665,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
         f->Close();
 
         delete v_reweights_floats; delete v_reweights_ids;
-    } //Loop on processes
+    } //Loop o processes
 
     if(normalize) //Normalize to 1
     {
@@ -657,7 +708,6 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
     }
 
 
-
 // #    # #####  # ##### ######    #    # #  ####  #####  ####   ####
 // #    # #    # #   #   #         #    # # #        #   #    # #
 // #    # #    # #   #   #####     ###### #  ####    #   #    #  ####
@@ -666,10 +716,10 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
 // #    # #    # #   #   ######    #    # #  ####    #    ####   ####
 
 //--- Write histograms to an output rootfile, so that they could later be superimposed on top of data/mc comparison plots (to compare shapes, ...)
-    bool write_histos_toRootfile = true;
+    bool write_histos_toRootfile = false;
     if(write_histos_toRootfile)
     {
-        TFile* f_out = new TFile("GENhisto.root", "RECREATE");
+        TFile* f_out = new TFile("GenPlotter_histos.root", "RECREATE");
 
         for(int ivar=0; ivar<v_var.size(); ivar++)
         {
@@ -739,7 +789,8 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
                 //Rescale TH1EFT accordingly to current reweight
                 WCPoint wcp = WCPoint((string) v_reweightNames_extrapol[iweight], 1.);
                 v2_TH1EFT_var_proc[ivar][iproc]->Scale(wcp);
-                v2_TH1EFT_var_proc[ivar][iproc]->Scale(1. / v2_TH1EFT_var_proc[ivar][iproc]->Integral()); //Normalize
+
+                if(normalize) {v2_TH1EFT_var_proc[ivar][iproc]->Scale(1. / v2_TH1EFT_var_proc[ivar][iproc]->Integral());} //Normalize
 
                 //Store contents of rescaled TH1EFT into a TH1F for drawing
                 v2_TH1FfromTH1EFT_proc_reweight[iproc][iweight] = (TH1F*) v2_TH1EFT_var_proc[ivar][iproc]->Clone();
@@ -874,6 +925,8 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
 
                 if(!iweight) //only needed for first histo
                 {
+                    v3_histos_var_proc_reweight[ivar][iproc][iweight]->SetTitle(""); //No main title
+
                     // v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetYaxis()->SetTitle("Events");
                     v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetYaxis()->SetTitle("a.u.");
                     // v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetYaxis()->SetTitle("#frac{d#sigma}{dX} (a.u.)");
@@ -890,6 +943,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
                     v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetYaxis()->SetNdivisions(506);
                     v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetYaxis()->SetTitleOffset(1.2);
                     v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetXaxis()->SetLabelSize(0.0); //subplot axis instead
+
 
                     if(setlog) {v3_histos_var_proc_reweight[ivar][iproc][iweight]->SetMaximum(ymax * 5.);}
                     else {v3_histos_var_proc_reweight[ivar][iproc][iweight]->SetMaximum(ymax * 1.2);}
@@ -1110,6 +1164,274 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
 
 
 
+//--------------------------------------------
+// ##     ##  ######  ########  ######     ##     ##  ######     ######## ######## ########
+//  ##   ##  ##    ## ##       ##    ##    ##     ## ##    ##    ##       ##          ##
+//   ## ##   ##       ##       ##          ##     ## ##          ##       ##          ##
+//    ###     ######  ######   ##          ##     ##  ######     ######   ######      ##
+//   ## ##         ## ##       ##           ##   ##        ##    ##       ##          ##
+//  ##   ##  ##    ## ##       ##    ##      ## ##   ##    ##    ##       ##          ##
+// ##     ##  ######  ########  ######        ###     ######     ######## ##          ##
+//--------------------------------------------
+
+/**
+ * Plot the process cross section as a function of the WCs of 2 operators (2D and 3D plots)
+ * First, loop on all entries and fill a TH1EFT object with all the events fits
+ * Then, rescale the TH1EFT at all points of a 2D scan (2 operators), store the sums of weights (= xsecs if properly normalized), and plot values
+ */
+void Plot_CrossSection_VS_WilsonCoeff(TString process, TString operator1, TString operator2)
+{
+    bool debug = false;
+    bool relative_to_SM = true; //true <-> compare all points to SM value
+
+ //  ####  ###### ##### #    # #####
+ // #      #        #   #    # #    #
+ //  ####  #####    #   #    # #    #
+ //      # #        #   #    # #####
+ // #    # #        #   #    # #
+ //  ####  ######   #    ####  #
+
+    cout<<endl<<BOLD(UNDL(FYEL("=== Plot XSEC .vs. WCs ===")))<<endl<<endl;
+
+    if(operator1 == "" || operator2 == "") {cout<<FRED("Error ! Wrong operator name ! Abort ! ")<<endl; return;}
+
+    TString dir = "./";
+    TString filepath = dir + "output_" + process + ".root";
+
+    TFile* f = TFile::Open(filepath);
+    if(f == 0) {cout<<endl<<BOLD(FRED("--- File not found ! Exit !"))<<endl<<endl; return;}
+
+    // TString treename = "tree";
+    TString treename = "GenAnalyzer/tree"; //new name
+    TTree* t = (TTree*) f->Get(treename);
+    if(t == 0) {cout<<endl<<BOLD(FRED("--- Tree not found ! Exit !"))<<endl<<endl; return;}
+
+    cout<<FBLU("Process : "<<process<<" // Reading file : ")<<filepath<<endl<<endl;
+
+    //Read and store sums of weights (SWE)
+    // TString hSWEname = "h_SWE";
+    TString hSWEname = "GenAnalyzer/h_SWE"; //new name
+    TH1F* h_SWE = (TH1F*) f->Get(hSWEname);
+    vector<float> v_SWE;
+    for(int ibin=0; ibin<h_SWE->GetNbinsX(); ibin++)
+    {
+        v_SWE.push_back(h_SWE->GetBinContent(ibin+1)); //1 SWE stored for each stored weight
+        // cout<<"v_SWE[ibin] = "<<v_SWE[ibin]<<endl;
+    }
+
+    //Read branches
+    vector<float>* v_reweights_floats = new vector<float>();
+    vector<string>* v_reweights_ids = new vector<string>();
+    t->SetBranchAddress("v_weightIds", &v_reweights_ids);
+    t->SetBranchAddress("v_weights", &v_reweights_floats);
+
+    float originalXWGTUP;
+    t->SetBranchAddress("originalXWGTUP", &originalXWGTUP);
+
+    TH1EFT* h = new TH1EFT("", "", 1, 0, 1); //TH1EFT storing the weights and fits for all events
+
+    int nentries = 1000;
+    // int nentries = t->GetEntries();
+    cout<<FMAG("Processing "<<nentries<<" entries...")<<endl;
+    for(int ientry=0; ientry<nentries; ientry++)
+    {
+        t->GetEntry(ientry);
+
+        Fill_TH1EFT(h, 0.5, v_reweights_ids, v_reweights_floats, originalXWGTUP, v_SWE, 0, false);
+    }
+
+    // ###### #    # ##### #####    ##   #####   ####  #
+    // #       #  #    #   #    #  #  #  #    # #    # #
+    // #####    ##     #   #    # #    # #    # #    # #
+    // #        ##     #   #####  ###### #####  #    # #
+    // #       #  #    #   #   #  #    # #      #    # #
+    // ###### #    #   #   #    # #    # #       ####  ######
+
+    cout<<FMAG("Creating 2D plot...")<<endl;
+
+    //1D vectors of WC values to cover for each operator
+    vector<float> v_grid_op1;
+    vector<float> v_grid_op2;
+    // int min_op1 = -100., max_op1=100; //min max operator1
+    // int min_op2 = -100., max_op2=100; //min max operator2
+    // float step = 5; //Steps between WC values
+    int min_op1 = -25., max_op1=25; //min max operator1
+    int min_op2 = -25., max_op2=25; //min max operator2
+    float step = 1; //Steps between WC values
+
+    //Final TH2F to plot -- store sums of weights at each point of the 2D scan
+    // TH2F* h2 = new TH2F("test1", "test2", (max_op1-min_op1)/step, min_op1, max_op1, (max_op2-min_op2)/step, min_op2, max_op2);
+
+    //To parameterize the xsec as a function of 2 operators, 6 independent coefficients are required
+    //Extract these parameters, and use them to parameterize smoothly the xsec as a function of the 2 operators -> plot
+    WCFit fit = h->GetSumFit(); //Get summed fit (over all bins)
+    Double_t c0, c1, c2, c3, c4, c5; //Get all necessary fit coeffs
+    c0 = fit.getCoefficient("rwgt_SM", "rwgt_SM");
+    c1 = fit.getCoefficient("rwgt_SM", (string) operator1);
+    c2 = fit.getCoefficient("rwgt_SM", (string) operator2);
+    c3 = fit.getCoefficient((string) operator1, (string) operator2);
+    c4 = fit.getCoefficient((string) operator1, (string) operator1);
+    c5 = fit.getCoefficient((string) operator2, (string) operator2);
+
+    //Create a TF2 object using the proper xsec parameterization
+    TF2 *tf2 = new TF2("f2", EFT_Fit_Parameterization, min_op1, max_op1, min_op2, max_op2, 6);
+    tf2->SetParameters(c0,c1,c2,c3,c4,c5);
+
+/*
+    //Get SM integral, for rescaling
+    TString rwgt_name_SM = "rwgt_"+operator1+"_0_"+operator2+"_0";
+    WCPoint wcp_SM = WCPoint((string) rwgt_name_SM, 1.);
+    h->Scale(wcp_SM);
+    float SM_integral = h->Integral();
+
+    for(float x1=min_op1; x1<=max_op1; x1+=step)
+    {
+        for(float x2=min_op2; x2<=max_op2; x2+=step)
+        {
+            //Get reweight ID corresponding to current scanning point
+            TString rwgt_name_tmp = "rwgt_"+operator1+"_"+std::to_string(x1)+"_"+operator2+"_"+std::to_string(x2);
+            if(debug) cout<<"rwgt_name_tmp "<<rwgt_name_tmp<<endl;
+
+            //Rescale TH1EFT accordingly to current reweight
+            //NB : no need to rescale each bin separately ! Only care about total integral, so can rescale global fit manually instead...
+            WCPoint wcp = WCPoint((string) rwgt_name_tmp, 1.);
+            // h->Scale(wcp);
+            // float value = h->Integral();
+            WCFit fit = h->GetSumFit();
+            float value = fit.evalPoint(&wcp);
+
+            Int_t binx = h2->GetXaxis()->FindBin(x1);
+            Int_t biny = h2->GetYaxis()->FindBin(x2);
+            Int_t bin = h2->GetBin(binx, biny, 0);
+
+            if(relative_to_SM) {value/= SM_integral;}
+
+            if(debug) cout<<"value "<<value<<endl;
+
+            h2->SetBinContent(bin, value);
+        }
+    }
+*/
+
+    TCanvas* c = new TCanvas("c","c", 1000, 800);
+    c->SetTopMargin(0.13);
+    c->SetRightMargin(0.11);
+    c->SetGridx(1);
+    c->SetGridy(1);
+
+ //  ####   ####   ####  #    # ###### ##### #  ####   ####
+ // #    # #    # #      ##  ## #        #   # #    # #
+ // #      #    #  ####  # ## # #####    #   # #       ####
+ // #      #    #      # #    # #        #   # #           #
+ // #    # #    # #    # #    # #        #   # #    # #    #
+ //  ####   ####   ####  #    # ######   #   #  ####   ####
+
+    //Color palettes : https://root.cern.ch/doc/master/classTColor.html
+    // gStyle->SetPalette(kDeepSea);
+
+    TString plot_title = "#sigma_{EFT}/#sigma_{SM} vs "+Get_Operator_Name(operator1)+" , "+Get_Operator_Name(operator2);
+    // TString plot_title = "#frac{#sigma_{EFT}}{#sigma_{SM}} vs { "+Get_Operator_Name(operator1)+" , "+Get_Operator_Name(operator2)+" }";
+    // h2->SetTitle(plot_title);
+    // h2->GetXaxis()->SetTitle(Get_Operator_Name(operator1));
+    // h2->GetYaxis()->SetTitle(Get_Operator_Name(operator2));
+    // h2->GetZaxis()->SetTitle("a.u.");
+    // h2->GetZaxis()->SetLabelSize(0.03);
+
+    //Increase resolution //Default is 20 for 2d func //Use at least 100 //Slows down significantly
+    tf2->SetNpx(100);
+    tf2->SetNpy(100);
+
+    tf2->GetHistogram()->SetTitle(plot_title);
+    tf2->GetHistogram()->GetXaxis()->SetTitle(Get_Operator_Name(operator1));
+    tf2->GetHistogram()->GetYaxis()->SetTitle(Get_Operator_Name(operator2));
+    tf2->GetHistogram()->GetZaxis()->SetLabelSize(0.03);
+    // tf2->GetHistogram()->GetZaxis()->SetTitle("a.u.");
+
+    //Draw marker on SM point //See : https://root.cern.ch/doc/master/classTAttMarker.html
+    TGraph *SM_marker = new TGraph();
+    SM_marker->SetPoint(0, 0, 0);
+    SM_marker->SetMarkerStyle(5);
+    SM_marker->SetMarkerSize(2.);
+    SM_marker->SetMarkerColor(kBlack);
+
+    TString text = "pp #rightarrow " + GetProcessLegendName(process);
+    TLatex latex;
+    latex.SetNDC();
+    latex.SetTextAlign(11);
+    latex.SetTextFont(52);
+    latex.SetTextSize(0.04);
+    latex.DrawLatex(0.17, 0.95, text);
+
+ // #####  #       ####  #####
+ // #    # #      #    #   #
+ // #    # #      #    #   #
+ // #####  #      #    #   #
+ // #      #      #    #   #
+ // #      ######  ####    #
+
+    //2D plot
+    tf2->Draw("colz");
+    SM_marker->Draw("P same");
+    TString outname = "xsec_vs_"+operator1+"_"+operator2+"_2D.png";
+    c->SaveAs(outname);
+
+    //3D plot
+    c->SetRightMargin(0.05);
+    // c->SetLeftMargin(0.05);
+    tf2->GetHistogram()->GetXaxis()->SetTitleOffset(1.5);
+    tf2->GetHistogram()->GetYaxis()->SetTitleOffset(1.5);
+    tf2->GetHistogram()->GetXaxis()->SetNdivisions(505);
+    tf2->GetHistogram()->GetYaxis()->SetNdivisions(505);
+    tf2->Draw("SURF2");
+    outname = "xsec_vs_"+operator1+"_"+operator2+"_3D.png";
+    c->SaveAs(outname);
+
+    delete h;
+    // delete h2;
+    delete tf2;
+    delete c;
+    delete SM_marker;
+
+    delete v_reweights_floats;
+    delete v_reweights_ids;
+
+    return;
+}
+
+/**
+ * Call function Plot_CrossSection_VS_WilsonCoeff() for each pair of operators
+*/
+void Plot_CrossSection_VS_WilsonCoeff_AllPairsOperators(TString process)
+{
+    vector<TString> v_operators;
+    v_operators.push_back("ctz");
+    v_operators.push_back("ctw");
+    v_operators.push_back("cpqm");
+    v_operators.push_back("cpq3");
+    v_operators.push_back("cpt");
+
+    cout<<endl<<BOLD(UNDL(FYEL("=== Plot XSEC .vs. WCs for all pairs of operators ===")))<<endl<<endl;
+
+    for(int i1=0; i1<v_operators.size(); i1++)
+    {
+        for(int i2=0; i2<v_operators.size(); i2++)
+        {
+            if(i1==i2) {continue;}
+
+            cout<<endl<<FMAG("=== Pair : "<<v_operators[i1]<<", "<<v_operators[i2]<<"")<<endl<<endl;
+
+            Plot_CrossSection_VS_WilsonCoeff(process, v_operators[i1], v_operators[i2]);
+        }
+    }
+
+    return;
+}
+
+
+
+
+
+
 
 
 
@@ -1137,7 +1459,7 @@ int main()
     //-- List of variables to plot, and their ranges
     //NB : "Top_x" and "Antitop_x" contain only events which have a top or antitop respectively. 'LeadingTop_x' considers leading top/antitop
     vector<TString> v_var; vector<pair<float, float>> v_min_max;
-    // v_var.push_back("Z_pt"); v_min_max.push_back(std::make_pair(0, 400));
+    v_var.push_back("Z_pt"); v_min_max.push_back(std::make_pair(0, 400));
     // v_var.push_back("Z_eta"); v_min_max.push_back(std::make_pair(-5, 5));
     // v_var.push_back("Z_m"); v_min_max.push_back(std::make_pair(70, 110));
     // v_var.push_back("Zreco_m"); v_min_max.push_back(std::make_pair(50, 110));
@@ -1146,8 +1468,8 @@ int main()
     // v_var.push_back("LeadingTop_eta"); v_min_max.push_back(std::make_pair(-5, 5));
     // v_var.push_back("TopZsystem_m"); v_min_max.push_back(std::make_pair(250, 1000));
 
-    v_var.push_back("cosThetaStarPol_Z"); v_min_max.push_back(std::make_pair(-1, 1));
-    v_var.push_back("cosThetaStarPol_Top"); v_min_max.push_back(std::make_pair(-1, 1));
+    // v_var.push_back("cosThetaStarPol_Z"); v_min_max.push_back(std::make_pair(-1, 1));
+    // v_var.push_back("cosThetaStarPol_Top"); v_min_max.push_back(std::make_pair(-1, 1));
     // v_var.push_back("Top_pt"); v_min_max.push_back(std::make_pair(0, 500));
     // v_var.push_back("Top_eta"); v_min_max.push_back(std::make_pair(-5, 5));
     // v_var.push_back("Top_m"); v_min_max.push_back(std::make_pair(100, 300));
@@ -1170,14 +1492,18 @@ int main()
     // v_reweightNames_extrapol.push_back("rwgt_ctz_2.0_ctw_2.0_cpqm_2.0_cpq3_2.0_cpt_2.0");
 
     v_reweightNames_extrapol.push_back("rwgt_ctz_5_ctw_0_cpqm_0_cpq3_0_cpt_0");
-    v_reweightNames_extrapol.push_back("rwgt_ctz_0_ctw_5_cpqm_0_cpq3_0_cpt_0");
-    v_reweightNames_extrapol.push_back("rwgt_ctz_0_ctw_0_cpqm_5_cpq3_0_cpt_0");
-    v_reweightNames_extrapol.push_back("rwgt_ctz_0_ctw_0_cpqm_0_cpq3_5_cpt_0");
-    v_reweightNames_extrapol.push_back("rwgt_ctz_0_ctw_0_cpqm_0_cpq3_0_cpt_5");
+    // v_reweightNames_extrapol.push_back("rwgt_ctz_0_ctw_5_cpqm_0_cpq3_0_cpt_0");
+    // v_reweightNames_extrapol.push_back("rwgt_ctz_0_ctw_0_cpqm_5_cpq3_0_cpt_0");
+    // v_reweightNames_extrapol.push_back("rwgt_ctz_0_ctw_0_cpqm_0_cpq3_5_cpt_0");
+    // v_reweightNames_extrapol.push_back("rwgt_ctz_0_ctw_0_cpqm_0_cpq3_0_cpt_5");
 
     Load_Canvas_Style();
 
-    Compare_Distributions(v_process, v_var, v_reweightNames_fromMG, v_reweightNames_extrapol, v_min_max);
+    // Compare_Distributions(v_process, v_var, v_reweightNames_fromMG, v_reweightNames_extrapol, v_min_max);
+
+    Plot_CrossSection_VS_WilsonCoeff("tllq", "ctw", "ctz");
+
+    // Plot_CrossSection_VS_WilsonCoeff_AllPairsOperators("tllq");
 
     return 0;
 }

@@ -203,8 +203,8 @@ void Compute_Write_Yields(vector<TString> v_samples, vector<TString> v_label, TS
 
             t->SetBranchStatus("*", 0); //disable all branches, speed up
 
-    		Double_t weight = 1., weight_avg = 0.;
-            Float_t eventMCFactor;
+    		Double_t weight = 1., weight_avg = 0.; //Event weight (gen-level weight, smeared by systematics)
+            Float_t eventMCFactor; //Sample-dependent factor computed at Potato-level (lumi*xsec/SWE)
 
             t->SetBranchStatus("eventWeight", 1);
     		t->SetBranchAddress("eventWeight", &weight);
@@ -353,21 +353,15 @@ int main(int argc, char **argv)
     TString lumi = "all"; //2016,2017,2018,(Run2,all)
     TString channel = ""; //'',uuu,uue,eeu,eee
 
-	if(argc > 1)
+    if(argc > 1)
 	{
-        if(!strcmp(argv[1],"SR") ) {region = argv[1];}
+        if(!strcmp(argv[1],"2016") || !strcmp(argv[1],"2017") || !strcmp(argv[1],"2018") || !strcmp(argv[1],"Run2")) {lumi = argv[1];}
 		else {cout<<"Wrong first arg !"<<endl; return 0;}
 
         if(argc > 2)
     	{
-            if(!strcmp(argv[2],"2016") || !strcmp(argv[2],"2017") || !strcmp(argv[2],"2018") || !strcmp(argv[2],"Run2")) {lumi = argv[2];}
+            if(!strcmp(argv[2],"") || !strcmp(argv[2],"uuu") || !strcmp(argv[2],"uue") || !strcmp(argv[2],"eeu") || !strcmp(argv[2],"eee")) {channel = argv[2];}
     		else {cout<<"Wrong second arg !"<<endl; return 0;}
-
-            if(argc > 3)
-        	{
-                if(!strcmp(argv[3],"") || !strcmp(argv[3],"uuu") || !strcmp(argv[3],"uue") || !strcmp(argv[3],"eeu") || !strcmp(argv[3],"eee")) {channel = argv[3];}
-        		else {cout<<"Wrong second arg !"<<endl; return 0;}
-        	}
     	}
 	}
 
@@ -381,7 +375,7 @@ int main(int argc, char **argv)
     v_samples.push_back("tZq"); v_label.push_back("tZq");
     v_samples.push_back("ttZ"); v_label.push_back("ttZ");
 
-    // v_samples.push_back("PrivMC_tZq"); v_label.push_back("PrivMC_tZq");
+    v_samples.push_back("PrivMC_tZq"); v_label.push_back("PrivMC_tZq");
     // v_samples.push_back("PrivMC_ttZ"); v_label.push_back("PrivMC_ttZ");
 
     v_samples.push_back("ttH"); v_label.push_back("ttX");

@@ -108,7 +108,7 @@ int main(int argc, char **argv)
     thesamplelist.push_back("DATA"); thesamplegroups.push_back("DATA");
 
     //Private MC production including EFT weights
-    // thesamplelist.push_back("PrivMC_tZq"); thesamplegroups.push_back("tZq_EFT");
+    thesamplelist.push_back("PrivMC_tZq"); thesamplegroups.push_back("tZq_EFT");
     // thesamplelist.push_back("PrivMC_ttZ"); thesamplegroups.push_back("ttZ_EFT");
 
     //Signal(s)
