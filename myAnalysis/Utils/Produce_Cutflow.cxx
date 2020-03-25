@@ -60,14 +60,14 @@ void Compute_Write_Yields(vector<TString> v_samples, vector<TString> v_label, TS
 	cout<<"(region : "<<region<<" / lumi : "<<lumi<<" / channel : "<<channel<<")"<<endl;
     cout<<endl<<YELBKG("                          ")<<endl<<endl;
 
-    mkdir("../outputs/", 0777);
-    mkdir("../outputs/cutflow", 0777);
-    // mkdir("../outputs/cutflow/latex", 0777);
+    mkdir("./outputs/", 0777);
+    mkdir("./outputs/cutflow", 0777);
+    // mkdir("./outputs/cutflow/latex", 0777);
 
-    TString outname = "../outputs/cutflow/Yields_"+region+"_"+lumi;
+    TString outname = "./outputs/cutflow/Yields_"+region+"_"+lumi;
     if(channel != "") {outname+= "_" + channel;}
     outname+= ".txt";
-    // TString outname_latex = "../outputs/cutflow/latex/Yields_"+region+"_"+lumi;
+    // TString outname_latex = "./outputs/cutflow/latex/Yields_"+region+"_"+lumi;
     // if(channel != "") {outname_latex+= "_" + channel;}
     // outname_latex+= ".txt";
 

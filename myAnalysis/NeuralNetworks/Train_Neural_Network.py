@@ -49,7 +49,7 @@ cuts = "passedBJets==1" #Event selection, both for train/test ; "1" <-> no cut
 
 #--- Training options
 # //--------------------------------------------
-_nepochs = 50 #Number of training epochs (<-> nof times the full training dataset is shown to the NN)
+_nepochs = 5 #Number of training epochs (<-> nof times the full training dataset is shown to the NN)
 _batchSize = 512 #Batch size (<-> nof events fed to the network before its parameter get updated)
 # _nof_output_nodes = 3 #1 (binary) or N (multiclass)
 
@@ -267,7 +267,7 @@ def Train_Test_Eval_PureKeras(_lumi_years, _processClasses_list, _labels_list, v
  #      #   #  #      #       #     #         #    # #   #  #    # #      #    #
  #      #    # ###### ###### ###### ######     ####  #    # #    # #      #    #
 
-# --- convert model to estimator and save model as frozen graph for c++
+# --- Convert model to estimator and save model as frozen graph for c++
 
     with tensorflow.compat.v1.Session() as sess: #Must first open a new session #Can't manage to run code below without this... (why?)
 
@@ -424,21 +424,21 @@ def Apply_Model_toTrainTestData(nof_output_nodes, processClasses_list, labels_li
 
     # -- Printout of some predictions
     # np.set_printoptions(threshold=5) #If activated, will print full numpy arrays
-    # print("-------------- FEW EXAMPLES... --------------")
-    # for i in range(10):
-    #     if nof_output_nodes == 1:
-    #         if y_test[i]==1:
-    #             true_label = "signal"
-    #         else:
-    #             true_label = "background"
-    #         print("===> Prediction for %s event : %s" % (true_label, (list_predictions_test_allClasses[0])[i]))
-    #
-    #     else:
-    #         for j in range(len(processClasses_list)):
-    #             if y_test[i][j]==1:
-    #                 true_label = labels_list[j]
-    #     print("===> Outputs nodes predictions for %s event : %s" % (true_label, (list_predictions_test_allClasses[j])[i]) )
-    # print("--------------\n")
+    print("-------------- FEW EXAMPLES... --------------")
+    for i in range(10):
+        if nof_output_nodes == 1:
+            if y_test[i]==1:
+                true_label = "signal"
+            else:
+                true_label = "background"
+            print("===> Prediction for %s event : %s" % (true_label, (list_predictions_test_allClasses[0])[i]))
+
+        else:
+            for j in range(len(processClasses_list)):
+                if y_test[i][j]==1:
+                    true_label = labels_list[j]
+        print("===> Outputs nodes predictions for %s event : %s" % (true_label, (list_predictions_test_allClasses[j])[i]) )
+    print("--------------\n")
 
     #-- Print predictions for first few events of first process => can compare with predictions obtained for same DNN/events using another code
     # for j in range(x_control_firstNEvents.shape[0]):

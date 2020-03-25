@@ -3,6 +3,7 @@
 
 import time   # time accounting
 import ROOT
+import numpy as np
 from ROOT import TMVA, TFile, TTree, TCut, gROOT, TH1, TH1F
 import tensorflow
 import keras
@@ -98,6 +99,13 @@ def normalize(val, m, dev):
     return (val-m)/dev
 # //--------------------------------------------
 # //--------------------------------------------
+
+def normalize2(x_train, x_test):
+    mu = np.mean(x_train, axis=0)
+    std = np.std(x_train, axis=0)
+    x_train_normalized = (x_train - mu) / std
+    x_test_normalized = (x_test - mu) / std
+    return x_train_normalized, x_test_normalized
 
 # //--------------------------------------------
 # //--------------------------------------------

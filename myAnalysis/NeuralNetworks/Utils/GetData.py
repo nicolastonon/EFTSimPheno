@@ -65,6 +65,7 @@ def Get_Data_For_DNN_Training(weight_dir, lumi_years, ntuples_dir, processClasse
     x, y, list_weights_allClasses = Shape_Data(list_x_allClasses, list_weights_allClasses, maxEvents_perClass, nof_output_nodes)
 
     #Transform the input features
+    #FIXME -- should transform inputs *after* split_train_test (the means and variances should be derived from training set only !)
     x, means, stddev = Transform_Inputs(weight_dir, x, var_list, lumiName)
 
     #Before we randomize the events, store the input values of the very first events (which belong to first process) --> Can use these known events for later validation/comparison

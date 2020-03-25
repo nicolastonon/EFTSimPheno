@@ -13,7 +13,7 @@ myProcess = "tllq" #e.g. tzq
 suffix = "dim6_FASTSIM1_v3" #e.g. dim6v1
 crabProdDate = "200316_201924" #e.g. "191217_220027"
 # crabProdDate = "200320_153657" #e.g. "191217_220027"
-nofFiles = 50 #Number of files to read (reads xxx_1.root to xxx_N.root ; will ignore missing files)
+nofFiles = 1 #Number of files to read (reads xxx_1.root to xxx_N.root ; will ignore missing files)
 
 # datatier = "GEN"
 datatier = "AODSIM"
@@ -57,7 +57,15 @@ process.source = cms.Source("PoolSource",
     fileNames = cms.untracked.vstring(fileNamesList)
 )
 process.source.skipBadFiles = cms.untracked.bool(True) #Ignore missing files
+
 # process.dump = cms.EDAnalyzer("EventContentAnalyzer")
+
+# process.output = cms.OutputModule("PoolOutputModule",
+#     fileName = cms.untracked.string('file:test.root')
+# )
+
+process.TFileService = cms.Service("TFileService", fileName=cms.string("output_"+myProcess+".root")) #Declare TFService
+
 # //--------------------------------------------
 # //--------------------------------------------
 

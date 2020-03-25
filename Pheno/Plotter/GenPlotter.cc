@@ -278,6 +278,26 @@ TString Get_Variable_Name(TString var)
     return var;
 }
 
+/**
+ * Returns a color depending on index given in arg
+ */
+int Get_Color(int index)
+{
+	vector<int> v_colors;
+
+    //Try to get many colors as different as possible
+    v_colors.push_back(kBlack); //SM is black
+	v_colors.push_back(kRed);
+	v_colors.push_back(kBlue);
+	v_colors.push_back(kGreen+1);
+	v_colors.push_back(kViolet-1);
+    v_colors.push_back(kOrange-1);
+    v_colors.push_back(kPink+5);
+    v_colors.push_back(kCyan-3);
+
+	if(index < v_colors.size() ) {return v_colors[index];}
+	else {return index;}
+}
 
 
 //--------------------------------------------
@@ -449,6 +469,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
         if(f == 0) {cout<<endl<<BOLD(FRED("--- File not found ! Exit !"))<<endl<<endl; return;}
 
         TString treename = "tree";
+        // TString treename = "GenAnalyzer/tree"; //new name
         TTree* t = (TTree*) f->Get(treename);
         if(t == 0) {cout<<endl<<BOLD(FRED("--- Tree not found ! Exit !"))<<endl<<endl; return;}
 
@@ -487,7 +508,9 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
         }
 
         //Read and store sums of weights (SWE)
-        TH1F* h_SWE = (TH1F*) f->Get("h_SWE");
+        TString hSWEname = "h_SWE";
+        // TString hSWEname = "GenAnalyzer/h_SWE"; //new name
+        TH1F* h_SWE = (TH1F*) f->Get(hSWEname);
         vector<float> v_SWE;
         for(int ibin=0; ibin<h_SWE->GetNbinsX(); ibin++)
         {
@@ -502,7 +525,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
      // #       #  #  #      #   ##   #   #    #    #      #    # #    # #
      // ######   ##   ###### #    #   #    ####     ######  ####   ####  #
 
-        // int nentries = 1000;
+     // int nentries = 1000;
         int nentries = t->GetEntries();
         cout<<FMAG("Processing "<<nentries<<" entries...")<<endl;
         for(int ientry=0; ientry<nentries; ientry++)
@@ -524,7 +547,10 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
                 if(v_var[ivar].Contains("Z_") && index_Z == -1) {continue;} //if Z not found
 
                 if(v_var[ivar].Contains("antitop", TString::kIgnoreCase) && index_antitop == -1) {continue;} //if antitop not found
-                else if(v_var[ivar].Contains("top", TString::kIgnoreCase) && index_top == -1) {continue;} //if top not found
+                if(v_var[ivar].Contains("top", TString::kIgnoreCase) && index_top == -1) {continue;} //if top not found
+
+                //FIXME -- tmp check
+                if(v_var[ivar].Contains("Zreco_") && v_var_floats[ivar] <= 0) {continue;} //No Z->ll reco
 
                 //Count nentries for debugging
                 v3_nentries_var_proc_bin[ivar][iproc][v3_histos_var_proc_reweight[ivar][iproc][0]->GetXaxis()->FindBin(v_var_floats[ivar])]++; //add +1 entry to relevant bin
@@ -667,25 +693,69 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
     }
 
 
- // #####  #       ####  #####
- // #    # #      #    #   #
- // #    # #      #    #   #
- // #####  #      #    #   #
- // #      #      #    #   #
- // #      ######  ####    #
+// ########  ##        #######  ########
+// ##     ## ##       ##     ##    ##
+// ##     ## ##       ##     ##    ##
+// ########  ##       ##     ##    ##
+// ##        ##       ##     ##    ##
+// ##        ##       ##     ##    ##
+// ##        ########  #######     ##
 
     bool setlog = false;
 
     for(int ivar=0; ivar<v_var.size(); ivar++)
     {
-        //--------------------------------------------
-        // Compute max Y value (to adapt Y range) and min/max 'BSM/SM' scale factor (to adapt ratio plot range)
-        //NB : should also loop on v_reweightNames_extrapol to check if it contains larger values...
+        //For each extrapolated reweight, will scale the TH1EFT accordingly and store its content into a TH1F which will be drawn on the canvas
+        vector<vector<TH1F*>> v2_TH1FfromTH1EFT_proc_reweight(v_process.size());
+        vector<vector<TH1F*>> v2_TH1FfromTH1EFT_proc_reweight_subplot(v_process.size());
+
         float ymax = -1;
         float SFmax = -1;
         float SFmin = 1.;
+
+        // Compute max Y value (to adapt Y range) and min/max 'BSM/SM' scale factor (to adapt ratio plot range)
         for(int iproc=0; iproc<v_process.size(); iproc++)
         {
+
+ // #####  ###### #    # ###### #  ####  #    # #####
+ // #    # #      #    # #      # #    # #    #   #
+ // #    # #####  #    # #####  # #      ######   #
+ // #####  #      # ## # #      # #  ### #    #   #
+ // #   #  #      ##  ## #      # #    # #    #   #
+ // #    # ###### #    # ###### #  ####  #    #   #
+ //
+ // ###### #    # ##### #####    ##   #####   ####  #
+ // #       #  #    #   #    #  #  #  #    # #    # #
+ // #####    ##     #   #    # #    # #    # #    # #
+ // #        ##     #   #####  ###### #####  #    # #
+ // #       #  #    #   #   #  #    # #      #    # #
+ // ###### #    #   #   #    # #    # #       ####  ######
+
+            //Create reweighted (extrapolation) histograms
+            v2_TH1FfromTH1EFT_proc_reweight[iproc].resize(v_reweightNames_extrapol.size());
+            v2_TH1FfromTH1EFT_proc_reweight_subplot[iproc].resize(v_reweightNames_extrapol.size());
+            for(int iweight=0; iweight<v_reweightNames_extrapol.size(); iweight++)
+            {
+                //Rescale TH1EFT accordingly to current reweight
+                WCPoint wcp = WCPoint((string) v_reweightNames_extrapol[iweight], 1.);
+                v2_TH1EFT_var_proc[ivar][iproc]->Scale(wcp);
+                v2_TH1EFT_var_proc[ivar][iproc]->Scale(1. / v2_TH1EFT_var_proc[ivar][iproc]->Integral()); //Normalize
+
+                //Store contents of rescaled TH1EFT into a TH1F for drawing
+                v2_TH1FfromTH1EFT_proc_reweight[iproc][iweight] = (TH1F*) v2_TH1EFT_var_proc[ivar][iproc]->Clone();
+            }
+
+ // ###### # #    # #####     #   #    #    #   ##   #    #
+ // #      # ##   # #    #     # #     ##  ##  #  #   #  #
+ // #####  # # #  # #    #      #      # ## # #    #   ##
+ // #      # #  # # #    #      #      #    # ######   ##
+ // #      # #   ## #    #      #      #    # #    #  #  #
+ // #      # #    # #####       #      #    # #    # #    #
+
+            //Find ymax among *all* histograms for proper plot rescaling
+            //--------------------------------------------
+
+            //Loop on MG reweights
             for(int iweight=0; iweight<v_reweightNames_fromMG.size(); iweight++)
             {
                 if(v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetMaximum() > ymax)
@@ -696,7 +766,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
 
                 //Reference for ratio is either the SM histo, or the histo of the first process
                 TH1F* h_compare_tmp = v3_histos_var_proc_reweight[ivar][iproc][0];
-                if(v_reweightNames_fromMG.size() == 1 && v_process.size() > 1) {h_compare_tmp = v3_histos_var_proc_reweight[ivar][0][iweight];}
+                if(v_reweightNames_fromMG.size() + v_reweightNames_extrapol.size() == 1 && v_process.size() > 1) {h_compare_tmp = v3_histos_var_proc_reweight[ivar][0][iweight];}
 
                 for(int ibin=1; ibin<v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetNbinsX()+1; ibin++)
                 {
@@ -712,9 +782,45 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
                     }
                 }
             }
+
+            //Loop on extrapolation reweights
+            for(int iweight=0; iweight<v_reweightNames_extrapol.size(); iweight++)
+            {
+                if(v2_TH1FfromTH1EFT_proc_reweight[iproc][iweight]->GetMaximum() > ymax)
+                {
+                    ymax = v2_TH1FfromTH1EFT_proc_reweight[iproc][iweight]->GetMaximum();
+                    // cout<<"ymax = "<<ymax<<endl;
+                }
+
+                //Reference for ratio is either the SM histo, or the histo of the first process
+                TH1F* h_compare_tmp = v3_histos_var_proc_reweight[ivar][iproc][0];
+                if(v_reweightNames_fromMG.size() + v_reweightNames_extrapol.size() == 1 && v_process.size() > 1) {h_compare_tmp = v3_histos_var_proc_reweight[ivar][0][iweight];}
+
+                for(int ibin=1; ibin<v2_TH1FfromTH1EFT_proc_reweight[iproc][iweight]->GetNbinsX()+1; ibin++)
+                {
+                    if(v2_TH1FfromTH1EFT_proc_reweight[iproc][iweight]->GetBinContent(ibin)/h_compare_tmp->GetBinContent(ibin) > SFmax)
+                    {
+                        SFmax = v2_TH1FfromTH1EFT_proc_reweight[iproc][iweight]->GetBinContent(ibin)/h_compare_tmp->GetBinContent(ibin);
+                        // cout<<"SFmax = "<<SFmax<<endl;
+                    }
+                    if(v2_TH1FfromTH1EFT_proc_reweight[iproc][iweight]->GetBinContent(ibin)/h_compare_tmp->GetBinContent(ibin) < SFmin)
+                    {
+                        SFmin = v2_TH1FfromTH1EFT_proc_reweight[iproc][iweight]->GetBinContent(ibin)/h_compare_tmp->GetBinContent(ibin);
+                        // cout<<"SFmin = "<<SFmin<<endl;
+                    }
+                }
+            }
         }
         // double SFmax = RoundUp(ymax / h_compare_tmp->GetMaximum()) + 0.99; //in %
         //--------------------------------------------
+
+ //                                                    #
+ //  ####    ##   #    # #    #   ##    ####          #     #      ######  ####
+ // #    #  #  #  ##   # #    #  #  #  #             #      #      #      #    #
+ // #      #    # # #  # #    # #    #  ####        #       #      #####  #
+ // #      ###### #  # # #    # ######      #      #        #      #      #  ###
+ // #    # #    # #   ##  #  #  #    # #    #     #         #      #      #    #
+ //  ####  #    # #    #   ##   #    #  ####     #          ###### ######  ####
 
         //-- Canvas definition
         TCanvas* c1 = new TCanvas("c1","c1", 1000, 800);
@@ -746,9 +852,12 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
             legend_proc->SetTextSize(0.03);
         }
 
-        //For each extrapolated reweight, will scale the TH1EFT accordingly and store its content into a TH1F which will be drawn on the canvas
-        vector<vector<TH1F*>> v2_TH1FfromTH1EFT_proc_reweight(v_process.size());
-        vector<vector<TH1F*>> v2_TH1FfromTH1EFT_proc_reweight_subplot(v_process.size());
+ // #####  #####    ##   #    #
+ // #    # #    #  #  #  #    #
+ // #    # #    # #    # #    #
+ // #    # #####  ###### # ## #
+ // #    # #   #  #    # ##  ##
+ // #####  #    # #    # #    #
 
         //-- Style and draw histos
         c1->cd();
@@ -757,9 +866,11 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
             //Loop on pre-existing MG reweights
             for(int iweight=0; iweight<v_reweightNames_fromMG.size(); iweight++)
             {
-                v3_histos_var_proc_reweight[ivar][iproc][iweight]->SetLineColor(iweight+1);
-                if(iweight+1==5) {v3_histos_var_proc_reweight[ivar][iproc][iweight]->SetLineColor(8);} //don't like yellow
-                v3_histos_var_proc_reweight[ivar][iproc][iweight]->SetLineWidth(3);
+                // v3_histos_var_proc_reweight[ivar][iproc][iweight]->SetLineColor(iweight+1);
+                // if(iweight+1==5) {v3_histos_var_proc_reweight[ivar][iproc][iweight]->SetLineColor(8);} //don't like yellow
+                v3_histos_var_proc_reweight[ivar][iproc][iweight]->SetLineColor(Get_Color(iweight));
+
+                v3_histos_var_proc_reweight[ivar][iproc][iweight]->SetLineWidth(4);
 
                 if(!iweight) //only needed for first histo
                 {
@@ -811,14 +922,17 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
                 //Store contents of rescaled TH1EFT into a TH1F for drawing
                 v2_TH1FfromTH1EFT_proc_reweight[iproc][iweight] = (TH1F*) v2_TH1EFT_var_proc[ivar][iproc]->Clone();
 
-                v2_TH1FfromTH1EFT_proc_reweight[iproc][iweight]->SetLineColor(v_reweightNames_fromMG.size() + iweight + 1);
-                if(v_reweightNames_fromMG.size() + iweight + 1==5) {v2_TH1FfromTH1EFT_proc_reweight[iproc][iweight]->SetLineColor(8);} //don't like yellow
+                // v2_TH1FfromTH1EFT_proc_reweight[iproc][iweight]->SetLineColor(v_reweightNames_fromMG.size() + iweight + 1);
+                // if(v_reweightNames_fromMG.size() + iweight + 1==5) {v2_TH1FfromTH1EFT_proc_reweight[iproc][iweight]->SetLineColor(8);} //don't like yellow
+                v2_TH1FfromTH1EFT_proc_reweight[iproc][iweight]->SetLineColor(Get_Color(v_reweightNames_fromMG.size() + iweight));
 
                 if(!iproc) //Different style per process ; only fill legend once per reweight, not for each process
                 {
                     legend_weights->AddEntry(v2_TH1FfromTH1EFT_proc_reweight[iproc][iweight], GetReweightLegendName(v_reweightNames_extrapol[iweight]), "L");
                 }
                 else {v2_TH1FfromTH1EFT_proc_reweight[iproc][iweight]->SetLineStyle(iproc+1);}
+
+                v2_TH1FfromTH1EFT_proc_reweight[iproc][iweight]->SetLineWidth(2);
 
                 v2_TH1FfromTH1EFT_proc_reweight[iproc][iweight]->Draw("hist E same");
             } //weight loop
@@ -851,7 +965,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
             {
                 TString subplot_y_title = "";
                 //Compare ratio EFT/SM
-                if(v_reweightNames_fromMG.size() > 1)
+                if(v_reweightNames_fromMG.size()+v_reweightNames_extrapol.size() > 1)
                 {
                     subplot_y_title = "BSM/SM"; // [%]
                     if(v_reweightNames_fromMG[iweight] != "sm")
@@ -861,7 +975,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
                         v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->Divide(v3_histos_var_proc_reweight[ivar][iproc][0]); //Divide by nominal
                     }
                 }
-                else if(v_reweightNames_fromMG.size() == 1 && v_process.size() > 1) //Compare ratio of processes
+                else if(v_reweightNames_fromMG.size() + v_reweightNames_extrapol.size() == 1 && v_process.size() > 1) //Compare ratio of processes
                 {
                     subplot_y_title = "Process ratio"; // [%]
                     if(iproc > 0)
@@ -894,8 +1008,9 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
                 v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->SetMinimum(0.);
                 v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->SetMaximum(SFmax*1.2);
 
-                v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->SetLineColor(iweight+1);
-                v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->SetLineWidth(3);
+                // v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->SetLineColor(iweight+1);
+                v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->SetLineColor(Get_Color(iweight));
+                v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->SetLineWidth(4);
 
                 v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->Draw("hist E same");
             }
@@ -908,6 +1023,8 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
 
                 v2_TH1FfromTH1EFT_proc_reweight_subplot[iproc][iweight]->SetMinimum(0.);
                 v2_TH1FfromTH1EFT_proc_reweight_subplot[iproc][iweight]->SetMaximum(SFmax*1.2);
+
+                v2_TH1FfromTH1EFT_proc_reweight_subplot[iproc][iweight]->SetLineWidth(2);
 
                 v2_TH1FfromTH1EFT_proc_reweight_subplot[iproc][iweight]->Draw("hist E same");
             }
@@ -928,7 +1045,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
         //Write once the list of names of the operators which are considered
         TString example_rwgt_name = ""; //Need 1 example of rwgt name
         if(v_reweightNames_extrapol.size()>0) {example_rwgt_name = v_reweightNames_extrapol[v_reweightNames_extrapol.size()-1];}
-        else if(v_reweightNames_fromMG.size()>0) {example_rwgt_name = v_reweightNames_fromMG[v_reweightNames_fromMG.size()-1];}
+        else if(v_reweightNames_fromMG.size()>1) {example_rwgt_name = v_reweightNames_fromMG[v_reweightNames_fromMG.size()-1];}
         TString list_operators = Get_List_Operators(example_rwgt_name);
         if(example_rwgt_name != "")
         {
@@ -1020,40 +1137,43 @@ int main()
     //-- List of variables to plot, and their ranges
     //NB : "Top_x" and "Antitop_x" contain only events which have a top or antitop respectively. 'LeadingTop_x' considers leading top/antitop
     vector<TString> v_var; vector<pair<float, float>> v_min_max;
-    v_var.push_back("Z_pt"); v_min_max.push_back(std::make_pair(0, 400));
-    v_var.push_back("Z_eta"); v_min_max.push_back(std::make_pair(-5, 5));
+    // v_var.push_back("Z_pt"); v_min_max.push_back(std::make_pair(0, 400));
+    // v_var.push_back("Z_eta"); v_min_max.push_back(std::make_pair(-5, 5));
     // v_var.push_back("Z_m"); v_min_max.push_back(std::make_pair(70, 110));
     // v_var.push_back("Zreco_m"); v_min_max.push_back(std::make_pair(50, 110));
+    // v_var.push_back("Zreco_dPhill"); v_min_max.push_back(std::make_pair(0, 4));
     // v_var.push_back("LeadingTop_pt"); v_min_max.push_back(std::make_pair(0, 500));
     // v_var.push_back("LeadingTop_eta"); v_min_max.push_back(std::make_pair(-5, 5));
-    // v_var.push_back("LeadingTop_m"); v_min_max.push_back(std::make_pair(-5, 5));
+    // v_var.push_back("TopZsystem_m"); v_min_max.push_back(std::make_pair(250, 1000));
+
+    v_var.push_back("cosThetaStarPol_Z"); v_min_max.push_back(std::make_pair(-1, 1));
+    v_var.push_back("cosThetaStarPol_Top"); v_min_max.push_back(std::make_pair(-1, 1));
     // v_var.push_back("Top_pt"); v_min_max.push_back(std::make_pair(0, 500));
     // v_var.push_back("Top_eta"); v_min_max.push_back(std::make_pair(-5, 5));
     // v_var.push_back("Top_m"); v_min_max.push_back(std::make_pair(100, 300));
-    // v_var.push_back("TopZsystem_m"); v_min_max.push_back(std::make_pair(250, 1000));
-    // v_var.push_back("Zreco_dPhill"); v_min_max.push_back(std::make_pair(0, 6));
-    // v_var.push_back("cosThetaStarPol_Z"); v_min_max.push_back(std::make_pair(-1, 1));
-    // v_var.push_back("cosThetaStarPol_Top"); v_min_max.push_back(std::make_pair(-1, 1));
+    // v_var.push_back("LeadingTop_m"); v_min_max.push_back(std::make_pair(-5, 5));
 
     //-- List of weights to plot *which are present in the rootfile (evaluated by MG)* (+ colors)
     //--> Will create corresponding TH1F and plot it (can use it e.g. to control that some base points are well modeled by TH1EFT extrapolation)
     //WARNING : here the names must match exactly those stored in the tree !
     vector<TString> v_reweightNames_fromMG; vector<int> v_colors;
     v_reweightNames_fromMG.push_back("rwgt_sm"); //Nominal SM weight -- ALWAYS KEEP FIRST !!!
-    v_reweightNames_fromMG.push_back("rwgt_ctz_2.0_ctw_2.0_cpqm_2.0_cpq3_2.0_cpt_2.0");
+
+    // v_reweightNames_fromMG.push_back("rwgt_ctz_2.0_ctw_2.0_cpqm_2.0_cpq3_2.0_cpt_2.0");
     // v_reweightNames_fromMG.push_back("rwgt_ctz_-2.0_ctw_2.0_cpqm_2.0_cpq3_-2.0_cpt_2.0");
     // v_reweightNames_fromMG.push_back("rwgt_ctz_-2.0_ctw_-2.0_cpqm_-2.0_cpq3_-2.0_cpt_2.0");
 
     //-- List of weights to plot *which will be obtained from the TH1EFT extrapolation* (+ colors)
     //NB : 'rwgt_sm' will crash ; explicitely set all the WCs to 0 instead
     vector<TString> v_reweightNames_extrapol;
-    v_reweightNames_extrapol.push_back("rwgt_ctz_0_ctw_0_cpqm_0_cpq3_0_cpt_0");
-    v_reweightNames_extrapol.push_back("rwgt_ctz_2.0_ctw_2.0_cpqm_2.0_cpq3_2.0_cpt_2.0");
+    // v_reweightNames_extrapol.push_back("rwgt_ctz_0_ctw_0_cpqm_0_cpq3_0_cpt_0");
+    // v_reweightNames_extrapol.push_back("rwgt_ctz_2.0_ctw_2.0_cpqm_2.0_cpq3_2.0_cpt_2.0");
 
-    // v_reweightNames_extrapol.push_back("rwgt_ctz_2_ctw_2_cpqm_2_cpq3_0_cpt_0");
-    // v_reweightNames_extrapol.push_back("rwgt_ctz_-2_ctw_2_cpqm_2_cpq3_0_cpt_0");
-    // v_reweightNames_extrapol.push_back("rwgt_ctz_3_ctw_0_cpqm_0_cpq3_0_cpt_0");
-    // v_reweightNames_extrapol.push_back("rwgt_ctz_3.0_ctw_6.0_cpqm_-4.0_cpq3_-2.0_cpt_2.0");
+    v_reweightNames_extrapol.push_back("rwgt_ctz_5_ctw_0_cpqm_0_cpq3_0_cpt_0");
+    v_reweightNames_extrapol.push_back("rwgt_ctz_0_ctw_5_cpqm_0_cpq3_0_cpt_0");
+    v_reweightNames_extrapol.push_back("rwgt_ctz_0_ctw_0_cpqm_5_cpq3_0_cpt_0");
+    v_reweightNames_extrapol.push_back("rwgt_ctz_0_ctw_0_cpqm_0_cpq3_5_cpt_0");
+    v_reweightNames_extrapol.push_back("rwgt_ctz_0_ctw_0_cpqm_0_cpq3_0_cpt_5");
 
     Load_Canvas_Style();
 

@@ -43,7 +43,7 @@ from Utils.Helper import normalize
 #Define here the Keras DNN model
 def Create_Model(outdir, DNN_name, nof_outputs, var_list, means, stddev):
 
-    use_normInputLayer = True #True <-> add normalization layer to automatically rescale all input values (gaussian scaling)
+    use_normInputLayer = False #True <-> add normalization layer to automatically rescale all input values (gaussian scaling) #FIXME -- True : wrong test performance... why ?
     use_batchNorm = True #True <-> Active batch norm layers
     use_dropout = True #True <-> Activate dropout for each dense layer by amount 'droprate' to mitigate overtraining
     droprate = 0.5
@@ -74,16 +74,25 @@ def Create_Model(outdir, DNN_name, nof_outputs, var_list, means, stddev):
 
     #-- List different models, by order of complexity
 
+                                         #
+ #    #  ####  #####  ###### #          ##
+ ##  ## #    # #    # #      #         # #
+ # ## # #    # #    # #####  #           #
+ #    # #    # #    # #      #           #
+ #    # #    # #    # #      #           #
+ #    #  ####  #####  ###### ######    #####
+
     #Model 1 -- simple
     if model_choice == 1:
 
+        #Define 'dense' layer type
         dense = Dense(64, kernel_initializer=my_init, use_bias=not use_batchNorm, activation='relu')
 
        # //--------------------------------------------
         if use_normInputLayer == True :
             model.add(Input(shape=num_input_variables, name="MYINPUT")) #Inactive input layer
             model.add(Lambda(normalize, arguments={'m': means, 'dev': stddev}, name="normalization")) #Normalization
-            model.add(Dense(64, kernel_initializer=my_init, activation='relu', use_bias=not use_batchNorm) ) #First dense layer
+            model.add(dense) #First dense layer
         else :
             model.add(Dense(64, kernel_initializer=my_init, activation='tanh', use_bias=not use_batchNorm, input_dim=num_input_variables, name="MYINPUT")) #, name="myInputs"
         if use_batchNorm==True:
@@ -110,6 +119,14 @@ def Create_Model(outdir, DNN_name, nof_outputs, var_list, means, stddev):
         else:
             model.add(Dense(nof_outputs, kernel_initializer=my_init, activation='softmax', name="MYOUTPUT")) #, name="myOutputs"
        # //--------------------------------------------
+
+                                        #####
+ #    #  ####  #####  ###### #         #     #
+ ##  ## #    # #    # #      #               #
+ # ## # #    # #    # #####  #          #####
+ #    # #    # #    # #      #         #
+ #    # #    # #    # #      #         #
+ #    #  ####  #####  ###### ######    #######
 
     #Model 2
     elif model_choice == 2:
@@ -151,6 +168,13 @@ def Create_Model(outdir, DNN_name, nof_outputs, var_list, means, stddev):
 
         model.add(Dense(nof_outputs, activation='softmax', kernel_initializer=my_init, name="MYOUTPUT") ) #output layer
        # //--------------------------------------------
+                                        #####
+ #    #  ####  #####  ###### #         #     #
+ ##  ## #    # #    # #      #               #
+ # ## # #    # #    # #####  #          #####
+ #    # #    # #    # #      #               #
+ #    # #    # #    # #      #         #     #
+ #    #  ####  #####  ###### ######     #####
 
     #Model 3
     elif model_choice == 3:

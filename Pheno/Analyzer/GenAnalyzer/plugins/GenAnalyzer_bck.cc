@@ -43,6 +43,11 @@
 #include <vector>
 #include <iostream>
 
+#include <Math/Vector3D.h>
+#include <TTree.h>
+#include <TLorentzVector.h>
+#include <TVector3.h>
+
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/one/EDAnalyzer.h"
@@ -61,8 +66,6 @@
 #include "DataFormats/JetReco/interface/GenJetCollection.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticleFwd.h"
 #include "SimDataFormats/GeneratorProducts/interface/HepMCProduct.h"
-#include "FWCore/ServiceRegistry/interface/Service.h"
-#include "CommonTools/UtilAlgos/interface/TFileService.h"
 
 #include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
 #include "SimDataFormats/GeneratorProducts/interface/LHERunInfoProduct.h"
@@ -71,16 +74,10 @@
 #include "SimDataFormats/GeneratorProducts/interface/LHEEventProduct.h"
 #include "GeneratorInterface/LHEInterface/interface/LHERunInfo.h"
 
-// #include "TThreadSlots.h"
-// #include "TROOT.h"
-// #include "Compression.h"
 #include "TFile.h"
 #include "TTree.h"
 #include "TString.h"
 #include "TH1F.h"
-#include <Math/Vector3D.h>
-#include <TLorentzVector.h>
-#include <TVector3.h>
 
 //
 // class declaration
@@ -102,9 +99,9 @@ class GenAnalyzer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
 
         static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
-        const reco::GenParticle* getTrueMother(const reco::GenParticle part);
-        int getTrueMotherIndex(Handle<reco::GenParticleCollection>, const reco::GenParticle);
-        int getTrueMotherId(Handle<reco::GenParticleCollection>, const reco::GenParticle);
+        const reco::GenParticle* getMother(const reco::GenParticle part);
+        int getMotherIndex(Handle<reco::GenParticleCollection>, const reco::GenParticle);
+        int getMotherId(Handle<reco::GenParticleCollection>, const reco::GenParticle);
         std::vector<int> GetVectorDaughterIndices(Handle<reco::GenParticleCollection>, const reco::GenParticle);
 
         float GetDeltaR(float, float, float, float);
@@ -137,12 +134,6 @@ class GenAnalyzer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
         edm::EDGetTokenT<LHEEventProduct> srcToken_; //General characteristics of a generated event (only present if the event starts from LHE events)
         edm::EDGetTokenT<LHERunInfoProduct> LHERunInfoProductToken_;
 
-        //--- TFileService (output file)
-        edm::Service<TFileService> fs;
-
-        // TFile* ofile_;
-        TTree* tree_;
-
         string processName;
 
         float min_pt_jet;
@@ -155,53 +146,56 @@ class GenAnalyzer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
         float mc_weight_originalValue;
         float originalXWGTUP;
 
+//--- OUTPUTS ---
+        TFile* ofile_;
+        TTree* tree_;
+
         //All gen particles
-        // std::vector<float> genParticlesPt_;
-        // std::vector<float> genParticlesEta_;
-        // std::vector<float> genParticlesPhi_;
-        // std::vector<float> genParticlesMass_;
-        // std::vector<float> genJetsPt_;
-        // std::vector<float> genJetsEta_;
-        // std::vector<float> genJetsPhi_;
-        // std::vector<float> genJetsMass_;
+        std::vector<float> genParticlesPt_;
+        std::vector<float> genParticlesEta_;
+        std::vector<float> genParticlesPhi_;
+        std::vector<float> genParticlesMass_;
+        std::vector<float> genJetsPt_;
+        std::vector<float> genJetsEta_;
+        std::vector<float> genJetsPhi_;
+        std::vector<float> genJetsMass_;
 
         //Z variables
-        // int index_Z;
+        int index_Z;
         float Z_pt_;
         float Z_eta_;
         float Z_phi_;
         float Z_m_;
-        int Z_decayMode_;
         float Zreco_pt_;
         float Zreco_eta_;
         float Zreco_phi_;
         float Zreco_m_;
         float Zreco_dPhill_;
 
-        //Top variables (consider only unique leptonic top)
-        // int index_top;
+        //Top variables
+        int index_top;
         float Top_pt_;
         float Top_eta_;
         float Top_phi_;
         float Top_m_;
 
-        //AntiTop variables (obsolete -- only care about unique leptonic top in event)
-        // int index_antitop;
-        // float AntiTop_pt_;
-        // float AntiTop_eta_;
-        // float AntiTop_phi_;
-        // float AntiTop_m_;
+        //AntiTop variables
+        int index_antitop;
+        float AntiTop_pt_;
+        float AntiTop_eta_;
+        float AntiTop_phi_;
+        float AntiTop_m_;
 
-        //Leading top variables (obsolete -- only care about unique leptonic top in event)
-        // float LeadingTop_pt_;
-        // float LeadingTop_eta_;
-        // float LeadingTop_phi_;
-        // float LeadingTop_m_;
+        //Leading top variables
+        float LeadingTop_pt_;
+        float LeadingTop_eta_;
+        float LeadingTop_phi_;
+        float LeadingTop_m_;
 
         //Full system variables (tZ for tZq process, ttZ for ttZ process)
-        // float TopZsystem_pt_;
-        // float TopZsystem_eta_;
-        // float TopZsystem_phi_;
+        float TopZsystem_pt_;
+        float TopZsystem_eta_;
+        float TopZsystem_phi_;
         float TopZsystem_m_;
 
         //Recoil jet
@@ -252,64 +246,53 @@ GenAnalyzer::GenAnalyzer(const edm::ParameterSet& iConfig) :
 
     cout<<endl<<FYEL("== PROCESS : "<<processName<<" ==")<<endl<<endl;
 
-    //If want to create output file interactively (does not work with crab ?)
-    // TString outputname = "output_"+processName+".root";
-    // ofile_ = new TFile(outputname, "RECREATE","GenAnalyzer output file");
-    // tree_ = new TTree("tree", "GenAnalyzer output tree");
-    // h_SWE = new TH1F("h_SWE", "h_SWE", 50, 0, 50); //NB : arbitrary indexing, depends on nof reweights considered !
+    //now do what ever initialization is needed
+    TString outputname = "output_"+processName+".root";
+    ofile_ = new TFile(outputname, "RECREATE","GenAnalyzer output file");
+    tree_ = new TTree("tree", "GenAnalyzer output tree");
+    h_SWE = new TH1F("h_SWE", "h_SWE", 50, 0, 50); //NB : arbitrary indexing, depends on nof reweights considered !
 
-// ########################
-// #  Create output tree  #
-// ########################
+    tree_->Branch("pt"   , &genParticlesPt_   ) ;
+    tree_->Branch("eta"  , &genParticlesEta_  ) ;
+    tree_->Branch("phi"  , &genParticlesPhi_  ) ;
+    tree_->Branch("mass" , &genParticlesMass_ ) ;
 
-    //Copied from FTProd
-    // TFile& f = fs->file();
-    // f.SetCompressionAlgorithm(ROOT::kZLIB);
-    // f.SetCompressionLevel(9);
+    tree_->Branch("genJetsPt" , &genJetsPt_) ;
+    tree_->Branch("genJetsEta" , &genJetsEta_) ;
+    tree_->Branch("genJetsPhi" , &genJetsPhi_) ;
+    tree_->Branch("genJetsMass" , &genJetsMass_) ;
 
-    tree_ = fs->make<TTree>("tree","GenAnalyzer output tree");
-    h_SWE = fs->make<TH1F>("h_SWE", "h_SWE", 100,  0., 100);
-
-    // tree_->Branch("pt"   , &genParticlesPt_   ) ;
-    // tree_->Branch("eta"  , &genParticlesEta_  ) ;
-    // tree_->Branch("phi"  , &genParticlesPhi_  ) ;
-    // tree_->Branch("mass" , &genParticlesMass_ ) ;
-    // tree_->Branch("genJetsPt" , &genJetsPt_) ;
-    // tree_->Branch("genJetsEta" , &genJetsEta_) ;
-    // tree_->Branch("genJetsPhi" , &genJetsPhi_) ;
-    // tree_->Branch("genJetsMass" , &genJetsMass_) ;
-
-    // tree_->Branch("index_Z" , &index_Z) ;
+    tree_->Branch("index_Z" , &index_Z) ;
     tree_->Branch("Z_pt" , &Z_pt_) ;
     tree_->Branch("Z_eta" , &Z_eta_) ;
     tree_->Branch("Z_phi" , &Z_phi_) ;
     tree_->Branch("Z_m" , &Z_m_) ;
-    tree_->Branch("Z_decayMode" , &Z_decayMode_) ;
     tree_->Branch("Zreco_pt" , &Zreco_pt_) ;
     tree_->Branch("Zreco_eta" , &Zreco_eta_) ;
     tree_->Branch("Zreco_phi" , &Zreco_phi_) ;
     tree_->Branch("Zreco_m" , &Zreco_m_) ;
     tree_->Branch("Zreco_dPhill" , &Zreco_dPhill_) ;
 
-    // tree_->Branch("index_top" , &index_top) ;
+    tree_->Branch("index_top" , &index_top) ;
     tree_->Branch("Top_pt" , &Top_pt_) ;
     tree_->Branch("Top_eta" , &Top_eta_) ;
     tree_->Branch("Top_phi" , &Top_phi_) ;
     tree_->Branch("Top_m" , &Top_m_) ;
 
-    // tree_->Branch("index_antitop" , &index_antitop) ;
-    // tree_->Branch("AntiTop_pt" , &AntiTop_pt_) ;
-    // tree_->Branch("AntiTop_eta" , &AntiTop_eta_) ;
-    // tree_->Branch("AntiTop_phi" , &AntiTop_phi_) ;
-    // tree_->Branch("AntiTop_m" , &AntiTop_m_) ;
-    // tree_->Branch("LeadingTop_pt" , &LeadingTop_pt_) ;
-    // tree_->Branch("LeadingTop_eta" , &LeadingTop_eta_) ;
-    // tree_->Branch("LeadingTop_phi" , &LeadingTop_phi_) ;
-    // tree_->Branch("LeadingTop_m" , &LeadingTop_m_) ;
+    tree_->Branch("index_antitop" , &index_antitop) ;
+    tree_->Branch("AntiTop_pt" , &AntiTop_pt_) ;
+    tree_->Branch("AntiTop_eta" , &AntiTop_eta_) ;
+    tree_->Branch("AntiTop_phi" , &AntiTop_phi_) ;
+    tree_->Branch("AntiTop_m" , &AntiTop_m_) ;
 
-    // tree_->Branch("TopZsystem_pt" , &TopZsystem_pt_) ;
-    // tree_->Branch("TopZsystem_eta" , &TopZsystem_eta_) ;
-    // tree_->Branch("TopZsystem_phi" , &TopZsystem_phi_) ;
+    tree_->Branch("LeadingTop_pt" , &LeadingTop_pt_) ;
+    tree_->Branch("LeadingTop_eta" , &LeadingTop_eta_) ;
+    tree_->Branch("LeadingTop_phi" , &LeadingTop_phi_) ;
+    tree_->Branch("LeadingTop_m" , &LeadingTop_m_) ;
+
+    tree_->Branch("TopZsystem_pt" , &TopZsystem_pt_) ;
+    tree_->Branch("TopZsystem_eta" , &TopZsystem_eta_) ;
+    tree_->Branch("TopZsystem_phi" , &TopZsystem_phi_) ;
     tree_->Branch("TopZsystem_m" , &TopZsystem_m_) ;
 
     tree_->Branch("recoilJet_pt" , &recoilJet_pt_) ;
@@ -346,10 +329,10 @@ GenAnalyzer::~GenAnalyzer()
    // do anything here that needs to be done at desctruction time
    // (e.g. close files, deallocate resources etc.)
 
-    // h_SWE->Write();
-    // ofile_->Write();
-    // delete h_SWE;
-    // delete ofile_;
+    h_SWE->Write();
+    ofile_->Write();
+    delete h_SWE;
+    delete ofile_;
 }
 
 //--------------------------------------------
@@ -379,12 +362,8 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
     int lumiBlock_ = iEvent.id().luminosityBlock();
     int eventNumber_ = iEvent.id().event();
 
-    if(debug)
-    {
-        if(eventNumber_ > 50) {return;} //Only debug first few events
-        cout<<endl<<endl<<endl<<endl<<endl<<"--------------------------------------------"<<endl;
-        cout<<endl<<"====== EVENT "<<eventNumber_<<" ======"<<endl;
-    }
+    if(debug && eventNumber_ > 10) {return;} //Only debug first events
+    if(debug) {cout<<endl<<endl<<endl<<"====== EVENT "<<eventNumber_<<" ======"<<endl;}
 
     // Initial-state info
     Handle<GenEventInfoProduct> genEventInfoProductHandle;
@@ -404,57 +383,55 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
     iEvent.getByToken(genJetCollection_token_, genJetsHandle);
     // cout<<"genJetsHandle.isValid() = "<<genJetsHandle.isValid()<<endl;
 
-    // genParticlesPt_.clear();
-    // genParticlesEta_.clear();
-    // genParticlesPhi_.clear();
-    // genParticlesMass_.clear();
+    genParticlesPt_.clear();
+    genParticlesEta_.clear();
+    genParticlesPhi_.clear();
+    genParticlesMass_.clear();
 
-    // genJetsPt_.clear();
-    // genJetsEta_.clear();
-    // genJetsPhi_.clear();
-    // genJetsMass_.clear();
+    genJetsPt_.clear();
+    genJetsEta_.clear();
+    genJetsPhi_.clear();
+    genJetsMass_.clear();
 
-    float DEFVAL = -9;
+    index_Z = -1;
+    Z_pt_ = 0;
+    Z_eta_ = 0;
+    Z_phi_ = 0;
+    Z_m_ = 0;
+    Zreco_pt_ = 0;
+    Zreco_eta_ = 0;
+    Zreco_phi_ = 0;
+    Zreco_m_ = 0;
+    Zreco_dPhill_ = 0;
 
-    // index_Z = -1;
-    Z_pt_ = DEFVAL;
-    Z_eta_ = DEFVAL;
-    Z_phi_ = DEFVAL;
-    Z_m_ = DEFVAL;
-    Z_decayMode_ = DEFVAL;
-    Zreco_pt_ = DEFVAL;
-    Zreco_eta_ = DEFVAL;
-    Zreco_phi_ = DEFVAL;
-    Zreco_m_ = DEFVAL;
-    Zreco_dPhill_ = DEFVAL;
+    index_top = -1;
+    Top_pt_ = 0;
+    Top_eta_ = 0;
+    Top_phi_ = 0;
+    Top_m_ = 0;
 
-    // index_top = -1;
-    Top_pt_ = DEFVAL;
-    Top_eta_ = DEFVAL;
-    Top_phi_ = DEFVAL;
-    Top_m_ = DEFVAL;
+    index_antitop = -1;
+    AntiTop_pt_ = 0;
+    AntiTop_eta_ = 0;
+    AntiTop_phi_ = 0;
+    AntiTop_m_ = 0;
 
-    // index_antitop = -1;
-    // AntiTop_pt_ = DEFVAL;
-    // AntiTop_eta_ = DEFVAL;
-    // AntiTop_phi_ = DEFVAL;
-    // AntiTop_m_ = DEFVAL;
-    // LeadingTop_pt_ = DEFVAL;
-    // LeadingTop_eta_ = DEFVAL;
-    // LeadingTop_phi_ = DEFVAL;
-    // LeadingTop_m_ = DEFVAL;
+    LeadingTop_pt_ = 0;
+    LeadingTop_eta_ = 0;
+    LeadingTop_phi_ = 0;
+    LeadingTop_m_ = 0;
 
-    // TopZsystem_pt_ = DEFVAL;
-    // TopZsystem_eta_ = DEFVAL;
-    // TopZsystem_phi_ = DEFVAL;
-    TopZsystem_m_ = DEFVAL;
+    TopZsystem_pt_ = 0;
+    TopZsystem_eta_ = 0;
+    TopZsystem_phi_ = 0;
+    TopZsystem_m_ = 0;
 
-    recoilJet_pt_ = DEFVAL;
-    recoilJet_eta_ = DEFVAL;
-    recoilJet_phi_ = DEFVAL;
+    recoilJet_pt_ = 0;
+    recoilJet_eta_ = 0;
+    recoilJet_phi_ = 0;
 
-    cosThetaStarPol_Top_ = DEFVAL;
-    cosThetaStarPol_Z_ = DEFVAL;
+    cosThetaStarPol_Top_ = 0;
+    cosThetaStarPol_Z_ = 0;
 
     v_weights_.clear();
     v_weightIds_.clear();
@@ -535,30 +512,27 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
     } //end lheEventProductHandle.isValid
 
 
-//  ######   ######## ##    ##    ##        #######   #######  ########
-// ##    ##  ##       ###   ##    ##       ##     ## ##     ## ##     ##
-// ##        ##       ####  ##    ##       ##     ## ##     ## ##     ##
-// ##   #### ######   ## ## ##    ##       ##     ## ##     ## ########
-// ##    ##  ##       ##  ####    ##       ##     ## ##     ## ##
-// ##    ##  ##       ##   ###    ##       ##     ## ##     ## ##
-//  ######   ######## ##    ##    ########  #######   #######  ##
+ //  ####  ###### #    #    #       ####   ####  #####
+ // #    # #      ##   #    #      #    # #    # #    #
+ // #      #####  # #  #    #      #    # #    # #    #
+ // #  ### #      #  # #    #      #    # #    # #####
+ // #    # #      #   ##    #      #    # #    # #
+ //  ####  ###### #    #    ######  ####   ####  #
 
 //-- Loop on genParticles
     if(genParticlesHandle.isValid() )
     {
-        //Indices
-        int index_top=-1, index_antitop=-1, index_Z=-1;
-
         //Gen-level particles
         TLorentzVector Zboson, top, antitop, TopZsystem, leadingTop, recoilJet;
 
-        //Reconstructed decay products
-        TLorentzVector lepZ1, lepZ2; int lepZ1_id=-99, lepZ2_id=-99; //Leptons from Z, or from non-resonant prod.
-        TLorentzVector RecoZ; //Z=l1+l2
+        //Reco from decay products
+        TLorentzVector lepZ1, lepZ2; int lepZ1_charge, lepZ2_charge;
+        TLorentzVector RecoZ;
         TLorentzVector lepTop, neuTop, bTop;
-        TLorentzVector RecoTop; //t = b+v+l
+        TLorentzVector RecoTop;
         TLorentzVector lepAntiTop, neuAntiTop, bAntiTop;
-        TLorentzVector RecoAntiTop; //t = b+v+l
+        TLorentzVector RecoAntiTop;
+        TLorentzVector RecoTopZsystem;
 
         // cout<<"genParticlesHandle->size() = "<<genParticlesHandle->size()<<endl;
         // for (auto it = genParticles->begin(); it != genParticles->end(); it++) {
@@ -579,58 +553,71 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
             int isDirectPromptTauDecayProductFinalState = p.isDirectPromptTauDecayProductFinalState();
 
             //-- Basic cuts
-            if(statusGen >= 71 && statusGen <= 79) {continue;} //NB : not all FS particles have statusGen==1 ! see : http://home.thep.lu.se/~torbjorn/pythia81html/ParticleProperties.html
-            if(ptGen < 5.) {continue;} //In analysis, will not reconstruct leptons below 10 GeV... //NB : this cut may remove prompt leptons, e.g. from Z->tau->X decay
+            // if(statusGen != 1) {continue;} //doesn't seem like this is shared by all FS particles (bquark, ...)
+            if(ptGen < 2.) {continue;}
 
             //-- Infos on *all* gen particles
-            // genParticlesPt_.push_back(ptGen);
-            // genParticlesEta_.push_back(etaGen);
-            // genParticlesPhi_.push_back(phiGen);
-            // genParticlesMass_.push_back(mGen);
+            genParticlesPt_.push_back(ptGen);
+            genParticlesEta_.push_back(etaGen);
+            genParticlesPhi_.push_back(phiGen);
+            genParticlesMass_.push_back(mGen);
+
+            //Access particle's mother infos
+            const reco::GenParticle* mom = GenAnalyzer::getMother(p); //Get particle's mother genParticle
+            int mother_index = getMotherIndex(genParticlesHandle, p); //Get particle's mother index
+            // int mother_id = getMotherId(genParticlesHandle, p); //Get particle's mother ID
 
             //Get vector of daughters' indices
-            std::vector<int> daughter_indices = GetVectorDaughterIndices(genParticlesHandle, p);
+            std::vector<int> daughter_index = GetVectorDaughterIndices(genParticlesHandle, p);
+
+            //-- Specific printouts
+            /*
+            if(abs(idGen) == 23) //Z boson : check daughters
+            {
+                for(size_t idaughter=0; idaughter<daughter_index.size(); idaughter++)
+                {
+                    cout<<"--> daughter id "<<(*genParticlesHandle)[daughter_index[idaughter]].pdgId()<<endl;
+                }
+            }
+            else if((abs(idGen) == 11 || abs(idGen) == 13) && isPromptFinalStateGen && mother_index != -1) //ele : check mother
+            {
+                cout<<"---> mother id "<<(*genParticlesHandle)[mother_index].pdgId()<<endl;
+            }
+            else if(abs(idGen) == 6) //top quarks
+            {
+                for(size_t idaughter=0; idaughter<daughter_index.size(); idaughter++)
+                {
+                    cout<<"--> daughter id "<<(*genParticlesHandle)[daughter_index[idaughter]].pdgId()<<endl;
+                }
+            }
+            else if(abs(idGen) == 24) //W bosons
+            {
+                for(size_t idaughter=0; idaughter<daughter_index.size(); idaughter++)
+                {
+                    cout<<"--> daughter id "<<(*genParticlesHandle)[daughter_index[idaughter]].pdgId()<<endl;
+                }
+            }
+            */
 
             if(debug)
             {
-                //Access particle's mother infos
-                // const reco::GenParticle* mom = GenAnalyzer::getTrueMother(p); //Get particle's mother genParticle
-                // int mother_index = getTrueMotherIndex(genParticlesHandle, p); //Get particle's mother index
-                // int mother_id = getTrueMotherId(genParticlesHandle, p); //Get particle's mother ID
+                if(abs(idGen) != 11 && abs(idGen) != 13 && abs(idGen) != 15 && abs(idGen) != 23 && abs(idGen) != 24 && abs(idGen) != 6 && abs(idGen) != 5) {continue;} //FIXME
 
-                // if(
-                // abs(idGen) != 11
-                // && abs(idGen) != 13
-                // && abs(idGen) != 15
-                // && abs(idGen) != 23
-                // && abs(idGen) != 24
-                // && abs(idGen) != 25
-                // && abs(idGen) != 6
-                // && abs(idGen) != 5
-                // ) {continue;}
+                cout<<endl<<"* ID "<<idGen<<endl;
+                cout<<"* mother ID "<<getMotherId(genParticlesHandle, p)<<endl;
+                cout<<"* statusGen "<<statusGen<<endl;
+                cout<<"* isPromptFinalStateGen "<<isPromptFinalStateGen<<endl;
+                cout<<"* isDirectPromptTauDecayProductFinalState "<<isDirectPromptTauDecayProductFinalState<<endl;
 
-                if(
-                    abs(idGen) > 25
-                    || abs(idGen) == 22
-                    || abs(idGen) == 21
-                ) {continue;}
-
-                if(daughter_indices.size() > 0 && (*genParticlesHandle)[daughter_indices[0]].pdgId() == idGen) {continue;} //don't printout particle if it 'decays into itself'
-
-                cout<<endl<<"* ID "<<idGen<<" (idx "<<i<<")"<<endl;
-                cout<<"* Mother ID "<<getTrueMotherId(genParticlesHandle, p)<<endl;
-                cout<<"* statusGen "<<statusGen<<" / promptFS "<<isPromptFinalStateGen<<" / promptTauFS "<<isDirectPromptTauDecayProductFinalState<<endl;
-
-                for(unsigned int idaughter=0; idaughter<daughter_indices.size(); idaughter++)
+                for(unsigned int idaughter=0; idaughter<daughter_index.size(); idaughter++)
                 {
-                    const GenParticle & daughter = (*genParticlesHandle)[daughter_indices[idaughter]];
+                    const GenParticle & daughter = (*genParticlesHandle)[daughter_index[idaughter]];
 
-                    // cout<<"...Daughter index = "<<daughter_indices[idaughter]<<endl;
-                    cout<<"... daughter ID = "<<daughter.pdgId()<<" (idx "<<daughter_indices[idaughter]<<")"<<endl;
+                    // cout<<"...Daughter index = "<<daughter_index[idaughter]<<endl;
+                    cout<<"...Daughter ID = "<<daughter.pdgId()<<endl;
                 }
             }
-
-            isPromptFinalStateGen+= isDirectPromptTauDecayProductFinalState; //will only check value of 'isPromptFinalStateGen', but care about both cases
+            isPromptFinalStateGen+= isDirectPromptTauDecayProductFinalState; //only check value of 'isPromptFinalStateGen', but care about both cases
 
  // #####  ######  ####   ####
  // #    # #      #    # #    #
@@ -639,107 +626,72 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
  // #   #  #      #    # #    #
  // #    # ######  ####   ####
 
+            if(abs(idGen) == 25) {index_Higgs = i;} //Look for presence of Higgs bosons in sample
+
            //-- Particle reco
-
-           //Look for presence of Higgs bosons in sample
-           if(abs(idGen) == 25) {index_Higgs = i;}
-
-           else if(abs(idGen) == 23)
+           // if(isPromptFinalStateGen) //not true for b from top
            {
-               if(daughter_indices.size() > 0) {Z_decayMode_ = (*genParticlesHandle)[daughter_indices[0]].pdgId();}
-           }
-
-           //Look for final-state e,mu
-           else if(isEleMu(idGen) && isPromptFinalStateGen)
-           {
-                //CHECK IF COMES FROM TOP QUARK DECAY
-                int isTopAntitopDaughter = isTopDecayProduct(genParticlesHandle, p, index_top, index_antitop);
-                if(isTopAntitopDaughter == 1) //e,mu from top decay found
-                {
-                    if(debug) {cout<<FYEL("Found leptonic top quark --> Top index = ")<<index_top<<endl;}
-                    lepTop.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen); //lepton from top decay
-                    continue;
-                }
-                else if(isTopAntitopDaughter == -1) //e,mu from antitop decay found
-                {
-                    if(debug) {cout<<FYEL("Found leptonic antitop quark --> Antitop index = ")<<index_antitop<<endl;}
-                    lepAntiTop.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen); //lepton from antitop decay
-                    continue;
-                }
-
-               //CHECK IF COMES FROM Z BOSON DECAY (or non-resonant ll prod.)
-               if(isZDecayProduct(genParticlesHandle, p, index_Z) || isNonResonant_ll(genParticlesHandle, p)) //Z daughter or ll pair found
+               //Z BOSON decay products ; consider e,mu ; also consider non-resonant prod
+               if(isEleMu(idGen) && isPromptFinalStateGen)
                {
-                   if(debug) {cout<<FYEL("Found lepton --> Z index = "<<index_Z<<"")<<endl;}
+                   if(isZDecayProduct(genParticlesHandle, p, index_Z) || isNonResonant_ll(genParticlesHandle, p)) //Z daughter or ll pair found
+                   {
+                       if(debug)  cout<<"Found Z decay product (ID="<<idGen<<") / Z index = "<<index_Z<<endl;
 
-                   if(lepZ1.Pt() == 0) //Check whether lepZ1 TLVec is already filled
-                   {
-                       // cout<<"lepZ1 pt "<<ptGen<<" eta "<<etaGen<<" phi "<<phiGen<<" E "<<EGen<<endl;
-                       lepZ1.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);
-                       lepZ1_id = idGen;
-                   }
-                   else if(lepZ2.Pt() == 0) //Check whether lepZ2 TLVec is already filled
-                   {
-                       // cout<<"lepZ2 pt "<<ptGen<<" eta "<<etaGen<<" phi "<<phiGen<<" E "<<EGen<<endl;
-                       lepZ2.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);
-                       lepZ2_id = idGen;
+                       if(lepZ1.Pt() == 0) //SHOULD IDENTIFY LEPZ1/LEPZ2 AS LEPTON PAIR CLOSEST TO MZ, to include non-resonnant prod ??
+                       {
+                           // cout<<"lepZ1 pt "<<ptGen<<" eta "<<etaGen<<" phi "<<phiGen<<" E "<<EGen<<endl;
+                           lepZ1.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);
+
+                           lepZ1_charge = chargeGen;
+                       } //first Z daughter
+                       else if(lepZ2.Pt() == 0)
+                       {
+                           // cout<<"lepZ2 pt "<<ptGen<<" eta "<<etaGen<<" phi "<<phiGen<<" E "<<EGen<<endl;
+                           lepZ2.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);
+
+                           lepZ2_charge = chargeGen;
+                       } //second Z daughter
                    }
                }
-           }
 
-           // Look for other top quark indirect decay products (neutrinos, bquark)
-           else if(abs(idGen) == 12 || abs(idGen) == 14 || abs(idGen) == 5) //try to identify the b/l/v from t->bW
-           {
-               int isTopAntitopDaughter = isTopDecayProduct(genParticlesHandle, p, index_top, index_antitop);
-               if(isTopAntitopDaughter == 1) //top decay product found
+               //TOP QUARK leptonic decay products
+               if(isEleMu(idGen) || abs(idGen) == 12 || abs(idGen) == 14 || abs(idGen) == 5) //try to identify the b/l/v from t->bW
                {
-                   if(abs(idGen) == 5) {bTop.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);} //bquark from top decay
-                   else if(abs(idGen) == 12 || abs(idGen) == 14) {neuTop.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);} //neutrino from top decay
-               }
-               else if(isTopAntitopDaughter == -1) //antitop decay product found
-               {
-                   if(abs(idGen) == 5) {bAntiTop.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);} //bquark from antitop decay
-                   else if(abs(idGen) == 12 || abs(idGen) == 14) {neuAntiTop.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);} //neutrino from antitop decay
-               }
-           }
+                   int isTopAntitopDaughter = isTopDecayProduct(genParticlesHandle, p, index_top, index_antitop);
+                   if(isTopAntitopDaughter == 1) //Top daughter found
+                   {
+                       if(debug) cout<<"Found top (indirect) decay product (ID="<<idGen<<") / Top index = "<<index_top<<endl;
 
-           //Look for light recoil jet (--> select leading light jet not coming from top decay)
-           else if(abs(idGen) <= 4) //Consider u,d,c,s flavours only
-           {
-               int dummy = 0;
-               if(isTopDecayProduct(genParticlesHandle, p, dummy, dummy) == 0) //Verify that it does not come from top decay
+                       if(isEleMu(idGen) && isPromptFinalStateGen) {lepTop.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);} //lepton from top decay
+                       else if(abs(idGen) == 5) {bTop.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);} //bquark from top decay
+                       else if(abs(idGen) == 12 || abs(idGen) == 14) {neuTop.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);} //neutrino from top decay
+                   }
+                   else if(isTopAntitopDaughter == -1) //AntiTop daughter found
+                   {
+                       if(debug) cout<<"Found antitop (indirect) decay product (ID="<<idGen<<") / anti-top index = "<<index_antitop<<endl;
+
+                       if(isEleMu(idGen) && isPromptFinalStateGen) {lepAntiTop.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);} //lepton from top decay
+                       else if(abs(idGen) == 5) {bAntiTop.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);} //bquark from top decay
+                       else if(abs(idGen) == 12 || abs(idGen) == 14) {neuAntiTop.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);} //neutrino from top decay
+                   }
+               }
+
+               //RECOIL JET variables (choose leading light jet not from top decay)
+               if(abs(idGen) <= 4)
                {
-                   if(ptGen > recoilJet.Pt()) {recoilJet.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);} //Select hardest possible jet
+                   int dummy = 0;
+                   if(!isTopDecayProduct(genParticlesHandle, p, dummy, dummy) )
+                   {
+                       if(ptGen > recoilJet.Pt())
+                       {
+                           recoilJet.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);
+                       }
+                   }
                }
            }
 
        } //end GenParticles coll. loop
-
-       // Z_decayMode_ = abs(lepZ1_id);
-
-       //true <-> particle decays leptonically ; if decays into tau, tau then decays into e,mu
-       bool hasTopDecayEMU = false;
-       bool hasAntitopDecayEMU = false;
-       bool hasZDecayEMU = false;
-
-       if(lepZ1.Pt() > 0 && lepZ2.Pt() > 0 && lepZ1_id == -lepZ2_id && abs((lepZ1+lepZ2).M()-91.2)<15) {hasZDecayEMU = true;} //SFOS pair within 15 GeV of Z peak
-       if(lepTop.Pt() > 0) {hasTopDecayEMU = true;}
-       if(lepAntiTop.Pt() > 0) {hasAntitopDecayEMU = true;}
-
-        //Only keep events with 3 e,mu ?
-        //NB : events may be rejected because they contain hadronic taus, due to pt cuts, ...
-       if(debug && (!hasZDecayEMU || (hasTopDecayEMU && hasAntitopDecayEMU) ) )
-       {
-           cout<<endl<<FRED("hasZDecayEMU "<<hasZDecayEMU<<"")<<endl;
-           cout<<FRED("hasTopDecayEMU "<<hasTopDecayEMU<<"")<<endl;
-           cout<<FRED("hasAntitopDecayEMU "<<hasAntitopDecayEMU<<"")<<endl<<endl;
-
-           cout<<"lepZ1.Pt() "<<lepZ1.Pt()<<" / lepZ1_id "<<lepZ1_id<<endl;
-           cout<<"lepZ2.Pt() "<<lepZ2.Pt()<<" / lepZ2_id "<<lepZ2_id<<endl;
-           cout<<"abs((lepZ1+lepZ2).M()) "<<abs((lepZ1+lepZ2).M())<<endl;
-           return;
-       }
-
 
  // #    # #  ####  #    #       #      ###### #    # ###### #         #    #   ##   #####   ####
  // #    # # #    # #    #       #      #      #    # #      #         #    #  #  #  #    # #
@@ -759,8 +711,8 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
             Z_m_ = Zboson.M();
         }
 
-        //Reco (ee,uu) Z boson variables
-        if(hasZDecayEMU)
+        //RECO Z boson variables (also non-resonant ll prod)
+        if(lepZ1.Pt() > 0 && lepZ2.Pt() > 0)
         {
             RecoZ = lepZ1+lepZ2;
             Zreco_pt_ = RecoZ.Pt();
@@ -769,57 +721,74 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
             Zreco_m_ = RecoZ.M();
             Zreco_dPhill_ = TMath::Abs(lepZ2.Phi() - lepZ1.Phi());
 
-            if(debug && index_Z < 0) {cout<<"Non-resonant lepton pair found ! Mll = "<<Zreco_m_<<endl;}
+            // if(index_Z < 0) {cout<<"Non-resonant lepton pair found ! Mll = "<<Zreco_m_<<endl;}
 
-            //need to specify negatively charged lepton, cf formula
-            if(lepZ1_id < 0)
+            if(lepZ1_charge == -1)
             {
                 cosThetaStarPol_Z_ = Compute_cosThetaStarPol_Z(Zreco_pt_, Zreco_eta_, Zreco_phi_, Zreco_m_, lepZ1.Pt(), lepZ1.Eta(), lepZ1.Phi());
             }
-            else if(lepZ2_id < 0)
+            else if(lepZ2_charge == -1)
             {
                 cosThetaStarPol_Z_ = Compute_cosThetaStarPol_Z(Zreco_pt_, Zreco_eta_, Zreco_phi_, Zreco_m_, lepZ2.Pt(), lepZ2.Eta(), lepZ2.Phi());
             }
         }
-        else {if(debug) {cout<<FRED("lepZ1.Pt() "<<lepZ1.Pt()<<"")<<endl; cout<<FRED("lepZ2.Pt() "<<lepZ2.Pt()<<"")<<endl;}} //Can happen e.g. if 1 tau lepton decays hadronically
 
-        // if(index_top >= 0) //Found top
-        // {
-        //     top = GetPtEtaPhiE_fromPartIndex(genParticlesHandle, index_top);
-        //     Top_pt_ = top.Pt();
-        //     Top_eta_ = top.Eta();
-        //     Top_phi_ = top.Phi();
-        //     Top_m_ = top.M();
-        // }
-        // if(index_antitop >= 0) //Found antitop
-        // {
-        //     antitop = GetPtEtaPhiE_fromPartIndex(genParticlesHandle, index_antitop);
-        //     AntiTop_pt_ = antitop.Pt();
-        //     AntiTop_eta_ = antitop.Eta();
-        //     AntiTop_phi_ = antitop.Phi();
-        //     AntiTop_m_ = antitop.M();
-        // }
-
-        //Leptonic top
-        if(hasTopDecayEMU)
+        if(index_top >= 0) //Found top
         {
             top = GetPtEtaPhiE_fromPartIndex(genParticlesHandle, index_top);
             Top_pt_ = top.Pt();
             Top_eta_ = top.Eta();
             Top_phi_ = top.Phi();
             Top_m_ = top.M();
-        }
-        else if(hasAntitopDecayEMU)
-        {
-            antitop = GetPtEtaPhiE_fromPartIndex(genParticlesHandle, index_antitop);
-            Top_pt_ = antitop.Pt();
-            Top_eta_ = antitop.Eta();
-            Top_phi_ = antitop.Phi();
-            Top_m_ = antitop.M();
+
+            // RecoTop = lepTop+bTop+neuTop;
+            // Top_pt_ = RecoTop.Pt();
+            // Top_eta_ = RecoTop.Eta();
+            // Top_phi_ = RecoTop.Phi();
+            // Top_m_ = RecoTop.M();
         }
 
-        if(hasTopDecayEMU) {TopZsystem_m_ = (RecoZ+top).M();}
-        else if(hasAntitopDecayEMU) {TopZsystem_m_ = (RecoZ+antitop).M();}
+        if(index_antitop >= 0) //Found antitop
+        {
+            antitop = GetPtEtaPhiE_fromPartIndex(genParticlesHandle, index_antitop);
+            AntiTop_pt_ = antitop.Pt();
+            AntiTop_eta_ = antitop.Eta();
+            AntiTop_phi_ = antitop.Phi();
+            AntiTop_m_ = antitop.M();
+
+            // RecoAntiTop = lepAntiTop+bAntiTop+neuAntiTop;
+            // AntiTop_pt_ = RecoAntiTop.Pt();
+            // AntiTop_eta_ = RecoAntiTop.Eta();
+            // AntiTop_phi_ = RecoAntiTop.Phi();
+            // AntiTop_m_ = RecoAntiTop.M();
+        }
+
+        if(index_top >= 0 || index_antitop >= 0)
+        {
+            //Top-Z system
+            if(index_Z >= 0)
+            {
+                if(index_top >= 0)
+                {
+                    TopZsystem = Zboson+top;
+                    if(index_antitop >= 0) {TopZsystem+= antitop;}
+                }
+                else if(index_antitop >= 0) {TopZsystem = Zboson+antitop;}
+
+                TopZsystem_pt_ = TopZsystem.Pt();
+                TopZsystem_eta_ = TopZsystem.Eta();
+                TopZsystem_phi_ = TopZsystem.Phi();
+                TopZsystem_m_ = TopZsystem.M();
+            }
+
+            //Leading top
+            if(top.Pt() > antitop.Pt()) {leadingTop = top; cosThetaStarPol_Top_ = Compute_cosThetaStarPol_Top(leadingTop, lepTop, recoilJet);}
+            else {leadingTop = antitop; cosThetaStarPol_Top_ = Compute_cosThetaStarPol_Top(leadingTop, lepAntiTop, recoilJet);}
+            LeadingTop_pt_ = leadingTop.Pt();
+            LeadingTop_eta_ = leadingTop.Eta();
+            LeadingTop_phi_ = leadingTop.Phi();
+            LeadingTop_m_ = leadingTop.M();
+        } //at least 1 top found
 
         if(recoilJet.Pt() > 0)
         {
@@ -831,13 +800,9 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
         //NB -- we look for tops and Z bosons via stable final state electrons/muons. So a Z->qq decay will not be found
         if(debug)
         {
-            cout<<endl<<endl<<FMAG("=== Event summary : ")<<endl;
-            if(index_Z < 0) {cout<<"LEPTONIC (e,u) Z BOSON NOT FOUND !"<<endl;}
-            if(index_top < 0) {cout<<"LEPTONIC (e,u) TOP NOT FOUND !"<<endl;}
-            if(index_antitop < 0) {cout<<"LEPTONIC (e,u) ANTITOP NOT FOUND !"<<endl;}
-            cout<<"Z_pt_ "<<Z_pt_<<endl;
-            cout<<"Top_pt_ "<<Top_pt_<<endl;
-            cout<<endl<<endl<<FMAG("========================")<<endl;
+            if(index_Z < 0) {cout<<FRED("LEPTONIC (e,u) Z BOSON NOT FOUND !")<<endl;}
+            if(index_top < 0) {cout<<FRED("LEPTONIC (e,u) TOP NOT FOUND !")<<endl;}
+            if(index_antitop < 0) {cout<<FRED("LEPTONIC (e,u) ANTITOP NOT FOUND !")<<endl;}
         }
 
        //--Printout daughter infos
@@ -907,6 +872,10 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
         }
     }
     */
+
+    //-- enforce presence of real Z...
+    // cout<<"index_Z "<<index_Z<<endl;
+    // if(index_Z < 0) {return;}
 
     tree_->Fill();
 
@@ -1042,21 +1011,21 @@ void GenAnalyzer::fillDescriptions(edm::ConfigurationDescriptions& descriptions)
 //--------------------------------------------
 
 /**
- * Return the mother genParticle (and make sure it has a different ID than the daughter <-> 'true mother')
+ * Return the mother genParticle (and make sure it has a different ID)
  */
-const reco::GenParticle* GenAnalyzer::getTrueMother(const reco::GenParticle part)
+const reco::GenParticle* GenAnalyzer::getMother(const reco::GenParticle part)
 {
-    const reco::GenParticle *mom = &part; //Start from daughter
+    const reco::GenParticle *mom = &part;
 
-    while(mom->numberOfMothers() > 0) //Loop recursively on particles mothers
+    while(mom->numberOfMothers() > 0)
     {
         for(unsigned int j=0; j<mom->numberOfMothers(); ++j)
         {
             mom = dynamic_cast<const reco::GenParticle*>(mom->mother(j));
 
-            if(mom->pdgId() != part.pdgId()) //Stop once a mother is found which is different from the daughter passed in arg
+            if(mom->pdgId() != part.pdgId())
             {
-                return mom; //Return the mother particle
+                return mom;
             }
         }
     }
@@ -1064,31 +1033,32 @@ const reco::GenParticle* GenAnalyzer::getTrueMother(const reco::GenParticle part
     return mom;
 }
 
-//Look for particle's mother, and perform cone-matching to find index within gen collection
-int GenAnalyzer::getTrueMotherIndex(Handle<reco::GenParticleCollection> genParticlesHandle, const reco::GenParticle p)
+//Trick : loop on collection until match mother particle -> Extract mom index
+int GenAnalyzer::getMotherIndex(Handle<reco::GenParticleCollection> genParticlesHandle, const reco::GenParticle p)
 {
-    int mother_index = -1;
+    int mother_index = 0;
 
-    const reco::GenParticle* mom = getTrueMother(p); //Get particle's mother genParticle
+    const reco::GenParticle* mom = getMother(p); //Get particle's mother genParticle
 
-    // while(p.pdgId() == mom->pdgId()) {mom = getTrueMother(*mom);} //Loop on mothers until a particle with different ID is found //already done in getTrueMother()
-
-    //To find the index of the mother within the genPart collection, run on entire collection and perform dR-matching
-    for(reco::GenParticleCollection::const_iterator genParticleSrc_m = genParticlesHandle->begin(); genParticleSrc_m != genParticlesHandle->end(); genParticleSrc_m++)
+    reco::GenParticleCollection::const_iterator genParticleSrc_m;
+    for(genParticleSrc_m = genParticlesHandle->begin(); genParticleSrc_m != genParticlesHandle->end(); genParticleSrc_m++)
     {
-        // cout<<genParticleSrc_m-genParticlesHandle->begin()<<endl; //Access iterator index
         reco::GenParticle *mcp_m = &(const_cast<reco::GenParticle&>(*genParticleSrc_m));
-        if(fabs(mcp_m->pt()-mom->pt()) < 10E-3 && fabs(mcp_m->eta()-mom->eta()) < 10E-3) {mother_index = genParticleSrc_m-genParticlesHandle->begin(); break; } //Cone matching
+
+        if(fabs(mcp_m->pt()-mom->pt()) < 10E-6 && fabs(mcp_m->eta()-mom->eta()) < 10E-6) //Matching
+        {
+            break;
+        }
+
+        mother_index++;
     }
 
     return mother_index;
 }
 
-//-- Get ID of mother particle
-//NB : expensive to call this function several times, because each time it will call getTrueMotherIndex() ! Better to call getTrueMotherIndex() directly once
-int GenAnalyzer::getTrueMotherId(Handle<reco::GenParticleCollection> genParticlesHandle, const reco::GenParticle p)
+int GenAnalyzer::getMotherId(Handle<reco::GenParticleCollection> genParticlesHandle, const reco::GenParticle p)
 {
-    int mother_index = getTrueMotherIndex(genParticlesHandle, p); //Get particle's mother index
+    int mother_index = getMotherIndex(genParticlesHandle, p); //Get particle's mother index
 
     if(mother_index < 0) {return -1;}
 
@@ -1097,37 +1067,19 @@ int GenAnalyzer::getTrueMotherId(Handle<reco::GenParticleCollection> genParticle
 
 bool GenAnalyzer::isZDecayProduct(Handle<reco::GenParticleCollection> genParticlesHandle, const reco::GenParticle p, int& index_Z)
 {
-    int mom_index = getTrueMotherIndex(genParticlesHandle, p); //Get particle's mother index
-    int mom_id = (*genParticlesHandle)[mom_index].pdgId();
-
-    if(abs(mom_id) == 23) {index_Z = mom_index; return true;} //Z daughter found
-
-    //Look for chain decay daughter (Z -> tau tau -> xxx)
-    if(abs(mom_id) == 15)
-    {
-        const reco::GenParticle* mom = getTrueMother(p); //Get the mother (tau) particle
-        int momTau_id = getTrueMotherId(genParticlesHandle, *mom); //Get the id of the tau's mother
-        if(abs(momTau_id) == 23) {return 1;} //Check if the tau's mother is itself a Z ; could also be a Higgs, ...
-    }
+    if(abs(getMotherId(genParticlesHandle, p)) == 23) {index_Z = getMotherIndex(genParticlesHandle, p); return true;} //Z daughter found
 
     return false;
 }
 
-//If final-state ele/mu is not from W/Z decay, must be part of the non-resonant pair production... or it could come from e.g. Z->tautau
+//If final-state ele/mu is not from W/Z decay, must be part of the non-resonant pair production
 bool GenAnalyzer::isNonResonant_ll(Handle<reco::GenParticleCollection> genParticlesHandle, const reco::GenParticle p)
 {
-    int mother_id = getTrueMotherId(genParticlesHandle, p);
-    if((p.isPromptFinalState() || p.isDirectPromptTauDecayProductFinalState()) && isEleMu(p.pdgId()) && abs(mother_id) !=  24 && abs(mother_id) !=  23) //Final-state e,mu not coming from top or Z decay
+    if(p.isPromptFinalState()==1 && isEleMu(p.pdgId()) && abs(getMotherId(genParticlesHandle, p)) !=  24 && abs(getMotherId(genParticlesHandle, p)) !=  23)
     {
-        // const reco::GenParticle* mom = getTrueMother(p); //Get the mother (tau) particle
-        // int mom_mom_id = getTrueMotherId(genParticlesHandle, *mom); //Get the id of the tau's mother
-        // if(abs(mom_mom_id) != 15)
-        // {
-        //     what is usually the mother for nonresonant ll prod ?
-        //     cout<<"NON RESONANT LEPTON ?"<<endl;
-        //     cout<<"Mother id --> "<<mother_id<<endl;
-        //     cout<<"Mother's mother's id --> "<<mom_mom_id<<endl;
-        // }
+        // cout<<"NON RESONANT LEPTON FOUND !"<<endl;
+        // cout<<"Mother ==== "<<getMotherId(genParticlesHandle, p)<<endl;
+
         return true;
     }
 
@@ -1136,39 +1088,15 @@ bool GenAnalyzer::isNonResonant_ll(Handle<reco::GenParticleCollection> genPartic
 
 int GenAnalyzer::isTopDecayProduct(Handle<reco::GenParticleCollection> genParticlesHandle, const reco::GenParticle p, int& index_top, int& index_antitop)
 {
-    int mom_id = getTrueMotherId(genParticlesHandle, p);
+    if(getMotherId(genParticlesHandle, p) == 6) {index_top = getMotherIndex(genParticlesHandle, p); return 1;} //Top daughter found (t -> Wb)
+    if(getMotherId(genParticlesHandle, p) == -6) {index_antitop = getMotherIndex(genParticlesHandle, p); return -1;} //AntiTop daughter found (t -> Wb)
 
-    if(mom_id == 6) {index_top = getTrueMotherIndex(genParticlesHandle, p); return 1;} //Top daughter found (t -> Wb)
-    if(mom_id == -6) {index_antitop = getTrueMotherIndex(genParticlesHandle, p); return -1;} //AntiTop daughter found (t -> Wb)
-
-    const reco::GenParticle* mom = getTrueMother(p);
-
-    //Look for chain decay daughter (t -> W -> xx)
-    if(abs(mom_id) == 24)
+    if(abs(getMotherId(genParticlesHandle, p)) == 24) //Look for chain decay daughter (W -> xx)
     {
-        //Check id of the mother of the mother (W)
-        int momW_id = getTrueMotherId(genParticlesHandle, *mom);
+        const reco::GenParticle* mom = getMother(p); //Get particle's mother genParticle
 
-        if(momW_id == 6) {index_top = getTrueMotherIndex(genParticlesHandle, *mom); return 1;} //Top daughter found (through W decay) //NB : pass the 'first mom' as arg <-> get second mom
-        if(momW_id == -6) {index_antitop = getTrueMotherIndex(genParticlesHandle, *mom); return -1;} //AntiTop daughter found (through W decay) //NB : pass the 'first mom' as arg <-> get second mom
-    }
-
-    //Look for chain decay daughter (t -> W -> tau -> e,u)
-    if(abs(mom_id) == 15)
-    {
-        //Check id of the mother of the mother (tau)
-        int momTau_id = getTrueMotherId(genParticlesHandle, *mom);
-
-        if(abs(momTau_id) == 24)
-        {
-            const reco::GenParticle* momTau = getTrueMother(*mom);
-
-            //Check id of the mother of the mother (W) of the mother (tau)
-            int momW_id = getTrueMotherId(genParticlesHandle, *momTau);
-
-            if(momW_id == 6) {index_top = getTrueMotherIndex(genParticlesHandle, *mom); return 1;} //Top daughter found (through W decay) //NB : pass the 'first mom' as arg <-> get second mom
-            if(momW_id == -6) {index_antitop = getTrueMotherIndex(genParticlesHandle, *mom); return -1;} //AntiTop daughter found (through W decay) //NB : pass the 'first mom' as arg <-> get second mom
-        }
+        if(getMotherId(genParticlesHandle, *mom) == 6) {index_top = getMotherIndex(genParticlesHandle, *mom); return 1;} //Top daughter found (through W decay) //NB : pass the 'first mom' as arg <-> get second mom
+        if(getMotherId(genParticlesHandle, *mom) == -6) {index_antitop = getMotherIndex(genParticlesHandle, *mom); return -1;} //AntiTop daughter found (through W decay) //NB : pass the 'first mom' as arg <-> get second mom
     }
 
     return 0;
