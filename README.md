@@ -68,8 +68,6 @@ _____________________________________________________________________________
     * [GenAnalyzer](https://github.com/nicolastonon/EFT-Simu-Pheno#GenAnalyzer)
     * [GenPlotter](https://github.com/nicolastonon/EFT-Simu-Pheno#GenPlotter)
 
-* [Ntuple analysis](https://github.com/nicolastonon/EFT-Simu-Pheno#Ntuple-analysis-and-COMBINE)
-
 _____________________________________________________________________________
 
 #### Useful links
@@ -95,8 +93,8 @@ The example commands below are valid for 2017 MC production.
 <!-- :construction: *Add commands for each year.* -->
 
 ```
-mkdir MyAnalysis
-cd MyAnalysis
+mkdir myDir
+cd myDir
 
 # Or other release, as specific below
 RELEASE=9_3_6
@@ -457,11 +455,6 @@ cmsRun Pheno/Analyzer/test/GenAnalyzer/ConfFile_cfg.py
 g++ GenPlotter.cc -o GenPlotter.exe `root-config --cflags --glibs`
 ./GenPlotter.exe
 ```
-
-# Ntuple analysis and COMBINE
-
-See the READMEs in the [dedicated directory](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/myAnalysis).
-
 _____________________________________________________________________________
 
 

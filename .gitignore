@@ -4,11 +4,6 @@
 # Directories #
 ############
 
-./myAnalysis/weights/**
-
-./myAnalysis/myDict*
-./myAnalysis/myLib*
-
 ############
 # Backup copies #
 ############
