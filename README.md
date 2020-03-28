@@ -81,7 +81,6 @@ _____________________________________________________________________________
 
 :link: [Instructions for private production](https://docs.google.com/document/d/1YghFcqPGS8lx4OIpHWtpNHD8keQQf1vL5XtAP4TJBuo) *(by Seth Moortgat)*
 
-:link: [SMEFT@NLO model](http://feynrules.irmp.ucl.ac.be/wiki/SMEFTatNLO)
 </details>
 
 _____________________________________________________________________________
