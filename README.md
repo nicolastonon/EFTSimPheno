@@ -74,6 +74,7 @@ _____________________________________________________________________________
 
 <details>
 <summary>Useful links:</summary>
+
 :link: [SMEFT@NLO model](http://feynrules.irmp.ucl.ac.be/wiki/SMEFTatNLO)
 
 :link: [dim6top model](https://feynrules.irmp.ucl.ac.be/wiki/dim6top)
