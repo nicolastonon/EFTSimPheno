@@ -542,8 +542,8 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
         if(v_process[iproc] == "tllq" || v_process[iproc] == "ttz") {weight_SF = xsec_ttll * lumi;}
 
         //Read branches
-        vector<float>* v_reweights_floats = new vector<float>(v_reweightNames_fromMG.size());
-        vector<string>* v_reweights_ids = new vector<string>(v_reweightNames_fromMG.size());
+        vector<float>* v_reweights_floats = new vector<float>();
+        vector<string>* v_reweights_ids = new vector<string>();
         vector<float> v_var_floats(v_var.size());
         t->SetBranchAddress("v_weightIds", &v_reweights_ids);
         t->SetBranchAddress("v_weights", &v_reweights_floats);
@@ -1230,8 +1230,9 @@ void Plot_CrossSection_VS_WilsonCoeff(TString process, TString operator1, TStrin
 
     TH1EFT* h = new TH1EFT("", "", 1, 0, 1); //TH1EFT storing the weights and fits for all events
 
-    int nentries = 1000;
+    int nentries = 10000;
     // int nentries = t->GetEntries();
+    if(nentries>30000) {nentries = 30000;}
     cout<<FMAG("Processing "<<nentries<<" entries...")<<endl;
     for(int ientry=0; ientry<nentries; ientry++)
     {

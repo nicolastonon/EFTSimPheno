@@ -31,6 +31,13 @@ CODE EXAMPLE
 :underage:
 :put_litter_in_its_place:
 :new:
+
+#HOW TO HIDE CONTENTS (which can be viewed by cliking icon) :
+<details>
+<summary>[NameOfHiddenContent]:</summary>
+[theHiddenContent]
+</details>
+
 -------------------------------------------->
 
 :telephone: Contact : nicolas.tonon@cern.ch

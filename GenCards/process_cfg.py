@@ -115,7 +115,7 @@ flavour_scheme = "5F" # or "4F"
 
 operators = ["ctZ","ctW","cpQM","cpQ3","cpt"]
 
-baseline_values = ["3.0","3.0","3.0","3.0","3.0"]
+baseline_values = ["5.0","5.0","5.0","5.0","5.0"]
 assert len(baseline_values) == len(operators), \
 	"ERROR: length of baseline_values should be the same as that of operators"
 
@@ -147,7 +147,7 @@ assert len(baseline_values) == len(operators), \
 #          \/
 
 # reweighting_strategy = ["minimal","custom"]
-reweighting_strategy = ["grid"]
+reweighting_strategy = ["rnd_scan"]
 
 #     /\  		  /\
 #     |   	 	   |
@@ -228,7 +228,7 @@ if reweighting_strategy == "individual":
 #
 # * - * - * - * -
 
-n_points = 30
+n_points = 40
 if reweighting_strategy == "rnd_scan":
 	assert n_points >= (1. + 2.*len(operators) + (len(operators)*(len(operators)-1.))/2.), \
 			"ERROR: you need at least %i points for %i operators to fully determine the coefficients of the quadratic form"%((1. + 2.*len(operators) + (len(operators)*(len(operators)-1.))/2.),len(operators))
@@ -238,10 +238,11 @@ if reweighting_strategy == "rnd_scan":
 # * - * - * - * -
 
 boundaries = [
-	[-2.,2.],
-	[-2.,2.],
-	[-2.,2.],
-	[-2.,2.]
+	[-5.,5.],
+	[-5.,5.],
+	[-5.,5.],
+	[-5.,5.],
+	[-5.,5.]
 ]
 
 if reweighting_strategy == "rnd_scan":
@@ -371,6 +372,6 @@ reweight_dict_tmp_["rwgt_ctG_min3p0_ctW_2p0"] = 	{'ctG': -3.0,
 											'ctW': 2.0,
 											'ctWI': 0.0}
 # include the SM by default
-reweight_dict_tmp_["rwgt_SM"] = {}
+reweight_dict_tmp_["rwgt_sm"] = {}
 for op in operators:
-	reweight_dict_tmp_["rwgt_SM"][op] = 0.0
+	reweight_dict_tmp_["rwgt_sm"][op] = 0.0

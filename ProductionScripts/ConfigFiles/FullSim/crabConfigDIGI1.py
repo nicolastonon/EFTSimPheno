@@ -27,14 +27,14 @@ config.Data.totalUnits = 100 #Total nof files
 config.Data.publication = False
 #second part of the sample name
 config.Data.outputDatasetTag = prodName
-config.Data.ignoreLocality = True
+# config.Data.ignoreLocality = True
 
 
 config.section_("Site")
 #site where you have your t2 account and grid storage
 config.Site.storageSite = 'T2_DE_DESY'
 #configure which sites to run on
-config.Site.whitelist = ['T2_DE_DESY']
+# config.Site.whitelist = ['T2_DE_DESY']
 
 config.section_("User")
 

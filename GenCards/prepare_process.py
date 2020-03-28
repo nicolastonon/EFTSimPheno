@@ -102,6 +102,12 @@ if "no_reweights" in reweighting_strategy:
 else:
 	if "individual" in reweighting_strategy:
 
+        # include the SM by default (as first element)
+		if not "rwgt_sm" in reweight_dict.keys():
+			reweight_dict["rwgt_sm"] = {}
+			for op in operators:
+				reweight_dict["rwgt_sm"][op] = 0.0
+
 		for idx,op in enumerate(operators):
 			for val in points_individual[idx]:
 				reweight_dict[translate_weight_name([op],[val])] = {}
@@ -109,17 +115,17 @@ else:
 				for other_op in [i for i in operators if not i == op]:
 					reweight_dict[translate_weight_name([op],[val])][other_op] = 0.0
 
-		# include the SM by default
-		if not "rwgt_SM" in reweight_dict.keys():
-			reweight_dict["rwgt_SM"] = {}
-			for op in operators:
-				reweight_dict["rwgt_SM"][op] = 0.0
-
 		#pprint(reweight_dict)
 
 
 
 	if "rnd_scan" in reweighting_strategy:
+
+        # include the SM by default (as first element)
+		if not "rwgt_sm" in reweight_dict.keys():
+			reweight_dict["rwgt_sm"] = {}
+			for op in operators:
+				reweight_dict["rwgt_sm"][op] = 0.0
 
 		for i in range(n_points):
 			values_tmp_ = []
@@ -133,23 +139,17 @@ else:
 			for idx,op in enumerate(operators):
 				reweight_dict[dict_name][op] = values_tmp_[idx]
 
-		# include the SM by default
-		if not "rwgt_SM" in reweight_dict.keys():
-			reweight_dict["rwgt_SM"] = {}
-			for op in operators:
-				reweight_dict["rwgt_SM"][op] = 0.0
-
 		#pprint(reweight_dict)
 
 
 
 	if "grid" in reweighting_strategy:
 
-        # include the SM by default
-		if not "rwgt_SM" in reweight_dict.keys():
-			reweight_dict["rwgt_SM"] = {}
+        # include the SM by default (as first element)
+		if not "rwgt_sm" in reweight_dict.keys():
+			reweight_dict["rwgt_sm"] = {}
 			for op in operators:
-				reweight_dict["rwgt_SM"][op] = 0.0
+				reweight_dict["rwgt_sm"][op] = 0.0
 
 		grid_values_per_operator = []
 		for op in boundaries_and_npoints:
@@ -165,6 +165,13 @@ else:
 
 
 	if "minimal" in reweighting_strategy:
+
+        # include the SM by default (as first element)
+		if not "rwgt_sm" in reweight_dict.keys():
+			reweight_dict["rwgt_sm"] = {}
+			for op in operators:
+				reweight_dict["rwgt_sm"][op] = 0.0
+
 		init_steps = [i for i in range(order+1)]
 		valid_combinations = [i for i in itertools.product(init_steps,repeat=len(operators)) if sum(i)<=order]
 		for comb in valid_combinations:
@@ -179,11 +186,6 @@ else:
 			for idx,op in enumerate(operators):
 				reweight_dict[dict_name][op] = (np.asarray(rescaled_comb_array))[idx]
 
-		if not "rwgt_SM" in reweight_dict.keys():
-			reweight_dict["rwgt_SM"] = {}
-			for op in operators:
-				reweight_dict["rwgt_SM"][op] = 0.0
-
 		# sanity check, should always be fulfilled
 		assert len(reweight_dict.keys()) >= (1. + 2.*len(operators) + (len(operators)*(len(operators)-1.))/2.), \
 			"ERROR: you need at least %i points for %i operators to fully determine the coefficients of the quadratic form"%((1. + 2.*len(operators) + (len(operators)*(len(operators)-1.))/2.),len(operators))
@@ -196,10 +198,10 @@ else:
 	if "custom" in reweighting_strategy:
 		reweight_dict.update(reweight_dict_tmp_)
 		# include the SM by default
-		if not "rwgt_SM" in reweight_dict.keys():
-			reweight_dict["rwgt_SM"] = {}
+		if not "rwgt_sm" in reweight_dict.keys():
+			reweight_dict["rwgt_sm"] = {}
 			for op in operators:
-				reweight_dict["rwgt_SM"][op] = 0.0
+				reweight_dict["rwgt_sm"][op] = 0.0
 
 		#pprint(reweight_dict)
 
