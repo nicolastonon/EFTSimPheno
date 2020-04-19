@@ -1,5 +1,5 @@
 #https://github.com/cms-analysis/TopEFT/blob/master/mcgeneration
-#Modified from codes by Seth Moortgat
+#Adapted from codes by Seth Moortgat
 
 import os
 import sys
@@ -7,13 +7,6 @@ import numpy as np
 from pprint import pprint
 import random
 import itertools
-
-
-
-
-
-
-
 
 #******************************************************
 #
@@ -25,7 +18,6 @@ import itertools
 # date: 11/12-2019
 #
 #******************************************************
-
 
 #*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 #
@@ -228,7 +220,8 @@ if reweighting_strategy == "individual":
 #
 # * - * - * - * -
 
-n_points = 40
+# n_points = 40
+n_points = int(5 + (len(operators)+1)*(len(operators)+2)/2) #NT -- min nof points + 5 (+ 2*len(operators) individual reweight points added automatically in 'rnd_scan')
 if reweighting_strategy == "rnd_scan":
 	assert n_points >= (1. + 2.*len(operators) + (len(operators)*(len(operators)-1.))/2.), \
 			"ERROR: you need at least %i points for %i operators to fully determine the coefficients of the quadratic form"%((1. + 2.*len(operators) + (len(operators)*(len(operators)-1.))/2.),len(operators))

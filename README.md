@@ -47,9 +47,7 @@ _____________________________________________________________________________
 
 > Files and instructions to :
 > * generate private MC samples including EFT reweighting ;
-> * perform basic phenomenology studies ;
-> * analyse DESY TopZ ntuples ;
-> * run COMBINE.
+> * perform basic phenomenology studies.
 
 #### Table Of Contents
 

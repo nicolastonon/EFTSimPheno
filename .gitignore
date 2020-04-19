@@ -8,8 +8,8 @@
 # Backup copies #
 ############
 *~
-**/old/
-**/backup/
+*/old/
+*/backup/
 
 ############
 # Specific #
