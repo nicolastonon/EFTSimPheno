@@ -43,8 +43,6 @@
 # PDF CHOICE: this automatically fixes also alpha_s and its evol.    *
 #*********************************************************************
      lhapdf    = pdlabel     ! PDF set
-#230000    = lhaid     ! if pdlabel=lhapdf, this is the lhapdf number
-
     $DEFAULT_PDF_SETS = lhaid                  !
     $DEFAULT_PDF_MEMBERS = reweight_PDF           ! reweight to get PDF uncertainty
 
@@ -130,7 +128,7 @@
 #*********************************************************************
 # Maximum and minimum absolute rapidity (for max, -1 means no cut)   *
 #*********************************************************************
-  -1.0 = etaj    ! max rap for the jets
+  5.0 = etaj    ! max rap for the jets
   -1.0  = etab    ! max rap for the b
  -1.0  = etaa    ! max rap for the photons
  -1.0  = etal    ! max rap for the charged leptons

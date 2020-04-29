@@ -1,8 +1,11 @@
+#Custom for private ttll sample
+#Modify for each process : qCut (MG xqcut), nQmatch (FS), nJetMax (extra partons)
+
 import FWCore.ParameterSet.Config as cms
-import os
 
 from Configuration.Generator.Pythia8CommonSettings_cfi import *
 from Configuration.Generator.MCTunes2017.PythiaCP5Settings_cfi import *
+#from Configuration.Generator.PSweightsPythia.PythiaPSweightsSettings_cfi import * #not available in 94X
 
 #Block to first produce LHE events from gridpack
 externalLHEProducer = cms.EDProducer("ExternalLHEProducer",
@@ -24,8 +27,24 @@ generator = cms.EDFilter("Pythia8HadronizerFilter",
     PythiaParameters = cms.PSet(
         pythia8CommonSettingsBlock,
         pythia8CP5SettingsBlock,
+        #pythia8PSweightsSettingsBlock, #not available in 94X
+        processParameters = cms.vstring(
+            'JetMatching:setMad = off',
+            'JetMatching:scheme = 1',
+            'JetMatching:merge = on',
+            'JetMatching:jetAlgorithm = 2',
+            'JetMatching:etaJetMax = 5.',
+            'JetMatching:coneRadius = 1.',
+            'JetMatching:slowJetPower = 1',
+            'JetMatching:qCut = 10.', #this is the actual merging scale
+            'JetMatching:nQmatch = 5', #4 corresponds to 4-flavour scheme (no matching of b-quarks), 5 for 5-flavour scheme
+            'JetMatching:nJetMax = 1', #number of partons in born matrix element for highest multiplicity
+            'JetMatching:doShowerKt = off', #off for MLM matching, turn on for shower-kT matching
+        ),
         parameterSets = cms.vstring('pythia8CommonSettings',
-                                    'pythia8CP5Settings'
+                                    'pythia8CP5Settings',
+                                    #'pythia8PSweightsSettings', #not available in 94X
+                                    'processParameters',
                                     )
     )
 )

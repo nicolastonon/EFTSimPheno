@@ -345,7 +345,7 @@ void FillTH1EFT(TH1EFT*& h, const float& x, vector<string>* v_reweights_ids, vec
     //May only loop on minimal required number of points for WCFit (depends on n.of WCs) -- will get fit warning otherwise
 
     // for(int iwgt=0; iwgt<25; iwgt++) //just the necessary nof weights to overconstrain fit with 5 WCs
-    for(int iwgt=0; iwgt<v_reweights_ids->size(); iwgt++) //FIXME
+    for(int iwgt=0; iwgt<v_reweights_ids->size(); iwgt++)
     {
         // cout<<"v_reweights_ids->at(iwgt) "<<v_reweights_ids->at(iwgt)<<" / w = "<<v_reweights_floats->at(iwgt)<<" / v_SWE[iwgt] "<<v_SWE[iwgt]<<endl;
 

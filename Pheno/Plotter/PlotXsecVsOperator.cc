@@ -108,7 +108,7 @@ using namespace std;
 
 void Get_TH1EFT_ForXsecPlot(TH1EFT*& h, TString process)
 {
-    bool debug = true; //FIXMe
+    bool debug = false;
 
     TString dir = "./";
     TString filepath = dir + "output_" + process + ".root";
@@ -536,8 +536,8 @@ int main()
     // process = "tzq";
     // process = "tllq";
     // process = "ttll";
-    process = "tllq_top19001";
-    // process = "ttll_top19001";
+    // process = "tllq_top19001";
+    process = "ttll_top19001";
 
     vector<TString> v_operators;
     v_operators.push_back("ctZ");

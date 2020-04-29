@@ -6,5 +6,5 @@ set param_card ymb 0.0
 set param_card ctZ 5.0
 set param_card ctW 5.0
 set param_card cpQM 5.0
-set param_card cpQ3 -15.0
+set param_card cpQ3 5.0
 set param_card cpt 5.0
