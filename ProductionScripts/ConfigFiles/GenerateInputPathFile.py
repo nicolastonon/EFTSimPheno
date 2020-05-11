@@ -7,14 +7,15 @@ def Write_FilePaths(dirpath, filetype, nof_files):
     text_file = open("inputs_paths.txt", "w")
 
     for i in range(1, nof_files+1):
-        text_file.write(dirpath+'/'+filetype+'_'+str(i)+'.root'+'\n')
+        text_file.write('/store/user/ntonon/'+dirpath+'/'+filetype+'_'+str(i)+'.root'+'\n')
 
     text_file.close()
 
 
 
-dirpath = "/store/user/ntonon/tllqdim6_FASTSIM_v2/tllqdim6_FASTSIM_v2/200315_011949/0000/"
-filetype = "FASTSIM1"
-nof_files = 1000
+dirpath = "tllqdim6_top19001_LHEGENSIM_v2/tllqdim6_top19001_DIGI2_v2/200502_214035/0000"
+# filetype = "FASTSIM1"
+filetype = "DIGI2"
+nof_files = 500
 
 Write_FilePaths(dirpath, filetype, nof_files)

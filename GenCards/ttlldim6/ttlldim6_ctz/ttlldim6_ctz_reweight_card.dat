@@ -74,9 +74,6 @@ launch
 #                       Reweight Module                           *
 #******************************************************************
 
-launch --rwgt_name=rwgt_sm
-set ctZ 0.000000
-
 launch --rwgt_name=rwgt_ctZ_-5
 set ctZ -5.0
 

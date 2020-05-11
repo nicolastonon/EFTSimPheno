@@ -339,7 +339,6 @@ void FillTH1EFT(TH1EFT*& h, const float& x, vector<string>* v_reweights_ids, vec
     bool debug = false;
 //--------------------------------------------
     float sm_wgt = 0.; //Weight of SM point
-    float sm_swe = 0.; //SWE of SM point
     WCFit eft_fit("myfit");
 
     //May only loop on minimal required number of points for WCFit (depends on n.of WCs) -- will get fit warning otherwise
@@ -355,9 +354,7 @@ void FillTH1EFT(TH1EFT*& h, const float& x, vector<string>* v_reweights_ids, vec
         if(!ts.Contains("_sm", TString::kIgnoreCase))
         {
             float w = v_reweights_floats->at(iwgt);
-            // float w = v_reweights_floats->at(iwgt) / v_SWE[iwgt];
-            // float w = v_reweights_floats->at(iwgt)/(originalXWGTUP * v_SWE[iwgt]);
-            // float w = v_reweights_floats->at(iwgt) / originalXWGTUP;
+            // float w = v_reweights_floats->at(iwgt) / v_SWE[iwgt]; //Should divide all reweights by SWE(SM)
 
             WCPoint wc_pt(v_reweights_ids->at(iwgt), w);
 
@@ -366,7 +363,6 @@ void FillTH1EFT(TH1EFT*& h, const float& x, vector<string>* v_reweights_ids, vec
         else
         {
             sm_wgt = v_reweights_floats->at(iwgt);
-            sm_swe = v_SWE[iwgt];
         }
     } //weights loop
 

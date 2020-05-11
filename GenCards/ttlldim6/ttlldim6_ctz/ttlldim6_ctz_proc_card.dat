@@ -44,4 +44,4 @@ generate p p > t t~ l+ l- / h DIM6<=1 DIM6^2==2 DIM6_ctZ^2==2 FCNC=0 @0
 add process p p > t t~ vl vl~ / h DIM6<=1 DIM6^2==2 DIM6_ctZ^2==2 FCNC=0 @1
 add process p p > t t~ l+ l- j / h DIM6<=1 DIM6^2==2 DIM6_ctZ^2==2 FCNC=0 @2
 add process p p > t t~ vl vl~ j / h DIM6<=1 DIM6^2==2 DIM6_ctZ^2==2 FCNC=0 @3
-output ttlldim6_ctz
+output ttlldim6_ctz -nojpeg

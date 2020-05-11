@@ -218,7 +218,7 @@ void Get_TH1EFT_ForXsecPlot(TH1EFT*& h, TString process)
  */
 void Plot_CrossSection_VS_WilsonCoeff(TString process, TString operator1, TString operator2, TH1EFT* h, TString type="1D")
 {
-    bool debug = true;
+    bool debug = false;
     bool relative_to_SM = true; //true <-> compare all points to SM value
 
     string kSMstr = "SM"; //Must be exact same name as 'kSMstr' in WCFit

@@ -74,23 +74,20 @@ launch
 #                       Reweight Module                           *
 #******************************************************************
 
-launch --rwgt_name=rwgt_sm
-set ctZ 0.000000
+launch --rwgt_name=rwgt_ctW_-5
+set ctW -5.0
 
-launch --rwgt_name=rwgt_ctZ_-5
-set ctZ -5.0
+launch --rwgt_name=rwgt_ctW_-3
+set ctW -3.0
 
-launch --rwgt_name=rwgt_ctZ_-3
-set ctZ -3.0
+launch --rwgt_name=rwgt_ctW_-1
+set ctW -1.0
 
-launch --rwgt_name=rwgt_ctZ_-1
-set ctZ -1.0
+launch --rwgt_name=rwgt_ctW_1
+set ctW 1.0
 
-launch --rwgt_name=rwgt_ctZ_1
-set ctZ 1.0
+launch --rwgt_name=rwgt_ctW_3
+set ctW 3.0
 
-launch --rwgt_name=rwgt_ctZ_3
-set ctZ 3.0
-
-launch --rwgt_name=rwgt_ctZ_5
-set ctZ 5.0
+launch --rwgt_name=rwgt_ctW_5
+set ctW 5.0

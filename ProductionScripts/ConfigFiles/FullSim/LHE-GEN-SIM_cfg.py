@@ -26,7 +26,7 @@ process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(10)
+    input = cms.untracked.int32(-1)
 )
 
 # Input source
@@ -119,13 +119,12 @@ process.generator = cms.EDFilter("Pythia8HadronizerFilter",
 )
 
 process.externalLHEProducer = cms.EDProducer("ExternalLHEProducer",
-    args = cms.vstring('../tllqdim6_slc6_amd64_gcc630_CMSSW_9_3_16_tarball.tar.xz'), #NB : when using CRAB, must use relative path '../xxx' so that file is found from created crabDir ! (interactively, use './' or full path)
-    nEvents = cms.untracked.uint32(10),
+    args = cms.vstring('../xxx.tar.xz'), #NB : when using CRAB, must use relative path '../xxx' so that file is found from created crabDir ! (interactively, use './' or full path)
+    nEvents = cms.untracked.uint32(100),
     numberOfParameters = cms.uint32(1),
     outputFile = cms.string('cmsgrid_final.lhe'),
     scriptName = cms.FileInPath('GeneratorInterface/LHEInterface/data/run_generic_tarball_cvmfs.sh')
 )
-
 
 # Path and EndPath definitions
 process.lhe_step = cms.Path(process.externalLHEProducer)
@@ -142,8 +141,9 @@ from PhysicsTools.PatAlgos.tools.helpers import associatePatAlgosToolsTask
 associatePatAlgosToolsTask(process)
 
 #Setup FWK for multithreaded
-process.options.numberOfThreads=cms.untracked.uint32(1)
-process.options.numberOfStreams=cms.untracked.uint32(0)
+# process.options.numberOfThreads=cms.untracked.uint32(1)
+# process.options.numberOfStreams=cms.untracked.uint32(0)
+
 # filter all path with the production filter sequence
 for path in process.paths:
 	if path in ['lhe_step']: continue

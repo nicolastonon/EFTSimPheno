@@ -136,7 +136,7 @@ void makeplot(const char *name, TTree *tree, TCut weight, const char *drawstring
 }
 
 //Example path for file stored at DESY T2 : /pnfs/desy.de/cms/tier2/store/user/ntonon/ttlldim6_top19001_FASTSIM1_v2/ttlldim6_top19001_FASTSIM1_v2/200428_093324/0000/FASTSIM1_inAODSIM_9.root
-void plotdjr(const TString& infile, const TString& outfile="DJR.png")
+void plotdjr(const TString& infile, const TString& outfile="plot_DJR.png")
 {
     TString cmsswbase = getenv("CMSSW_BASE");
     if(cmsswbase.Length() == 0) {std::cout<<"Error ! Must run from CMSSW area"<<std::endl; return 1;}
@@ -183,15 +183,15 @@ void plotdjr(const TString& infile, const TString& outfile="DJR.png")
     TPad *pad[5];
     setcanvas(c1,pad);
 
-    pad[0]->cd(); pad[0]->SetBottomMargin(0.10);
+    pad[0]->cd(); pad[0]->SetBottomMargin(0.12);
     makeplot("djr0",tree,weight,"log10(GenEvent.DJRValues_[0])","log_{10}#left(#frac{DRJ0#rightarrow1}{GeV}#right)",nbins,djrmin,djrmax,typeMC); //Or : x title : DJR 0->1
-    pad[1]->cd(); pad[1]->SetBottomMargin(0.10);
+    pad[1]->cd(); pad[1]->SetBottomMargin(0.12);
     makeplot("djr1",tree,weight,"log10(GenEvent.DJRValues_[1])","log_{10}#left(#frac{DRJ1#rightarrow2}{GeV}#right)",nbins,djrmin,djrmax,typeMC);
-    pad[2]->cd(); pad[2]->SetBottomMargin(0.10);
+    pad[2]->cd(); pad[2]->SetBottomMargin(0.12);
     makeplot("djr2",tree,weight,"log10(GenEvent.DJRValues_[2])","log_{10}#left(#frac{DRJ2#rightarrow3}{GeV}#right)",nbins,djrmin,djrmax,typeMC);
-    pad[3]->cd(); pad[3]->SetBottomMargin(0.10);
+    pad[3]->cd(); pad[3]->SetBottomMargin(0.12);
     makeplot("djr3",tree,weight,"log10(GenEvent.DJRValues_[3])","log_{10}#left(#frac{DRJ3#rightarrow4}{GeV}#right)",nbins,djrmin,djrmax,typeMC);
-    pad[4]->cd(); pad[4]->SetBottomMargin(0.10);
+    pad[4]->cd(); pad[4]->SetBottomMargin(0.12);
     makeplot("djr4",tree,weight,"log10(GenEvent.DJRValues_[4])","log_{10}#left(#frac{DRJ4#rightarrow5}{GeV}#right)",nbins,djrmin,djrmax,typeMC);
 
     c1->Print(outfile);
