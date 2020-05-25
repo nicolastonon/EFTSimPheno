@@ -4,25 +4,6 @@
  * Also other functions : plot xsec vs operators, etc.
 */
 
-/* BASH COLORS */
-#define RST   "[0m"
-#define KRED  "[31m"
-#define KGRN  "[32m"
-#define KYEL  "[33m"
-#define KBLU  "[34m"
-#define KMAG  "[35m"
-#define KCYN  "[36m"
-#define KWHT  "[37m"
-#define FRED(x) KRED x RST
-#define FGRN(x) KGRN x RST
-#define FYEL(x) KYEL x RST
-#define FBLU(x) KBLU x RST
-#define FMAG(x) KMAG x RST
-#define FCYN(x) KCYN x RST
-#define FWHT(x) KWHT x RST
-#define BOLD(x) "[1m" x RST
-#define UNDL(x) "[4m" x RST
-
 #include <sstream>
 #include <fstream>
 #include <iomanip>
@@ -105,7 +86,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
     cout<<endl<<BOLD(UNDL(FYEL("=== Compare Distributions (different processes, EFT points, ...) ===")))<<endl<<endl;
 
 //--------------------------------------------
-    bool normalize = true; //true <--> scale all histos to 1
+    bool normalize = false; //true <--> scale all histos to 1
     bool show_overflow = true; //true <--> include under- and over-flow (from bins 0 and nbins+1)
 //--------------------------------------------
 
@@ -196,9 +177,16 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
             bool weightFound = false;
             for(int iweightid=0; iweightid<v_reweights_ids->size(); iweightid++)
             {
+                // cout<<"v_reweights_ids->at(iweightid) "<<v_reweights_ids->at(iweightid)<<endl;
+
                 if(v_reweightNames_fromMG[iweight] == TString(v_reweights_ids->at(iweightid)) ) {weightFound = true;}
             }
-            if(!weightFound) {cout<<FRED("ERROR ! Weight "<<v_reweightNames_fromMG[iweight]<<" not found ! Abort !")<<endl; return;}
+            if(!weightFound)
+            {
+                cout<<FRED("ERROR ! Weight "<<v_reweightNames_fromMG[iweight]<<" not found ! The reweights found in sample are :")<<endl;
+                for(int iweightid=0; iweightid<v_reweights_ids->size(); iweightid++) {cout<<"v_reweights_ids->at(iweightid) "<<v_reweights_ids->at(iweightid)<<endl;}
+                return;
+            }
         }
 
         //Read and store sums of weights (SWE)
@@ -219,7 +207,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
      // #       #  #  #      #   ##   #   #    #    #      #    # #    # #
      // ######   ##   ###### #    #   #    ####     ######  ####   ####  #
 
-        // int nentries = 100;
+        // int nentries = 5000;
         int nentries = t->GetEntries();
         cout<<FMAG("Processing "<<nentries<<" entries...")<<endl;
         for(int ientry=0; ientry<nentries; ientry++)
@@ -261,15 +249,17 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
 
                         if(v_reweightNames_fromMG[iweight] == TString(v_reweights_ids->at(iweightid)) ) //Requested weight found
                         {
-                            // cout<<"v_reweights_floats->at(iweightid) "<<v_reweights_floats->at(iweightid)<<endl;
-
                             if(isnan(v_var_floats[ivar]) || isinf(v_var_floats[ivar]))
                             {
                                 cout<<FRED("Warning ! "<<v_var[ivar]<<" = "<<v_var_floats[ivar]<<" // SKIP !")<<endl;
                                 continue;
                             }
 
-                            float w = v_reweights_floats->at(iweightid)/(mc_weight_originalValue * v_SWE[iweightid]);
+                            // cout<<v_reweights_ids->at(iweightid)<<" --> "<<v_reweights_floats->at(iweightid)<<endl;
+
+                            //FIXME
+                            float w = v_reweights_floats->at(iweightid);
+                            // float w = v_reweights_floats->at(iweightid)/(mc_weight_originalValue * v_SWE[iweightid]);
                             // float w = weight_SF * v_reweights_floats->at(iweightid)/ v_SWE[iweightid];
 
                             if(show_overflow) {Fill_TH1F_UnderOverflow(v3_histos_var_proc_reweight[ivar][iproc][iweight], v_var_floats[ivar], w);}
@@ -286,18 +276,23 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
 
                     } //Loop on event weights -- for matching
                 } //Loop on selected weights -- for matching
-
-                FillTH1EFT(v2_TH1EFT_var_proc[ivar][iproc], v_var_floats[ivar], v_reweights_ids, v_reweights_floats, originalXWGTUP, v_SWE, weight_SF, show_overflow);
-
-                // cout<<"v2_TH1EFT_var_proc[ivar][iproc]->Integral() "<<v2_TH1EFT_var_proc[ivar][iproc]->Integral()<<endl;
             } //Loop on vars
+
+            if(!v_reweightNames_extrapol.size()) {continue;} //Don't need to fill TH1EFT (long) if not extrapolating weights
+
+            float sm_wgt = 0;
+            WCFit eftfit = Get_EFT_Fit(v_reweights_ids, v_reweights_floats, sm_wgt);
+
+            FillTH1EFT_ManyVars(v2_TH1EFT_var_proc, iproc, v_var_floats, eftfit, sm_wgt, show_overflow);
+
+            // FillTH1EFT(v2_TH1EFT_var_proc[ivar][iproc], v_var_floats[ivar], v_reweights_ids, v_reweights_floats, originalXWGTUP, v_SWE, weight_SF, show_overflow);
         } //Loop on entries
 
         delete h_SWE;
         f->Close();
 
         delete v_reweights_floats; delete v_reweights_ids;
-    } //Loop o processes
+    } //Loop on processes
 
     if(normalize) //Normalize to 1
     {
@@ -825,42 +820,65 @@ int main()
     // v_process.push_back("tzq");
     // v_process.push_back("tllq");
     // v_process.push_back("ttll");
-    v_process.push_back("tllq_top19001");
+    // v_process.push_back("tllq_top19001");
     // v_process.push_back("ttll_top19001");
+    v_process.push_back("ttll_test");
 
     //-- List of variables to plot, and their ranges
     //NB : "Top_x" and "Antitop_x" contain only events which have a top or antitop respectively. 'LeadingTop_x' considers leading top/antitop
     vector<TString> v_var; vector<pair<float, float>> v_min_max;
-    v_var.push_back("Z_pt"); v_min_max.push_back(std::make_pair(0, 400));
-    // v_var.push_back("Z_eta"); v_min_max.push_back(std::make_pair(-5, 5));
-    // v_var.push_back("Z_m"); v_min_max.push_back(std::make_pair(70, 110));
-    // v_var.push_back("Zreco_m"); v_min_max.push_back(std::make_pair(50, 110));
-    // v_var.push_back("Zreco_dPhill"); v_min_max.push_back(std::make_pair(0, 4));
-    // v_var.push_back("LeadingTop_pt"); v_min_max.push_back(std::make_pair(0, 500));
-    // v_var.push_back("LeadingTop_eta"); v_min_max.push_back(std::make_pair(-5, 5));
-    // v_var.push_back("TopZsystem_m"); v_min_max.push_back(std::make_pair(250, 1000));
+    v_var.push_back("Z_pt"); v_min_max.push_back(std::make_pair(0, 300));
+    v_var.push_back("Z_eta"); v_min_max.push_back(std::make_pair(-5, 5));
+    v_var.push_back("Zreco_pt"); v_min_max.push_back(std::make_pair(0, 300));
+    v_var.push_back("Zreco_eta"); v_min_max.push_back(std::make_pair(-5, 5));
+    v_var.push_back("Zreco_m"); v_min_max.push_back(std::make_pair(75, 105));
+    v_var.push_back("Zreco_dPhill"); v_min_max.push_back(std::make_pair(-4, 4));
+    v_var.push_back("LepTop_pt"); v_min_max.push_back(std::make_pair(0, 400));
+    v_var.push_back("LepTop_eta"); v_min_max.push_back(std::make_pair(-5, 5));
+    v_var.push_back("TopZsystem_pt"); v_min_max.push_back(std::make_pair(100, 500));
+    v_var.push_back("TopZsystem_eta"); v_min_max.push_back(std::make_pair(-5, 5));
+    v_var.push_back("TopZsystem_m"); v_min_max.push_back(std::make_pair(0, 400));
+    v_var.push_back("recoilJet_pt"); v_min_max.push_back(std::make_pair(0, 250));
+    v_var.push_back("recoilJet_eta"); v_min_max.push_back(std::make_pair(-5, 5));
+    v_var.push_back("cosThetaStarPol_Top"); v_min_max.push_back(std::make_pair(-1, 1));
+    v_var.push_back("cosThetaStarPol_Z"); v_min_max.push_back(std::make_pair(-1, 1));
+    v_var.push_back("Mass_3l"); v_min_max.push_back(std::make_pair(0, 500));
+    v_var.push_back("delRZl"); v_min_max.push_back(std::make_pair(0, 2));
+    v_var.push_back("Top_delRbl"); v_min_max.push_back(std::make_pair(0, 4));
+    v_var.push_back("Top_delRbW"); v_min_max.push_back(std::make_pair(0, 4));
+    v_var.push_back("tZ_m"); v_min_max.push_back(std::make_pair(0, 400));
+    v_var.push_back("tZ_eta"); v_min_max.push_back(std::make_pair(0, 4));
+    v_var.push_back("delRtZ"); v_min_max.push_back(std::make_pair(0, 4));
+    v_var.push_back("delRtRecoilJet"); v_min_max.push_back(std::make_pair(0, 4));
+    v_var.push_back("delRbRecoilJet"); v_min_max.push_back(std::make_pair(0, 4));
+    v_var.push_back("delRlRecoilJet"); v_min_max.push_back(std::make_pair(0, 4));
+    v_var.push_back("dEtaRecoilJetBJet"); v_min_max.push_back(std::make_pair(0, 4));
+    v_var.push_back("delRlWb"); v_min_max.push_back(std::make_pair(0, 2));
+    v_var.push_back("leptonCharge"); v_min_max.push_back(std::make_pair(-1, 1));
+    v_var.push_back("mTW"); v_min_max.push_back(std::make_pair(0, 300));
+    v_var.push_back("ptW"); v_min_max.push_back(std::make_pair(0, 400));
 
-    // v_var.push_back("cosThetaStarPol_Z"); v_min_max.push_back(std::make_pair(-1, 1));
-    // v_var.push_back("cosThetaStarPol_Top"); v_min_max.push_back(std::make_pair(-1, 1));
-    // v_var.push_back("Top_pt"); v_min_max.push_back(std::make_pair(0, 500));
-    // v_var.push_back("Top_eta"); v_min_max.push_back(std::make_pair(-5, 5));
-    // v_var.push_back("Top_m"); v_min_max.push_back(std::make_pair(100, 300));
-    // v_var.push_back("LeadingTop_m"); v_min_max.push_back(std::make_pair(-5, 5));
+//--------------------------------------------
 
-    //-- List of weights to plot *which are present in the rootfile (evaluated by MG)* (+ colors)
+    //-- List of weights to plot *which are present in the rootfile* (evaluated by MG) (+ specify colors)
     //--> Will create corresponding TH1F and plot it (can use it e.g. to control that some base points are well modeled by TH1EFT extrapolation)
     //WARNING : here the names must match exactly those stored in the tree !
     vector<TString> v_reweightNames_fromMG; vector<int> v_colors;
     v_reweightNames_fromMG.push_back("rwgt_sm"); //Nominal SM weight -- ALWAYS KEEP FIRST !!!
 
-    // v_reweightNames_fromMG.push_back("rwgt_ctz_2.0_ctw_2.0_cpqm_2.0_cpq3_2.0_cpt_2.0");
+    // v_reweightNames_fromMG.push_back("rwgt_ctZ_5.0_ctW_0.0_cpQM_0.0_cpQ3_0.0_cpt_0.0");
+    // v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_5.0_cpQM_0.0_cpQ3_0.0_cpt_0.0");
+    v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_5.0_cpQ3_0.0_cpt_0.0");
+    // v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_0.0_cpQ3_5.0_cpt_0.0");
+    v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_0.0_cpQ3_0.0_cpt_5.0");
 
     //-- List of weights to plot *which will be obtained from the TH1EFT extrapolation* (+ colors)
     //NB : 'rwgt_sm' will crash ; explicitely set all the WCs to 0 instead
     vector<TString> v_reweightNames_extrapol;
     // v_reweightNames_extrapol.push_back("rwgt_ctz_0_ctw_0_cpqm_0_cpq3_0_cpt_0");
 
-    v_reweightNames_extrapol.push_back("rwgt_ctz_5_ctw_0_cpqm_0_cpq3_0_cpt_0");
+    // v_reweightNames_extrapol.push_back("rwgt_ctZ_5.0_ctW_0.0_cpQM_0.0_cpQ3_0.0_cpt_0.0");
+    // v_reweightNames_extrapol.push_back("rwgt_ctz_5_ctw_0_cpqm_0_cpq3_0_cpt_0");
     // v_reweightNames_extrapol.push_back("rwgt_ctz_0_ctw_5_cpqm_0_cpq3_0_cpt_0");
 
     Load_Canvas_Style();

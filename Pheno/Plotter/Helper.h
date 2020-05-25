@@ -1,12 +1,12 @@
-/* BASH COLORS */
-#define RST   "[0m"
-#define KRED  "[31m"
-#define KGRN  "[32m"
-#define KYEL  "[33m"
-#define KBLU  "[34m"
-#define KMAG  "[35m"
-#define KCYN  "[36m"
-#define KWHT  "[37m"
+/* BASH CUSTOM */
+#define RST   "\e[0m"
+#define KRED  "\e[31m"
+#define KGRN  "\e[32m"
+#define KYEL  "\e[33m"
+#define KBLU  "\e[34m"
+#define KMAG  "\e[35m"
+#define KCYN  "\e[36m"
+#define KWHT  "\e[37m"
 #define FRED(x) KRED x RST
 #define FGRN(x) KGRN x RST
 #define FYEL(x) KYEL x RST
@@ -14,8 +14,23 @@
 #define FMAG(x) KMAG x RST
 #define FCYN(x) KCYN x RST
 #define FWHT(x) KWHT x RST
-#define BOLD(x) "[1m" x RST
-#define UNDL(x) "[4m" x RST
+#define BOLD(x) "\e[1m" x RST
+#define ITAL(x) "\e[3m" x RST
+#define UNDL(x) "\e[4m" x RST
+#define STRIKE(x) "\e[9m" x RST
+#define DIM(x) "\e[2m" x RST
+#define DOUBLEUNDERLINE(x) "\e[21m" x RST
+#define CURLYUNDERLINE(x) "\e[4:3m" x RST
+#define BLINK(x) "\e[5m" x RST
+#define REVERSE(x) "\e[7m" x RST
+#define INVISIBLE(x) "\e[8m" x RST
+#define OVERLINE(x) "\e[53m" x RST
+#define TURQUOISE  "\e[38;5;42m"
+#define SALMON  "\e[38;2;240;143;104m"
+#define FTURQUOISE(x) TURQUOISE x RST
+#define FSALMON(x) SALMON x RST
+#define YELBKG(x) "\e[43m" x RST
+#define CYANBKG(x) "\e[46m" x RST
 
 #include <sstream>
 #include <fstream>
@@ -31,18 +46,17 @@
 #include <TChain.h>
 #include <TFile.h>
 #include <TH1F.h>
+#include "TH2F.h"
 #include <TStyle.h>
 #include <TCanvas.h>
 #include <TLorentzVector.h>
 #include "TTree.h"
-#include "TString.h"
 #include "TColor.h"
 #include "TCut.h"
 #include "TLegend.h"
 #include "TLine.h"
 #include "THStack.h"
 #include "TString.h"
-#include "TH2F.h"
 #include "TObject.h"
 #include "TGraph.h"
 
@@ -331,20 +345,38 @@ int Get_Color(int index)
 // ######## ##          ##       ##        #######  ##    ##  ######   ######
 //--------------------------------------------
 
-/**
- * For given event, create the WCFit object and fill the TH1EFT with it
-*/
-void FillTH1EFT(TH1EFT*& h, const float& x, vector<string>* v_reweights_ids, vector<float>* v_reweights_floats, const float& originalXWGTUP, const vector<float>& v_SWE, const float& weight_SF=0, bool show_overflow=false)
+void FillTH1EFT_SingleVar(TH1EFT*& h, const float& x,  WCFit eft_fit, float sm_wgt, bool show_overflow=false)
+{
+    //Fill with SM weight by default
+    if(show_overflow) {Fill_TH1EFT_UnderOverflow(h, x, sm_wgt, eft_fit);}
+    else {h->Fill(x, sm_wgt, eft_fit);}
+
+    return;
+}
+
+void FillTH1EFT_ManyVars(vector<vector<TH1EFT*>>& v_h, int idx_proc, vector<float> v_x, WCFit eft_fit, float sm_wgt, bool show_overflow=false)
+{
+    for (size_t ivar = 0; ivar < v_x.size(); ivar++)
+    {
+        //Fill with SM weight by default
+        if(show_overflow) {Fill_TH1EFT_UnderOverflow(v_h[ivar][idx_proc], v_x[ivar], sm_wgt, eft_fit);}
+        else {v_h[ivar][idx_proc]->Fill(v_x[ivar], sm_wgt, eft_fit);}
+    }
+
+    return;
+}
+
+WCFit Get_EFT_Fit(vector<string>* v_reweights_ids, vector<float>* v_reweights_floats, float& sm_wgt)
 {
     bool debug = false;
+
 //--------------------------------------------
-    float sm_wgt = 0.; //Weight of SM point
+
     WCFit eft_fit("myfit");
 
     //May only loop on minimal required number of points for WCFit (depends on n.of WCs) -- will get fit warning otherwise
-
-    // for(int iwgt=0; iwgt<25; iwgt++) //just the necessary nof weights to overconstrain fit with 5 WCs
-    for(int iwgt=0; iwgt<v_reweights_ids->size(); iwgt++)
+    for(int iwgt=0; iwgt<25; iwgt++) //just the necessary nof weights to overconstrain fit with 5 WCs
+    // for(int iwgt=0; iwgt<v_reweights_ids->size(); iwgt++)
     {
         // cout<<"v_reweights_ids->at(iwgt) "<<v_reweights_ids->at(iwgt)<<" / w = "<<v_reweights_floats->at(iwgt)<<" / v_SWE[iwgt] "<<v_SWE[iwgt]<<endl;
 
@@ -367,6 +399,7 @@ void FillTH1EFT(TH1EFT*& h, const float& x, vector<string>* v_reweights_ids, vec
     } //weights loop
 
     //-- Include 'manually' the SM point as first element (not included automatically because named 'SM' and not via its operator values)
+    //-- Return the value of sm_wgt by reference
     eft_fit.points.insert(eft_fit.points.begin(), eft_fit.points[0]); //Duplicate the first element
     eft_fit.points[0].setSMPoint(); //Set (new) first element to SM coeffs (all null)
     eft_fit.points[0].wgt = sm_wgt; //Set (new) first element to SM weight
@@ -386,16 +419,9 @@ void FillTH1EFT(TH1EFT*& h, const float& x, vector<string>* v_reweights_ids, vec
             wc_pt.dump(); //Printout names and values of all WCs for this point
             std::cout << "===> " << std::setw(3) << i << ": " << std::setw(12) << wc_pt.wgt << " | " << std::setw(12) << fit_val << " | " << std::setw(12) << (wc_pt.wgt-fit_val) << std::endl; //Printout : i / true weight / evaluated weight / diff
         }
-
-        // cout<<"originalXWGTUP "<<originalXWGTUP<<endl;
-        cout<<endl<<endl<<endl;
     }
 
-    //Fill with SM weight by default
-    if(show_overflow) {Fill_TH1EFT_UnderOverflow(h, x, v_reweights_floats->at(1), eft_fit);}
-    else {h->Fill(x, v_reweights_floats->at(1), eft_fit);}
-
-    return;
+    return eft_fit;
 }
 
 /**
@@ -416,6 +442,103 @@ Double_t EFT_Fit_Parameterization_2D(Double_t* val, Double_t* par)
     return (par[0] + x*par[1] + x*x*par[2] + y*par[3] + x*y*par[4] + y*y*par[5]) / par[0];
 }
 
+
+//XXX
+void Draw_MG_Reference_Points(TString operator1, TGraph*& graph, vector<double>* v_sumsReweights_afterSel, vector<string>* v_reweights_ids)
+{
+    TString weightname_SM = "rwgt_SM";
+    vector<TString> v_reweightNames_fromMG; vector<double> v_Xaxis;
+    if(operator1 == "ctZ")
+    {
+        v_reweightNames_fromMG.push_back("rwgt_ctZ_-3.0_ctW_0.0_cpQM_0.0_cpQ3_0.0_cpt_0.0"); v_Xaxis.push_back(-3);
+        v_reweightNames_fromMG.push_back("rwgt_ctZ_5.0_ctW_0.0_cpQM_0.0_cpQ3_0.0_cpt_0.0"); v_Xaxis.push_back(5);
+    }
+    else if(operator1 == "ctW")
+    {
+        v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_-3.0_cpQM_0.0_cpQ3_0.0_cpt_0.0"); v_Xaxis.push_back(-3);
+        v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_5.0_cpQM_0.0_cpQ3_0.0_cpt_0.0"); v_Xaxis.push_back(5);
+    }
+    else if(operator1 == "cpQM")
+    {
+        v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_-3.0_cpQ3_0.0_cpt_0.0"); v_Xaxis.push_back(-3);
+        v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_5.0_cpQ3_0.0_cpt_0.0"); v_Xaxis.push_back(5);
+    }
+    else if(operator1 == "cpQ3")
+    {
+        v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_0.0_cpQ3_-3.0_cpt_0.0"); v_Xaxis.push_back(-3);
+        v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_0.0_cpQ3_5.0_cpt_0.0"); v_Xaxis.push_back(5);
+    }
+    else if(operator1 == "cpt")
+    {
+        v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_0.0_cpQ3_0.0_cpt_-3.0"); v_Xaxis.push_back(-3);
+        v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_0.0_cpQ3_0.0_cpt_5.0"); v_Xaxis.push_back(5);
+    }
+
+/*
+    TH1F* h_SM = NULL;
+
+    //Define root interactive command to draw desired histogram
+    TString variable = weightname_SM + " >> h_SM(1, 0, 1)";
+
+    //Produce histogram (interactively)
+    t->Draw(variable);
+
+    //Retrieve generated histogram
+    h_SM = (TH1F*) gDirectory->Get("h_SM")->Clone();
+
+    float int_SM = h_SM->Integral();
+    cout<<"int_SM "<<int_SM<<endl;
+
+    delete h_SM;
+
+    for(int ipoint=0; ipoint<v_reweightNames_fromMG.size(); ipoint++)
+    {
+        for(int id=0; id<v_reweights_ids->size(); id++)
+        {
+            if((TString) v_reweights_ids->at(id) != v_reweightNames_fromMG[ipoint]) {continue;}
+
+            TH1F* h = NULL;
+
+            //Define root interactive command to draw desired histogram
+        	TString variable = v_weightIds + "["+id+"]" + " >> h(" + Convert_Number_To_TString(nbins) + "," + Convert_Number_To_TString(xmin) + "," + Convert_Number_To_TString(xmax) + ")";
+
+        	//Produce histogram (interactively)
+        	t->Draw(variable);
+
+            //Retrieve generated histogram
+            h = (TH1F*) gDirectory->Get("h")->Clone();
+            h->SetDirectory(0); //NECESSARY so that histo is not associated with TFile, and doesn't get deleted when file closed !
+            if(!h || h->GetEntries() == 0) {cout<<BOLD(FRED("Null or void histogram (made from TMVA TTree) ! Abort !"))<<endl; return 0;}
+
+            double int_EFT = h->Integral();
+            cout<<"int_EFT "<<int_EFT<<endl;
+
+            // c->cd();
+
+            delete h;
+        }
+    }
+*/
+
+    // cout<<"v_reweights_ids->size() "<<v_reweights_ids->size()<<endl;
+    for(int ipoint=0; ipoint<v_reweightNames_fromMG.size(); ipoint++)
+    {
+        double int_SM = 0;
+        double int_EFT = 0;
+        for(int id=0; id<v_reweights_ids->size(); id++)
+        {
+            if((TString) v_reweights_ids->at(id) == "rwgt_sm" || (TString) v_reweights_ids->at(id) == "rwgt_SM") {int_SM = v_sumsReweights_afterSel->at(id);}
+            else if((TString) v_reweights_ids->at(id) == v_reweightNames_fromMG[ipoint]) {int_EFT = v_sumsReweights_afterSel->at(id);}
+        }
+
+        // cout<<"int_SM "<<int_SM<<endl;
+        // cout<<"int_EFT "<<int_EFT<<endl;
+        // cout<<"int_EFT/int_SM "<<int_EFT/int_SM<<endl;
+        graph->SetPoint(ipoint, v_Xaxis[ipoint], int_EFT/int_SM);
+    }
+
+    return;
+}
 
 
 

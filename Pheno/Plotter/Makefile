@@ -33,7 +33,7 @@ XSECPLOTTER = PlotXsecVsOperator.exe
 all: $(GENPLOTTER) $(XSECPLOTTER)
 
 #Obtain executables from object files
-$(GENPLOTTER): GenPlotter.cc $(LIB)
+$(GENPLOTTER): GenPlotter.cc Helper.h $(LIB)
 	@echo "###################################""#"
 	@echo "-- Creating executable ./$(GENPLOTTER) --"
 	@$(CC) GenPlotter.cc -o $@ $(ROOTFLAGS) $(LFLAGS) $(INCFLAGS) $(LIB)
@@ -41,7 +41,7 @@ $(GENPLOTTER): GenPlotter.cc $(LIB)
 	@echo "###################################""#"
 	@echo ""
 
-$(XSECPLOTTER): PlotXsecVsOperator.cc $(LIB)
+$(XSECPLOTTER): PlotXsecVsOperator.cc Helper.h $(LIB)
 	@echo "###################################""#"
 	@echo "-- Creating executable ./$(XSECPLOTTER) --"
 	@$(CC) PlotXsecVsOperator.cc -o $@ $(ROOTFLAGS) $(LFLAGS) $(INCFLAGS) $(LIB)
@@ -58,4 +58,4 @@ $(XSECPLOTTER): PlotXsecVsOperator.cc $(LIB)
 
 #Erase all objects and executable
 clean:
-	@-rm $(MAIN)
+	@-rm $(GENPLOTTER) $(XSECPLOTTER)

@@ -4,25 +4,6 @@
  * Also other functions : plot xsec vs operators, etc.
 */
 
-/* BASH COLORS */
-#define RST   "[0m"
-#define KRED  "[31m"
-#define KGRN  "[32m"
-#define KYEL  "[33m"
-#define KBLU  "[34m"
-#define KMAG  "[35m"
-#define KCYN  "[36m"
-#define KWHT  "[37m"
-#define FRED(x) KRED x RST
-#define FGRN(x) KGRN x RST
-#define FYEL(x) KYEL x RST
-#define FBLU(x) KBLU x RST
-#define FMAG(x) KMAG x RST
-#define FCYN(x) KCYN x RST
-#define FWHT(x) KWHT x RST
-#define BOLD(x) "[1m" x RST
-#define UNDL(x) "[4m" x RST
-
 #include <sstream>
 #include <fstream>
 #include <iomanip>
@@ -106,7 +87,7 @@ using namespace std;
  // #    # #        #        #   #    #   #   #      #        #
  //  ####  ######   #        #   #    # ##### ###### #        #
 
-void Get_TH1EFT_ForXsecPlot(TH1EFT*& h, TString process)
+void Get_TH1EFT_ForXsecPlot(TH1EFT*& h, TString process, vector<double>*& v_sumsReweights_afterSel, vector<string>*& v_reweights_ids)
 {
     bool debug = false;
 
@@ -134,11 +115,11 @@ void Get_TH1EFT_ForXsecPlot(TH1EFT*& h, TString process)
         // cout<<"v_SWE[ibin] = "<<v_SWE[ibin]<<endl;
     }
 
-    vector<double> v_sumsReweights_afterSel(100); //v_SWE stores sums of weights (for each EFT reweight point) for the total of all entries in the sample. This vector stores the SWE but only for the entries which have been processed (can be used for debugging, without running over all entries)
+    // vector<double> v_sumsReweights_afterSel(100); //v_SWE stores sums of weights (for each EFT reweight point) for the total of all entries in the sample. This vector stores the SWE but only for the entries which have been processed (can be used for debugging, without running over all entries)
 
     //Read branches
     vector<float>* v_reweights_floats = new vector<float>();
-    vector<string>* v_reweights_ids = new vector<string>();
+    // vector<string>* v_reweights_ids = new vector<string>();
     t->SetBranchAddress("v_weightIds", &v_reweights_ids);
     t->SetBranchAddress("v_weights", &v_reweights_floats);
 
@@ -146,9 +127,9 @@ void Get_TH1EFT_ForXsecPlot(TH1EFT*& h, TString process)
     t->SetBranchAddress("originalXWGTUP", &originalXWGTUP);
 
     //We just need to fill the TH1EFT to later parameterize the TF2 fit ; no need to use full statistics, few Ks events are enough for approx.
+    // int nentries = 1000;
     // int nentries = 10000;
-    int nentries = 1000;
-    // int nentries = t->GetEntries();
+    int nentries = t->GetEntries();
     cout<<FMAG("Processing "<<nentries<<" entries...")<<endl;
 
     //Draw progress bar
@@ -163,13 +144,17 @@ void Get_TH1EFT_ForXsecPlot(TH1EFT*& h, TString process)
 
         t->GetEntry(ientry);
 
-        FillTH1EFT(h, 0.5, v_reweights_ids, v_reweights_floats, originalXWGTUP, v_SWE, 0, false);
+        // FillTH1EFT(h, 0.5, v_reweights_ids, v_reweights_floats, originalXWGTUP, v_SWE, 0, false);
+        float sm_wgt;
+        WCFit eftfit = Get_EFT_Fit(v_reweights_ids, v_reweights_floats, sm_wgt);
+        FillTH1EFT_SingleVar(h, 0.5, eftfit, sm_wgt, true);
 
-        if(debug)
+        // if(debug)
         {
             for(int iwgt=0; iwgt<v_reweights_floats->size(); iwgt++)
             {
-                v_sumsReweights_afterSel[iwgt]+= v_reweights_floats->at(iwgt);
+                // v_sumsReweights_afterSel[iwgt]+= v_reweights_floats->at(iwgt);
+                v_sumsReweights_afterSel->at(iwgt)+= v_reweights_floats->at(iwgt);
             }
         }
     }
@@ -185,13 +170,14 @@ void Get_TH1EFT_ForXsecPlot(TH1EFT*& h, TString process)
             WCPoint wc_pt = fit.points.at(i);
             double fit_val = fit.evalPoint(&wc_pt);
             wc_pt.dump(); //Printout names and values of all WCs for this point
-            std::cout << "===> " << std::setw(3) << i << ": " << std::setw(12) << v_sumsReweights_afterSel[i] << " | " << std::setw(12) << fit_val << " | " << std::setw(12) << (v_sumsReweights_afterSel[i]-fit_val) << std::endl; //Printout : i / true weight / evaluated weight / diff
+            // std::cout << "===> " << std::setw(3) << i << ": " << std::setw(12) << v_sumsReweights_afterSel[i] << " | " << std::setw(12) << fit_val << " | " << std::setw(12) << (v_sumsReweights_afterSel[i]-fit_val) << std::endl; //Printout : i / true weight / evaluated weight / diff
+            std::cout << "===> " << std::setw(3) << i << ": " << std::setw(12) << v_sumsReweights_afterSel->at(i) << " | " << std::setw(12) << fit_val << " | " << std::setw(12) << (v_sumsReweights_afterSel->at(i)-fit_val) << std::endl; //Printout : i / true weight / evaluated weight / diff
         }
         cout<<endl<<endl<<endl;
     }
 
     delete v_reweights_floats;
-    delete v_reweights_ids;
+    // delete v_reweights_ids;
     f->Close();
 
     return;
@@ -216,7 +202,7 @@ void Get_TH1EFT_ForXsecPlot(TH1EFT*& h, TString process)
  * First, loop on all entries and fill a TH1EFT object with all the events fits
  * Then, rescale the TH1EFT at all points of a 2D scan (2 operators), store the sums of weights (= xsecs if properly normalized), and plot values
  */
-void Plot_CrossSection_VS_WilsonCoeff(TString process, TString operator1, TString operator2, TH1EFT* h, TString type="1D")
+void Plot_CrossSection_VS_WilsonCoeff(TString process, TString operator1, TString operator2, vector<double>*& v_sumsReweights_afterSel, vector<string>* v_reweights_ids, TH1EFT* h, TString type="1D")
 {
     bool debug = false;
     bool relative_to_SM = true; //true <-> compare all points to SM value
@@ -228,7 +214,7 @@ void Plot_CrossSection_VS_WilsonCoeff(TString process, TString operator1, TStrin
     if(operator1 == "") {cout<<FRED("Error ! Wrong operator name ! Abort ! ")<<endl; return;}
     if(type != "1D" && type != "2D") {cout<<FRED("Error ! Wrong type name ! Abort ! ")<<endl; return;}
 
-    cout<<FMAG("Creating "<<type<<" plot...")<<endl;
+    cout<<ITAL("Creating "<<type<<" plot...")<<endl;
 
     //1D vectors of WC values to cover for each operator
     vector<float> v_grid_op1;
@@ -271,7 +257,6 @@ void Plot_CrossSection_VS_WilsonCoeff(TString process, TString operator1, TStrin
         tf1 = new TF1("f1", EFT_Fit_Parameterization_1D, min_op1, max_op1, 3);
         tf1->SetParameters(c0,c1,c2);
     }
-
 
     //2D plot -> Create a TF2 object using the proper xsec parameterization
     TF2 *tf2 = 0;
@@ -354,13 +339,15 @@ void Plot_CrossSection_VS_WilsonCoeff(TString process, TString operator1, TStrin
  //   #   #    #
  // ##### #####
 
+    TGraph* graph = new TGraph;
+
     if(type == "1D")
     {
         TString plot_title = "#sigma_{EFT} / #sigma_{SM}";
         tf1->GetHistogram()->SetTitle("");
         tf1->GetHistogram()->GetXaxis()->SetTitle(Get_Operator_Name(operator1));
         tf1->GetHistogram()->GetYaxis()->SetTitle(Get_Operator_Name(plot_title));
-        if(tf1->GetMinimum() > 0.95) {tf1->SetMinimum(1.);}
+        // if(tf1->GetMinimum() > 0.95) {tf1->SetMinimum(1.);}
         tf1->SetLineWidth(3.);
         tf1->SetLineColor(kAzure-2);
 
@@ -370,6 +357,12 @@ void Plot_CrossSection_VS_WilsonCoeff(TString process, TString operator1, TStrin
         TString outname = process + "_xsec_vs_"+operator1+"_1D.png";
 
         latex.DrawLatex(0.18, 0.95, text);
+
+        Draw_MG_Reference_Points(operator1, graph, v_sumsReweights_afterSel, v_reweights_ids);
+        graph->Draw("P same");
+        graph->SetMarkerStyle(8);
+        graph->SetMarkerSize(1.5);
+        graph->SetMarkerColor(kViolet);
 
         c->SaveAs(outname);
     }
@@ -429,6 +422,7 @@ void Plot_CrossSection_VS_WilsonCoeff(TString process, TString operator1, TStrin
     else if(type == "2D") {delete tf2;}
     delete c;
     delete SM_marker;
+    delete graph;
 
     return;
 }
@@ -447,7 +441,9 @@ void Plot_CrossSection_VS_WilsonCoeff_SingleOperator(TString process, vector<TSt
 {
     //Get TH1EFT object
     TH1EFT* h = new TH1EFT("", "", 1, 0, 1); //TH1EFT storing the weights and fits for all events (single bin, only care about integral)
-    Get_TH1EFT_ForXsecPlot(h, process);
+    vector<double>* v_sumsReweights_afterSel = new vector<double>(100); //v_SWE stores sums of weights (for each EFT reweight point) for the total of all entries in the sample. This vector stores the SWE but only for the entries which have been processed
+    vector<string>* v_reweights_ids = new vector<string>();
+    Get_TH1EFT_ForXsecPlot(h, process, v_sumsReweights_afterSel, v_reweights_ids);
 
     cout<<endl<<BOLD(UNDL(FYEL("=== Plot XSEC .vs. WCs for all unique operators ===")))<<endl<<endl;
 
@@ -457,10 +453,12 @@ void Plot_CrossSection_VS_WilsonCoeff_SingleOperator(TString process, vector<TSt
 
         cout<<endl<<FMAG("=== Operator : "<<v_operators[i1]<<"")<<endl<<endl;
 
-        Plot_CrossSection_VS_WilsonCoeff(process, v_operators[i1], "", h, "1D");
+        Plot_CrossSection_VS_WilsonCoeff(process, v_operators[i1], "", v_sumsReweights_afterSel, v_reweights_ids, h, "1D");
     }
 
     delete h;
+    delete v_sumsReweights_afterSel;
+    delete v_reweights_ids;
 
     return;
 }
@@ -472,7 +470,9 @@ void Plot_CrossSection_VS_WilsonCoeff_PairOperators(TString process, vector<TStr
 {
     //Get TH1EFT object
     TH1EFT* h = new TH1EFT("", "", 1, 0, 1); //TH1EFT storing the weights and fits for all events (single bin, only care about integral)
-    Get_TH1EFT_ForXsecPlot(h, process);
+    vector<double>* v_sumsReweights_afterSel = new vector<double>(100); //v_SWE stores sums of weights (for each EFT reweight point) for the total of all entries in the sample. This vector stores the SWE but only for the entries which have been processed
+    vector<string>* v_reweights_ids = new vector<string>();
+    Get_TH1EFT_ForXsecPlot(h, process, v_sumsReweights_afterSel, v_reweights_ids);
 
     cout<<endl<<BOLD(UNDL(FYEL("=== Plot XSEC .vs. WCs for all pairs of operators ===")))<<endl<<endl;
 
@@ -487,16 +487,16 @@ void Plot_CrossSection_VS_WilsonCoeff_PairOperators(TString process, vector<TStr
 
             cout<<endl<<FMAG("=== Pair : "<<v_operators[i1]<<", "<<v_operators[i2]<<"")<<endl<<endl;
 
-            Plot_CrossSection_VS_WilsonCoeff(process, v_operators[i1], v_operators[i2], h, "2D");
+            Plot_CrossSection_VS_WilsonCoeff(process, v_operators[i1], v_operators[i2], v_sumsReweights_afterSel, v_reweights_ids, h, "2D");
         }
     }
 
     delete h;
+    delete v_sumsReweights_afterSel;
+    delete v_reweights_ids;
 
     return;
 }
-
-
 
 
 
@@ -537,7 +537,8 @@ int main()
     // process = "tllq";
     // process = "ttll";
     // process = "tllq_top19001";
-    process = "ttll_top19001";
+    // process = "ttll_top19001";
+    process = "ttll_test";
 
     vector<TString> v_operators;
     v_operators.push_back("ctZ");
