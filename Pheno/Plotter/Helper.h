@@ -253,10 +253,17 @@ TString GetReweightLegendName(TString variationname)
 
 TString GetProcessLegendName(TString proc)
 {
-    if(!proc.CompareTo("ttz", TString::kIgnoreCase)) {return "t#bar{t}Z";}
-    else if(!proc.CompareTo("tzq", TString::kIgnoreCase)) {return "tZq";}
-    else if(!proc.CompareTo("ttll", TString::kIgnoreCase)) {return "t#bar{t}ll";}
-    else if(!proc.CompareTo("tllq", TString::kIgnoreCase)) {return "tllq";}
+    //-- Exact match only
+    // if(!proc.CompareTo("ttz", TString::kIgnoreCase)) {return "t#bar{t}Z";}
+    // else if(!proc.CompareTo("tzq", TString::kIgnoreCase)) {return "tZq";}
+    // else if(!proc.CompareTo("ttll", TString::kIgnoreCase)) {return "t#bar{t}ll";}
+    // else if(!proc.CompareTo("tllq", TString::kIgnoreCase)) {return "tllq";}
+
+    //-- Substring matching
+    if(proc.Contains("ttz", TString::kIgnoreCase)) {return "t#bar{t}Z";}
+    else if(proc.Contains("tzq", TString::kIgnoreCase)) {return "tZq";}
+    else if(proc.Contains("ttll", TString::kIgnoreCase)) {return "t#bar{t}ll";}
+    else if(proc.Contains("tllq", TString::kIgnoreCase)) {return "tllq";}
 
     return proc;
 }

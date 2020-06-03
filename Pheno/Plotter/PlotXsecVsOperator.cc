@@ -331,6 +331,9 @@ void Plot_CrossSection_VS_WilsonCoeff(TString process, TString operator1, TStrin
     latex.SetTextFont(52);
     latex.SetTextSize(0.04);
 
+    mkdir("plots", 0777);
+    mkdir("plots/xsec", 0777);
+
  //   #
  //  ##   #####
  // # #   #    #
@@ -354,7 +357,6 @@ void Plot_CrossSection_VS_WilsonCoeff(TString process, TString operator1, TStrin
         //1D plot
         tf1->Draw("L");
         SM_marker->Draw("P same");
-        TString outname = process + "_xsec_vs_"+operator1+"_1D.png";
 
         latex.DrawLatex(0.18, 0.95, text);
 
@@ -364,7 +366,17 @@ void Plot_CrossSection_VS_WilsonCoeff(TString process, TString operator1, TStrin
         graph->SetMarkerSize(1.5);
         graph->SetMarkerColor(kViolet);
 
+        TLegend* leg = new TLegend(0.46, 0.75, 0.68, 0.9);
+        leg->SetTextSize(0.03);
+        leg->AddEntry(tf1, "Extrapolation", "L");
+        leg->AddEntry(graph, "MG reweighting", "P");
+        leg->AddEntry(SM_marker, "SM", "P");
+        leg->Draw("same");
+
+        TString outname = "plots/xsec/" + process + "_xsec_vs_"+operator1+"_1D.png";
         c->SaveAs(outname);
+
+        delete leg;
     }
 
  //  #####
@@ -400,7 +412,7 @@ void Plot_CrossSection_VS_WilsonCoeff(TString process, TString operator1, TStrin
         //2D plot
         tf2->Draw("colz");
         SM_marker->Draw("P same");
-        TString outname = process + "_xsec_vs_"+operator1+"_"+operator2+"_2D.png";
+        TString outname = "plots/xsec/" + process + "_xsec_vs_"+operator1+"_"+operator2+"_2D.png";
 
         latex.DrawLatex(0.18, 0.88, text);
 
@@ -414,7 +426,7 @@ void Plot_CrossSection_VS_WilsonCoeff(TString process, TString operator1, TStrin
         tf2->GetHistogram()->GetXaxis()->SetNdivisions(505);
         tf2->GetHistogram()->GetYaxis()->SetNdivisions(505);
         tf2->Draw("SURF2");
-        outname = process + "_xsec_vs_"+operator1+"_"+operator2+"_3D.png";
+        outname = "plots/xsec/" + process + "_xsec_vs_"+operator1+"_"+operator2+"_3D.png";
         c->SaveAs(outname);
     }
 
@@ -536,9 +548,9 @@ int main()
     // process = "tzq";
     // process = "tllq";
     // process = "ttll";
-    // process = "tllq_top19001";
+    // process = "tllq_fullsim";
     // process = "ttll_top19001";
-    process = "ttll_test";
+    process = "ttll_v3";
 
     vector<TString> v_operators;
     v_operators.push_back("ctZ");

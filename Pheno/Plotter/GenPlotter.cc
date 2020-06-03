@@ -86,7 +86,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
     cout<<endl<<BOLD(UNDL(FYEL("=== Compare Distributions (different processes, EFT points, ...) ===")))<<endl<<endl;
 
 //--------------------------------------------
-    bool normalize = false; //true <--> scale all histos to 1
+    bool normalize = true; //true <--> scale all histos to 1
     bool show_overflow = true; //true <--> include under- and over-flow (from bins 0 and nbins+1)
 //--------------------------------------------
 
@@ -257,7 +257,6 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
 
                             // cout<<v_reweights_ids->at(iweightid)<<" --> "<<v_reweights_floats->at(iweightid)<<endl;
 
-                            //FIXME
                             float w = v_reweights_floats->at(iweightid);
                             // float w = v_reweights_floats->at(iweightid)/(mc_weight_originalValue * v_SWE[iweightid]);
                             // float w = weight_SF * v_reweights_floats->at(iweightid)/ v_SWE[iweightid];
@@ -379,6 +378,9 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
 // ##        ########  #######     ##
 
     bool setlog = false;
+
+    mkdir("plots", 0777);
+    mkdir("plots/input_vars", 0777);
 
     for(int ivar=0; ivar<v_var.size(); ivar++)
     {
@@ -745,7 +747,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
 // ##  ## #   #  #   #   #
 // #    # #    # #   #   ######
 
-        TString outputname = "./" + v_var[ivar] + ".png";
+        TString outputname = "./plots/input_vars/" + v_var[ivar] + ".png";
         c1->SaveAs(outputname);
 
         delete pad_ratio;
@@ -820,9 +822,9 @@ int main()
     // v_process.push_back("tzq");
     // v_process.push_back("tllq");
     // v_process.push_back("ttll");
-    // v_process.push_back("tllq_top19001");
+    v_process.push_back("tllq_fullsim");
     // v_process.push_back("ttll_top19001");
-    v_process.push_back("ttll_test");
+    // v_process.push_back("ttll_v3");
 
     //-- List of variables to plot, and their ranges
     //NB : "Top_x" and "Antitop_x" contain only events which have a top or antitop respectively. 'LeadingTop_x' considers leading top/antitop
@@ -832,7 +834,7 @@ int main()
     v_var.push_back("Zreco_pt"); v_min_max.push_back(std::make_pair(0, 300));
     v_var.push_back("Zreco_eta"); v_min_max.push_back(std::make_pair(-5, 5));
     v_var.push_back("Zreco_m"); v_min_max.push_back(std::make_pair(75, 105));
-    v_var.push_back("Zreco_dPhill"); v_min_max.push_back(std::make_pair(-4, 4));
+    v_var.push_back("Zreco_dPhill"); v_min_max.push_back(std::make_pair(0, 4));
     v_var.push_back("LepTop_pt"); v_min_max.push_back(std::make_pair(0, 400));
     v_var.push_back("LepTop_eta"); v_min_max.push_back(std::make_pair(-5, 5));
     v_var.push_back("TopZsystem_pt"); v_min_max.push_back(std::make_pair(100, 500));
@@ -864,13 +866,17 @@ int main()
     //--> Will create corresponding TH1F and plot it (can use it e.g. to control that some base points are well modeled by TH1EFT extrapolation)
     //WARNING : here the names must match exactly those stored in the tree !
     vector<TString> v_reweightNames_fromMG; vector<int> v_colors;
+    //=====
     v_reweightNames_fromMG.push_back("rwgt_sm"); //Nominal SM weight -- ALWAYS KEEP FIRST !!!
+    //=====
 
     // v_reweightNames_fromMG.push_back("rwgt_ctZ_5.0_ctW_0.0_cpQM_0.0_cpQ3_0.0_cpt_0.0");
     // v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_5.0_cpQM_0.0_cpQ3_0.0_cpt_0.0");
     v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_5.0_cpQ3_0.0_cpt_0.0");
     // v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_0.0_cpQ3_5.0_cpt_0.0");
     v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_0.0_cpQ3_0.0_cpt_5.0");
+    // v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_-3.0_cpQ3_0.0_cpt_0.0");
+    // v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_0.0_cpQ3_0.0_cpt_-3.0");
 
     //-- List of weights to plot *which will be obtained from the TH1EFT extrapolation* (+ colors)
     //NB : 'rwgt_sm' will crash ; explicitely set all the WCs to 0 instead
@@ -880,6 +886,9 @@ int main()
     // v_reweightNames_extrapol.push_back("rwgt_ctZ_5.0_ctW_0.0_cpQM_0.0_cpQ3_0.0_cpt_0.0");
     // v_reweightNames_extrapol.push_back("rwgt_ctz_5_ctw_0_cpqm_0_cpq3_0_cpt_0");
     // v_reweightNames_extrapol.push_back("rwgt_ctz_0_ctw_5_cpqm_0_cpq3_0_cpt_0");
+    // v_reweightNames_extrapol.push_back("rwgt_ctz_0_ctw_5_cpqm_5_cpq3_0_cpt_5");
+    v_reweightNames_extrapol.push_back("rwgt_ctz_0_ctw_0_cpqm_0_cpq3_0_cpt_5");
+    v_reweightNames_extrapol.push_back("rwgt_ctz_0_ctw_0_cpqm_5_cpq3_0_cpt_5");
 
     Load_Canvas_Style();
 
