@@ -142,7 +142,7 @@ else:
                 reweight_dict[dict_name][op] = values_tmp_[idx]
 
         #NT -- in 'rnd_scan' mode, also add 1 reweight per operator where only this operator his non-zero (may be needed for cross checks)
-        myvals=[-3.0, 5.0] #arbitrary WC values
+        myvals=[-7, 5, 15] #arbitrary WC values
         for idx1,op1 in enumerate(operators):
             for myval in myvals:
 

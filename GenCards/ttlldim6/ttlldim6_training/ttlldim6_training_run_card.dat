@@ -43,8 +43,8 @@
 # PDF CHOICE: this automatically fixes also alpha_s and its evol.    *
 #*********************************************************************
      lhapdf    = pdlabel     ! PDF set
-     $DEFAULT_PDF_SETS = lhaid                  !
-     $DEFAULT_PDF_MEMBERS = reweight_PDF           ! reweight to get PDF uncertainty
+    $DEFAULT_PDF_SETS = lhaid                  !
+#    $DEFAULT_PDF_MEMBERS = reweight_PDF           ! reweight to get PDF uncertainty
 
 # To see heavy ion options: type "update ion_pdf"
 #*********************************************************************
@@ -69,13 +69,13 @@
 #*********************************************************************
 # Matching parameter (MLM only)
 #*********************************************************************
- 0 = ickkw            ! 0 no matching, 1 MLM
+ 1 = ickkw            ! 0 no matching, 1 MLM
  1.0 = alpsfact         ! scale factor for QCD emission vx
  False = chcluster        ! cluster only according to channel diag
- 4 = asrwgtflavor     ! highest quark flavor for a_s reweight
- False  = auto_ptj_mjj  ! Automatic setting of ptj and mjj if xqcut >0
+ 5 = asrwgtflavor     ! highest quark flavor for a_s reweight
+ False  = auto_ptj_mjj  ! Automatic setting of ptj and mjj if xqcut >0 #CHANGED
                                    ! (turn off for VBF and single top processes)
- 0.0   = xqcut   ! minimum kt jet measure between partons
+ 80.0   = xqcut   ! minimum kt jet measure between partons #CHANGED
 #*********************************************************************
 #
 #*********************************************************************
@@ -110,10 +110,10 @@
 #*********************************************************************
 # Minimum and maximum pt's (for max, -1 means no cut)                *
 #*********************************************************************
- 10  = ptj       ! minimum pt for the jets
+ 20.0  = ptj       ! minimum pt for the jets #CHANGED
  0.0  = ptb       ! minimum pt for the b
  0.0  = pta       ! minimum pt for the photons
- 10.0  = ptl       ! minimum pt for the charged leptons
+ 10.0  = ptl       ! minimum pt for the charged leptons #CHANGED
  0.0  = misset    ! minimum missing Et (sum of neutrino's momenta)
  -1.0  = ptjmax    ! maximum pt for the jets
  -1.0  = ptbmax    ! maximum pt for the b
@@ -143,11 +143,11 @@
 #*********************************************************************
  0.0 = drjj    ! min distance between jets
  0.0   = drbb    ! min distance between b's
- 0.4 = drll    ! min distance between leptons
+ 0.0 = drll    ! min distance between leptons
  0.0 = draa    ! min distance between gammas
  0.0   = drbj    ! min distance between b and jet
  0.0 = draj    ! min distance between gamma and jet
- 0.4 = drjl    ! min distance between jet and lepton
+ 0.0 = drjl    ! min distance between jet and lepton
  0.0   = drab    ! min distance between gamma and b
  0.0   = drbl    ! min distance between b and lepton
  0.0 = dral    ! min distance between gamma and lepton
@@ -169,7 +169,7 @@
  0.0   = mmjj    ! min invariant mass of a jet pair
  0.0   = mmbb    ! min invariant mass of a b pair
  0.0   = mmaa    ! min invariant mass of gamma gamma pair
- 30.0   = mmll    ! min invariant mass of l+l- (same flavour) lepton pair
+ 10.0   = mmll    ! min invariant mass of l+l- (same flavour) lepton pair
  -1.0  = mmjjmax ! max invariant mass of a jet pair
  -1.0  = mmbbmax ! max invariant mass of a b pair
  -1.0  = mmaamax ! max invariant mass of gamma gamma pair
@@ -194,7 +194,7 @@
  0.0  = xptj ! minimum pt for at least one jet
  0.0  = xptb ! minimum pt for at least one b
  0.0  = xpta ! minimum pt for at least one photon
- 15.0  = xptl ! minimum pt for at least one charged lepton
+ 15.0  = xptl ! minimum pt for at least one charged lepton #CHANGED
 #*********************************************************************
 # Control the pt's of the jets sorted by pt                          *
 #*********************************************************************
@@ -236,7 +236,7 @@
 # When ptgmin=0, all the other parameters are ignored                  *
 # When ptgmin>0, pta and draj are not going to be used                 *
 #***********************************************************************
- 0.0 = ptgmin ! Min photon transverse momentum
+ 20.0 = ptgmin ! Min photon transverse momentum #CHANGED
  0.4 = R0gamma ! Radius of isolation code
  1.0 = xn ! n parameter of eq.(3.4) in hep-ph/9801442
  1.0 = epsgamma ! epsilon_gamma parameter of eq.(3.4) in hep-ph/9801442
@@ -258,7 +258,7 @@
 # maximal pdg code for quark to be considered as a light jet         *
 # (otherwise b cuts are applied)                                     *
 #*********************************************************************
- 4 = maxjetflavor    ! Maximum jet pdg code
+ 5 = maxjetflavor    ! Maximum jet pdg code
 #*********************************************************************
 #
 #*********************************************************************

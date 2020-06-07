@@ -28,7 +28,7 @@ config.Data.ignoreLocality = True
 config.section_("Site")
 #site where you have your t2 account and grid storage
 config.Site.storageSite = 'T2_DE_DESY'
-config.Site.whitelist = ['T2_DE_DESY']
+config.Site.whitelist = ['T2_DE_*']
 
 config.section_("User")
 

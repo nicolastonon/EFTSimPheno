@@ -66,9 +66,8 @@
 #define xsec_tllq 30.5
 #define xsec_ttll 281
 #define lumi 41.5
-
+#define DEFVAL -9
 using namespace std;
-
 
 
 //--------------------------------------------
@@ -100,6 +99,8 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
     vector<vector<vector<int>>> v3_nentries_var_proc_bin(v_var.size()); //For each bin of each var of each process, count nof entries -- for debug, understand uncerts.
 
     double debug_uncert=0;
+
+    TH1::SetDefaultSumw2();
 
     //Allocate memory to histos
     const int nbins_histos = 20;
@@ -207,11 +208,13 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
      // #       #  #  #      #   ##   #   #    #    #      #    # #    # #
      // ######   ##   ###### #    #   #    ####     ######  ####   ####  #
 
-        // int nentries = 5000;
+        // int nentries = 1000;
         int nentries = t->GetEntries();
         cout<<FMAG("Processing "<<nentries<<" entries...")<<endl;
         for(int ientry=0; ientry<nentries; ientry++)
         {
+            if(ientry > 30000) {break;} //slow
+
             t->GetEntry(ientry);
 
             if(ientry%1000==0) {cout<<ientry<<" entries..."<<endl;}
@@ -232,7 +235,8 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
                 // if(v_var[ivar].Contains("antitop", TString::kIgnoreCase) && index_antitop == -1) {continue;} //if antitop not found
                 // if(v_var[ivar].Contains("top", TString::kIgnoreCase) && index_top == -1) {continue;} //if top not found
 
-                if(v_var[ivar].Contains("Zreco_") && v_var_floats[ivar] <= 0) {continue;} //No Z->ll reco
+                if(v_var[ivar].Contains("Zreco_") && v_var_floats[ivar] == DEFVAL) {continue;} //No Z->ll reco, don't plot
+                else if(v_var[ivar].BeginsWith("Z_") && v_var_floats[ivar] == DEFVAL) {continue;} //No on-shell Z, don't plot
 
                 //Count nentries for debugging
                 v3_nentries_var_proc_bin[ivar][iproc][v3_histos_var_proc_reweight[ivar][iproc][0]->GetXaxis()->FindBin(v_var_floats[ivar])]++; //add +1 entry to relevant bin
@@ -258,7 +262,6 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
                             // cout<<v_reweights_ids->at(iweightid)<<" --> "<<v_reweights_floats->at(iweightid)<<endl;
 
                             float w = v_reweights_floats->at(iweightid);
-                            // float w = v_reweights_floats->at(iweightid)/(mc_weight_originalValue * v_SWE[iweightid]);
                             // float w = weight_SF * v_reweights_floats->at(iweightid)/ v_SWE[iweightid];
 
                             if(show_overflow) {Fill_TH1F_UnderOverflow(v3_histos_var_proc_reweight[ivar][iproc][iweight], v_var_floats[ivar], w);}
@@ -268,7 +271,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
                             // cout<<"v3_histos_var_proc_reweight[ivar][iproc][iweight]->Integral() "<<v3_histos_var_proc_reweight[ivar][iproc][iweight]->Integral()<<endl;
 
                             //DEBUG uncert : compute error of 1 bin myself to make sure it's OK
-                            if(!ivar && !iproc && !iweight && v3_histos_var_proc_reweight[0][0][0]->GetXaxis()->FindBin(v_var_floats[ivar]) == 1) {debug_uncert+= pow(v_reweights_floats->at(iweightid)/mc_weight_originalValue, 2);}
+                            if(!ivar && !iproc && !iweight && v3_histos_var_proc_reweight[0][0][0]->GetXaxis()->FindBin(v_var_floats[ivar]) == 1) {debug_uncert+= pow(v_reweights_floats->at(iweightid), 2);}
 
                             break; //weight has been found
                         }
@@ -310,7 +313,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
     bool printBinContent = false; //debug
     if(printBinContent)
     {
-        for(int ivar=0; ivar<1; ivar++)
+        for(int ivar=0; ivar<2; ivar++)
         {
             cout<<"var "<<v_var[ivar]<<endl;
 
@@ -322,15 +325,14 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
                 {
                     cout<<"//--------------------------------------------"<<endl;
                     cout<<"weight "<<v_reweightNames_fromMG[iweight]<<endl;
-                    for(int ibin=1; ibin<v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetNbinsX()+1; ibin++)
+                    for(int ibin=0; ibin<v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetNbinsX()+2; ibin++)
                     {
-                        cout<<"bin "<<ibin<<" : "<<v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetBinContent(ibin)<<" +- "<<v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetBinError(ibin)<<" ("<<v3_nentries_var_proc_bin[ivar][iproc][ibin+1]<<" entries)"<<endl; //NB : first v3_nentries_var_proc_bin element is underflow
+                        cout<<"bin "<<ibin<<" : "<<v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetBinContent(ibin)<<" +- "<<v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetBinError(ibin)<<" "<<"("<<v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetBinError(ibin)*100/v3_histos_var_proc_reweight[ivar][iproc][iweight]->GetBinContent(ibin)<<"%)"<<" ["<<v3_nentries_var_proc_bin[ivar][iproc][ibin]<<" entries]"<<endl; //NB : first v3_nentries_var_proc_bin element is underflow
                     }
                 }
             }
         }
-
-        cout<<"sqrt(debug_uncert) = "<<sqrt(debug_uncert)<<endl;
+        // cout<<"sqrt(debug_uncert) = "<<sqrt(debug_uncert)<<endl; //NB: not normalized
     }
 
 
@@ -576,6 +578,8 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
 
                     if(setlog) {v3_histos_var_proc_reweight[ivar][iproc][iweight]->SetMaximum(ymax * 5.);}
                     else {v3_histos_var_proc_reweight[ivar][iproc][iweight]->SetMaximum(ymax * 1.2);}
+
+                    v3_histos_var_proc_reweight[ivar][iproc][iweight]->SetMinimum(0.); //If no bin is 0, minimum is shifted and can give a wrong impression (inflated error bars, ...)
                 }
 
                 if(v_process.size() > 1 && !iweight) //only fill legend once per process, not for each weight
@@ -650,7 +654,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
                 //Compare ratio EFT/SM
                 if(v_reweightNames_fromMG.size()+v_reweightNames_extrapol.size() > 1)
                 {
-                    subplot_y_title = "BSM/SM"; // [%]
+                    subplot_y_title = "EFT/SM"; // [%]
                     if(v_reweightNames_fromMG[iweight] != "sm")
                     {
                         v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight] = (TH1F*) v3_histos_var_proc_reweight[ivar][iproc][iweight]->Clone(); //Copy histo
@@ -726,6 +730,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
         }
 
         //Write once the list of names of the operators which are considered
+        //NB: assumes that all the reweighting points (MG and extrapolation) will follow the exact same convention
         TString example_rwgt_name = ""; //Need 1 example of rwgt name
         if(v_reweightNames_extrapol.size()>0) {example_rwgt_name = v_reweightNames_extrapol[v_reweightNames_extrapol.size()-1];}
         else if(v_reweightNames_fromMG.size()>1) {example_rwgt_name = v_reweightNames_fromMG[v_reweightNames_fromMG.size()-1];}
@@ -737,7 +742,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
             latex.SetTextAlign(11);
             latex.SetTextFont(52);
             latex.SetTextSize(0.03);
-            latex.DrawLatex(x_left+0.04, bottom_legend-0.04, list_operators);
+            latex.DrawLatex(0.65, bottom_legend-0.04, list_operators);
         }
 
 // #    # #####  # ##### ######
@@ -822,7 +827,8 @@ int main()
     // v_process.push_back("tzq");
     // v_process.push_back("tllq");
     // v_process.push_back("ttll");
-    v_process.push_back("tllq_fullsim");
+    // v_process.push_back("tllq_fullsim");
+    v_process.push_back("tllq_training")    ;
     // v_process.push_back("ttll_top19001");
     // v_process.push_back("ttll_v3");
 
@@ -867,14 +873,21 @@ int main()
     //WARNING : here the names must match exactly those stored in the tree !
     vector<TString> v_reweightNames_fromMG; vector<int> v_colors;
     //=====
-    v_reweightNames_fromMG.push_back("rwgt_sm"); //Nominal SM weight -- ALWAYS KEEP FIRST !!!
+    v_reweightNames_fromMG.push_back("rwgt_sm"); //Nominal SM weight -- ALWAYS KEEP FIRST !
     //=====
+
+    v_reweightNames_fromMG.push_back("rwgt_ctz_5.0_ctw_0.0_cpqm_0.0_cpq3_0.0_cpt_0.0");
+    v_reweightNames_fromMG.push_back("rwgt_ctz_0.0_ctw_5.0_cpqm_0.0_cpq3_0.0_cpt_0.0");
+    v_reweightNames_fromMG.push_back("rwgt_ctz_0.0_ctw_0.0_cpqm_15.0_cpq3_0.0_cpt_0.0");
+    v_reweightNames_fromMG.push_back("rwgt_ctz_0.0_ctw_0.0_cpqm_0.0_cpq3_5.0_cpt_0.0");
+    v_reweightNames_fromMG.push_back("rwgt_ctz_0.0_ctw_0.0_cpqm_0.0_cpq3_0.0_cpt_15.0");
 
     // v_reweightNames_fromMG.push_back("rwgt_ctZ_5.0_ctW_0.0_cpQM_0.0_cpQ3_0.0_cpt_0.0");
     // v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_5.0_cpQM_0.0_cpQ3_0.0_cpt_0.0");
-    v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_5.0_cpQ3_0.0_cpt_0.0");
+    // v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_5.0_cpQ3_0.0_cpt_0.0");
     // v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_0.0_cpQ3_5.0_cpt_0.0");
-    v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_0.0_cpQ3_0.0_cpt_5.0");
+    // v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_0.0_cpQ3_0.0_cpt_5.0");
+
     // v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_-3.0_cpQ3_0.0_cpt_0.0");
     // v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_0.0_cpQ3_0.0_cpt_-3.0");
 
@@ -883,12 +896,10 @@ int main()
     vector<TString> v_reweightNames_extrapol;
     // v_reweightNames_extrapol.push_back("rwgt_ctz_0_ctw_0_cpqm_0_cpq3_0_cpt_0");
 
-    // v_reweightNames_extrapol.push_back("rwgt_ctZ_5.0_ctW_0.0_cpQM_0.0_cpQ3_0.0_cpt_0.0");
-    // v_reweightNames_extrapol.push_back("rwgt_ctz_5_ctw_0_cpqm_0_cpq3_0_cpt_0");
-    // v_reweightNames_extrapol.push_back("rwgt_ctz_0_ctw_5_cpqm_0_cpq3_0_cpt_0");
-    // v_reweightNames_extrapol.push_back("rwgt_ctz_0_ctw_5_cpqm_5_cpq3_0_cpt_5");
-    v_reweightNames_extrapol.push_back("rwgt_ctz_0_ctw_0_cpqm_0_cpq3_0_cpt_5");
-    v_reweightNames_extrapol.push_back("rwgt_ctz_0_ctw_0_cpqm_5_cpq3_0_cpt_5");
+    // v_reweightNames_extrapol.push_back("rwgt_ctZ_2_ctW_2_cpQM_10_cpQ3_5_cpt_10");
+    // v_reweightNames_extrapol.push_back("rwgt_ctZ_2_ctW_2_cpQM_0_cpQ3_5_cpt_0");
+    // v_reweightNames_extrapol.push_back("rwgt_ctZ_0_ctW_0_cpQM_15_cpQ3_0_cpt_0");
+    v_reweightNames_extrapol.push_back("rwgt_ctz_5_ctw_0_cpqm_0_cpq3_0_cpt_0");
 
     Load_Canvas_Style();
 

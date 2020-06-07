@@ -393,6 +393,7 @@ WCFit Get_EFT_Fit(vector<string>* v_reweights_ids, vector<float>* v_reweights_fl
         if(!ts.Contains("_sm", TString::kIgnoreCase))
         {
             float w = v_reweights_floats->at(iwgt);
+            // float w = v_reweights_floats->at(iwgt)*1000;
             // float w = v_reweights_floats->at(iwgt) / v_SWE[iwgt]; //Should divide all reweights by SWE(SM)
 
             WCPoint wc_pt(v_reweights_ids->at(iwgt), w);
@@ -402,6 +403,7 @@ WCFit Get_EFT_Fit(vector<string>* v_reweights_ids, vector<float>* v_reweights_fl
         else
         {
             sm_wgt = v_reweights_floats->at(iwgt);
+            // sm_wgt = v_reweights_floats->at(iwgt)*1000;
         }
     } //weights loop
 

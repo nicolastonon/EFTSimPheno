@@ -28,7 +28,7 @@ config.Data.ignoreLocality = True
 
 config.section_("Site")
 config.Site.storageSite = 'T2_DE_DESY'
-config.Site.whitelist = ['T2_DE_DESY']
+config.Site.whitelist = ['T2_DE_*']
 
 config.section_("User")
 
