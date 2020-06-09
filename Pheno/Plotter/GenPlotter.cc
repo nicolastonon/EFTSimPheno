@@ -89,6 +89,8 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
     bool show_overflow = true; //true <--> include under- and over-flow (from bins 0 and nbins+1)
 //--------------------------------------------
 
+    Load_Canvas_Style();
+
     //For each var, each process and each reweight, fill/store an histo
     vector<vector<vector<TH1F*>>> v3_histos_var_proc_reweight(v_var.size());
     vector<vector<vector<TH1F*>>> v3_histos_var_proc_reweight_subplot(v_var.size());
@@ -98,8 +100,9 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
 
     vector<vector<vector<int>>> v3_nentries_var_proc_bin(v_var.size()); //For each bin of each var of each process, count nof entries -- for debug, understand uncerts.
 
-    double debug_uncert=0;
+    TString example_reweight_namingConvention = ""; //Store 1 example of weight ID, to know which are the operators used to parameterized the event weights in samples //Assume that all considered samples follow same naming convention
 
+    double debug_uncert=0;
     TH1::SetDefaultSumw2();
 
     //Allocate memory to histos
@@ -118,14 +121,25 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
             v3_histos_var_proc_reweight[ivar][iproc].resize(v_reweightNames_fromMG.size());
             v3_histos_var_proc_reweight_subplot[ivar][iproc].resize(v_reweightNames_fromMG.size());
 
-            v2_TH1EFT_var_proc[ivar][iproc] = new TH1EFT("", "", nbins_histos, v_min_max[ivar].first, v_min_max[ivar].second);
+            float xmin = v_min_max[ivar].first, xmax = v_min_max[ivar].second;
+            if(xmin == xmax)
+            {
+                xmin = 0; xmax = 300; //Default range
+                if(v_var[ivar].Contains("_eta", TString::kIgnoreCase)) {xmin = -5; xmax = 5;}
+                else if(v_var[ivar].Contains("_phi", TString::kIgnoreCase) || v_var[ivar].Contains("_dPhi", TString::kIgnoreCase)) {xmin = -3.2; xmax = 3.2;}
+                else if(v_var[ivar].Contains("_dR", TString::kIgnoreCase) || v_var[ivar].Contains("dR_", TString::kIgnoreCase)) {xmin = 0; xmax = 6;}
+                else if(v_var[ivar].Contains("_eta", TString::kIgnoreCase)) {xmin = -5; xmax = 5;}
+                else if(v_var[ivar].Contains("_dEta", TString::kIgnoreCase) || v_var[ivar].Contains("dEta_", TString::kIgnoreCase)) {xmin = 0; xmax = 8;}
+            }
+
+            v2_TH1EFT_var_proc[ivar][iproc] = new TH1EFT("", "", nbins_histos, xmin, xmax);
 
             v3_nentries_var_proc_bin[ivar][iproc].resize(nbins_histos+2); //Also under/over flow bins
 
             for(int iweight=0; iweight<v_reweightNames_fromMG.size(); iweight++)
             {
-                v3_histos_var_proc_reweight[ivar][iproc][iweight] = new TH1F("", "", nbins_histos, v_min_max[ivar].first, v_min_max[ivar].second);
-                v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight] = new TH1F("", "", nbins_histos, v_min_max[ivar].first, v_min_max[ivar].second);
+                v3_histos_var_proc_reweight[ivar][iproc][iweight] = new TH1F("", "", nbins_histos, xmin, xmax);
+                v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight] = new TH1F("", "", nbins_histos, xmin, xmax);
             }
         }
     }
@@ -173,6 +187,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
 
         //Check that all requested weights (from MG) are found in sample
         t->GetEntry(0);
+        example_reweight_namingConvention = v_reweights_ids->at(2); //Arbitrary name example (don't take first element because it may be 'rwgt_sm')
         for(int iweight=0; iweight<v_reweightNames_fromMG.size(); iweight++)
         {
             bool weightFound = false;
@@ -211,15 +226,14 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
         // int nentries = 1000;
         int nentries = t->GetEntries();
         cout<<FMAG("Processing "<<nentries<<" entries...")<<endl;
+        if(v_reweightNames_extrapol.size() > 0 && nentries > 50000) {nentries = 50000;} //Parameterization is slow
         for(int ientry=0; ientry<nentries; ientry++)
         {
-            if(ientry > 30000) {break;} //slow
-
             t->GetEntry(ientry);
 
             if(ientry%1000==0) {cout<<ientry<<" entries..."<<endl;}
 
-            // cout<<"//--------------------------------------------"<<endl;
+            // coutendl;
             // for(int iweight=0; iweight<v_reweights_ids->size(); iweight++)
             // {
             //     cout<<"v_reweights_ids[iweight] "<<v_reweights_ids->at(iweight)<<endl;
@@ -235,8 +249,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
                 // if(v_var[ivar].Contains("antitop", TString::kIgnoreCase) && index_antitop == -1) {continue;} //if antitop not found
                 // if(v_var[ivar].Contains("top", TString::kIgnoreCase) && index_top == -1) {continue;} //if top not found
 
-                if(v_var[ivar].Contains("Zreco_") && v_var_floats[ivar] == DEFVAL) {continue;} //No Z->ll reco, don't plot
-                else if(v_var[ivar].BeginsWith("Z_") && v_var_floats[ivar] == DEFVAL) {continue;} //No on-shell Z, don't plot
+                if(abs(v_var_floats[ivar]) == abs(DEFVAL)) {continue;} //Dummy value, don't plot this entry for this variable
 
                 //Count nentries for debugging
                 v3_nentries_var_proc_bin[ivar][iproc][v3_histos_var_proc_reweight[ivar][iproc][0]->GetXaxis()->FindBin(v_var_floats[ivar])]++; //add +1 entry to relevant bin
@@ -285,7 +298,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
             float sm_wgt = 0;
             WCFit eftfit = Get_EFT_Fit(v_reweights_ids, v_reweights_floats, sm_wgt);
 
-            FillTH1EFT_ManyVars(v2_TH1EFT_var_proc, iproc, v_var_floats, eftfit, sm_wgt, show_overflow);
+            FillTH1EFT_ManyVars(v2_TH1EFT_var_proc, eftfit, v_var_floats, iproc, sm_wgt, show_overflow);
 
             // FillTH1EFT(v2_TH1EFT_var_proc[ivar][iproc], v_var_floats[ivar], v_reweights_ids, v_reweights_floats, originalXWGTUP, v_SWE, weight_SF, show_overflow);
         } //Loop on entries
@@ -384,6 +397,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
     mkdir("plots", 0777);
     mkdir("plots/input_vars", 0777);
 
+    bool contains_ACreweights = false; //Check whether some 'extrapolated reweights' are set in the AC framework -- if yes, want to extend legend size (larger names)
     for(int ivar=0; ivar<v_var.size(); ivar++)
     {
         //For each extrapolated reweight, will scale the TH1EFT accordingly and store its content into a TH1F which will be drawn on the canvas
@@ -417,8 +431,14 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
             v2_TH1FfromTH1EFT_proc_reweight_subplot[iproc].resize(v_reweightNames_extrapol.size());
             for(int iweight=0; iweight<v_reweightNames_extrapol.size(); iweight++)
             {
+                // cout<<"v_reweightNames_extrapol[iweight] "<<v_reweightNames_extrapol[iweight]<<endl;
+
                 //Rescale TH1EFT accordingly to current reweight
-                WCPoint wcp = WCPoint((string) v_reweightNames_extrapol[iweight], 1.);
+                WCPoint wcp;
+                if(v_reweightNames_extrapol[iweight].BeginsWith("rwgt_c", TString::kExact)) {wcp = WCPoint((string) v_reweightNames_extrapol[iweight], 1.);} //EFT
+                else if(v_reweightNames_extrapol[iweight].BeginsWith("rwgt_C", TString::kExact) || v_reweightNames_extrapol[iweight].BeginsWith("rwgt_D", TString::kExact)) {wcp = WCPoint((string) Convert_ACtoEFT(v_reweightNames_extrapol[iweight], example_reweight_namingConvention), 1.); contains_ACreweights = true;} //AC --> convert in terms of Wilson coeff. for reweighting
+                else {cout<<"ERROR: naming convention not recognized !"<<endl; return;}
+
                 v2_TH1EFT_var_proc[ivar][iproc]->Scale(wcp);
 
                 if(normalize) {v2_TH1EFT_var_proc[ivar][iproc]->Scale(1. / v2_TH1EFT_var_proc[ivar][iproc]->Integral());} //Normalize
@@ -509,6 +529,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
         // c1->SetTopMargin(0.1);
         c1->SetBottomMargin(0.43);
         if(setlog) c1->SetLogy();
+        c1->SetTopMargin(0.1); //space for legend
 
         //--- LEGEND FOR REWEIGHTS
         TLegend* legend_weights = 0;
@@ -518,9 +539,10 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
         // float width_col = 0.32; //hardcoded value
         float width_col = 0.17;
         float x_left = 0.99-ceil((v_reweightNames_fromMG.size()+v_reweightNames_extrapol.size())/2.)*width_col; //each column takes same x-space
+        if(contains_ACreweights) {x_left = 0.2;} //AC names are larger
         float bottom_legend = 0.90;
-        // legend_weights = new TLegend(x_left,0.88,0.99,0.99);
-        legend_weights = new TLegend(x_left,bottom_legend,0.99,0.99);
+        // legend_weights = new TLegend(x_left,bottom_legend,0.99,0.99);
+        legend_weights = new TLegend(x_left,0.905,0.995,0.995);
         legend_weights->SetNColumns(ceil((v_reweightNames_fromMG.size()+v_reweightNames_extrapol.size())/2.));
         legend_weights->SetLineColor(1);
         // legend_weights->SetTextSize(0.025);
@@ -530,7 +552,9 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
         TLegend* legend_proc = 0;
         if(v_process.size() > 1)
         {
-            legend_proc = new TLegend(x_left - 0.10,0.88,x_left - 0.01,0.99);
+            // legend_proc = new TLegend(x_left - 0.10,0.88,x_left - 0.01,0.99);
+            legend_proc = new TLegend(0.20, 0.92, x_left-0.02,0.99);
+            legend_weights->SetNColumns(v_process.size());
             legend_proc->SetTextSize(0.03);
         }
 
@@ -596,21 +620,20 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
                 v3_histos_var_proc_reweight[ivar][iproc][iweight]->Draw("hist E same");
             }
 
-            //Loop on extrapolated reweights
-            v2_TH1FfromTH1EFT_proc_reweight[iproc].resize(v_reweightNames_extrapol.size());
-            v2_TH1FfromTH1EFT_proc_reweight_subplot[iproc].resize(v_reweightNames_extrapol.size());
+            //-- Loop on extrapolated reweights
+            //REMOVE -- already done earlier ?
+            // v2_TH1FfromTH1EFT_proc_reweight[iproc].resize(v_reweightNames_extrapol.size());
+            // v2_TH1FfromTH1EFT_proc_reweight_subplot[iproc].resize(v_reweightNames_extrapol.size());
             for(int iweight=0; iweight<v_reweightNames_extrapol.size(); iweight++)
             {
+                //REMOVE -- already done earlier ?
                 //Rescale TH1EFT accordingly to current reweight
-                WCPoint wcp = WCPoint((string) v_reweightNames_extrapol[iweight], 1.);
-                v2_TH1EFT_var_proc[ivar][iproc]->Scale(wcp);
-                v2_TH1EFT_var_proc[ivar][iproc]->Scale(1. / v2_TH1EFT_var_proc[ivar][iproc]->Integral()); //Normalize
-
+                // WCPoint wcp = WCPoint((string) v_reweightNames_extrapol[iweight], 1.);
+                // v2_TH1EFT_var_proc[ivar][iproc]->Scale(wcp);
+                // v2_TH1EFT_var_proc[ivar][iproc]->Scale(1. / v2_TH1EFT_var_proc[ivar][iproc]->Integral()); //Normalize
                 //Store contents of rescaled TH1EFT into a TH1F for drawing
-                v2_TH1FfromTH1EFT_proc_reweight[iproc][iweight] = (TH1F*) v2_TH1EFT_var_proc[ivar][iproc]->Clone();
+                // v2_TH1FfromTH1EFT_proc_reweight[iproc][iweight] = (TH1F*) v2_TH1EFT_var_proc[ivar][iproc]->Clone();
 
-                // v2_TH1FfromTH1EFT_proc_reweight[iproc][iweight]->SetLineColor(v_reweightNames_fromMG.size() + iweight + 1);
-                // if(v_reweightNames_fromMG.size() + iweight + 1==5) {v2_TH1FfromTH1EFT_proc_reweight[iproc][iweight]->SetLineColor(8);} //don't like yellow
                 v2_TH1FfromTH1EFT_proc_reweight[iproc][iweight]->SetLineColor(Get_Color(v_reweightNames_fromMG.size() + iweight));
 
                 if(!iproc) //Different style per process ; only fill legend once per reweight, not for each process
@@ -693,7 +716,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
 
                 // v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->Scale(100.); //express in %
                 v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->SetMinimum(0.);
-                v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->SetMaximum(SFmax*1.2);
+                v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->SetMaximum(SFmax*1.1);
 
                 // v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->SetLineColor(iweight+1);
                 v3_histos_var_proc_reweight_subplot[ivar][iproc][iweight]->SetLineColor(Get_Color(iweight));
@@ -709,7 +732,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
                 v2_TH1FfromTH1EFT_proc_reweight_subplot[iproc][iweight]->Divide(v3_histos_var_proc_reweight[ivar][iproc][0]); //Divide by nominal = SM histo
 
                 v2_TH1FfromTH1EFT_proc_reweight_subplot[iproc][iweight]->SetMinimum(0.);
-                v2_TH1FfromTH1EFT_proc_reweight_subplot[iproc][iweight]->SetMaximum(SFmax*1.2);
+                v2_TH1FfromTH1EFT_proc_reweight_subplot[iproc][iweight]->SetMaximum(SFmax*1.1);
 
                 v2_TH1FfromTH1EFT_proc_reweight_subplot[iproc][iweight]->SetLineWidth(2);
 
@@ -720,21 +743,25 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
         //Only write process name on plot if considering 1 single process
         if(v_process.size() == 1)
         {
-            TString text = "pp #rightarrow " + GetProcessLegendName(v_process[0]) + " (13 TeV)";
+            TString text = "pp #rightarrow " + GetProcessLegendName(v_process[0]);
             TLatex latex;
             latex.SetNDC();
             latex.SetTextAlign(11);
             latex.SetTextFont(52);
-            latex.SetTextSize(0.04);
-            latex.DrawLatex(0.17, 0.95, text);
+            latex.SetTextSize(0.03);
+            // latex.DrawLatex(0.17, 0.95, text);
+
+            if(x_left < 0.45 || v_process.size()>1) {latex.DrawLatex(0.19, 0.85, text);}
+            else {latex.DrawLatex(0.26, 0.91, text);}
         }
 
         //Write once the list of names of the operators which are considered
         //NB: assumes that all the reweighting points (MG and extrapolation) will follow the exact same convention
         TString example_rwgt_name = ""; //Need 1 example of rwgt name
-        if(v_reweightNames_extrapol.size()>0) {example_rwgt_name = v_reweightNames_extrapol[v_reweightNames_extrapol.size()-1];}
-        else if(v_reweightNames_fromMG.size()>1) {example_rwgt_name = v_reweightNames_fromMG[v_reweightNames_fromMG.size()-1];}
-        TString list_operators = Get_List_Operators(example_rwgt_name);
+        // if(v_reweightNames_extrapol.size()>0) {example_rwgt_name = v_reweightNames_extrapol[v_reweightNames_extrapol.size()-1];}
+        // else if(v_reweightNames_fromMG.size()>1) {example_rwgt_name = v_reweightNames_fromMG[v_reweightNames_fromMG.size()-1];}
+        // TString list_operators = Get_List_Operators(example_rwgt_name);
+        TString list_operators = Get_List_Operators(example_reweight_namingConvention);
         if(example_rwgt_name != "")
         {
             TLatex latex;
@@ -742,7 +769,10 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
             latex.SetTextAlign(11);
             latex.SetTextFont(52);
             latex.SetTextSize(0.03);
-            latex.DrawLatex(0.65, bottom_legend-0.04, list_operators);
+            // latex.DrawLatex(0.65, bottom_legend-0.04, list_operators); //inside plot, top left
+
+            if(x_left < 0.45 || v_process.size()>1) {latex.DrawLatex(0.50, bottom_legend-0.05, list_operators);}
+            else {latex.DrawLatex(0.18, 0.96, list_operators);} //outside plot, top left
         }
 
 // #    # #####  # ##### ######
@@ -821,6 +851,8 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
 
 int main()
 {
+//--------------------------------------------
+
     //-- List of processes to superimpose
     vector<TString> v_process;
     // v_process.push_back("ttz");
@@ -828,43 +860,71 @@ int main()
     // v_process.push_back("tllq");
     // v_process.push_back("ttll");
     // v_process.push_back("tllq_fullsim");
-    v_process.push_back("tllq_training")    ;
     // v_process.push_back("ttll_top19001");
+    v_process.push_back("tllq_training")    ;
     // v_process.push_back("ttll_v3");
+
+//--------------------------------------------
 
     //-- List of variables to plot, and their ranges
     //NB : "Top_x" and "Antitop_x" contain only events which have a top or antitop respectively. 'LeadingTop_x' considers leading top/antitop
     vector<TString> v_var; vector<pair<float, float>> v_min_max;
-    v_var.push_back("Z_pt"); v_min_max.push_back(std::make_pair(0, 300));
-    v_var.push_back("Z_eta"); v_min_max.push_back(std::make_pair(-5, 5));
-    v_var.push_back("Zreco_pt"); v_min_max.push_back(std::make_pair(0, 300));
-    v_var.push_back("Zreco_eta"); v_min_max.push_back(std::make_pair(-5, 5));
-    v_var.push_back("Zreco_m"); v_min_max.push_back(std::make_pair(75, 105));
-    v_var.push_back("Zreco_dPhill"); v_min_max.push_back(std::make_pair(0, 4));
-    v_var.push_back("LepTop_pt"); v_min_max.push_back(std::make_pair(0, 400));
-    v_var.push_back("LepTop_eta"); v_min_max.push_back(std::make_pair(-5, 5));
-    v_var.push_back("TopZsystem_pt"); v_min_max.push_back(std::make_pair(100, 500));
-    v_var.push_back("TopZsystem_eta"); v_min_max.push_back(std::make_pair(-5, 5));
-    v_var.push_back("TopZsystem_m"); v_min_max.push_back(std::make_pair(0, 400));
-    v_var.push_back("recoilJet_pt"); v_min_max.push_back(std::make_pair(0, 250));
-    v_var.push_back("recoilJet_eta"); v_min_max.push_back(std::make_pair(-5, 5));
+    v_var.push_back("Z_pt"); v_min_max.push_back(std::make_pair(0, 500));
+    // v_var.push_back("Z_eta"); v_min_max.push_back(std::make_pair(-1, -1));
+    // v_var.push_back("Z_phi"); v_min_max.push_back(std::make_pair(-1, -1));
+    // v_var.push_back("Z_m"); v_min_max.push_back(std::make_pair(75, 105));
+    // v_var.push_back("Zreco_pt"); v_min_max.push_back(std::make_pair(50, 500));
+    // v_var.push_back("Zreco_eta"); v_min_max.push_back(std::make_pair(-1, -1));
+    // v_var.push_back("Zreco_phi"); v_min_max.push_back(std::make_pair(-1, -1));
+    // v_var.push_back("Zreco_m"); v_min_max.push_back(std::make_pair(75, 105));
+    // v_var.push_back("Zreco_dPhill"); v_min_max.push_back(std::make_pair(0, 3));
+    // v_var.push_back("LepTop_pt"); v_min_max.push_back(std::make_pair(0, 400));
+    // v_var.push_back("LepTop_eta"); v_min_max.push_back(std::make_pair(-1, -1));
+    // v_var.push_back("LepTop_phi"); v_min_max.push_back(std::make_pair(-1, -1));
+    // v_var.push_back("LepTop_m"); v_min_max.push_back(std::make_pair(160, 190));
+    // v_var.push_back("TopZsystem_pt"); v_min_max.push_back(std::make_pair(0, 500));
+    // v_var.push_back("TopZsystem_eta"); v_min_max.push_back(std::make_pair(-1, -1));
+    // v_var.push_back("TopZsystem_phi"); v_min_max.push_back(std::make_pair(-1, -1));
+    // v_var.push_back("TopZsystem_m"); v_min_max.push_back(std::make_pair(0, 1200));
+    // v_var.push_back("recoilQuark_pt"); v_min_max.push_back(std::make_pair(-1, -1));
+    // v_var.push_back("recoilQuark_eta"); v_min_max.push_back(std::make_pair(-1, -1));
+    // v_var.push_back("recoilQuark_phi"); v_min_max.push_back(std::make_pair(-1, -1));
+    // v_var.push_back("mTW"); v_min_max.push_back(std::make_pair(50, 400));
+    // v_var.push_back("Wlep_pt"); v_min_max.push_back(std::make_pair(-1, -1));
+    // v_var.push_back("Wlep_eta"); v_min_max.push_back(std::make_pair(-1, -1));
+    // v_var.push_back("Wlep_phi"); v_min_max.push_back(std::make_pair(-1, -1));
     v_var.push_back("cosThetaStarPol_Top"); v_min_max.push_back(std::make_pair(-1, 1));
     v_var.push_back("cosThetaStarPol_Z"); v_min_max.push_back(std::make_pair(-1, 1));
-    v_var.push_back("Mass_3l"); v_min_max.push_back(std::make_pair(0, 500));
-    v_var.push_back("delRZl"); v_min_max.push_back(std::make_pair(0, 2));
-    v_var.push_back("Top_delRbl"); v_min_max.push_back(std::make_pair(0, 4));
-    v_var.push_back("Top_delRbW"); v_min_max.push_back(std::make_pair(0, 4));
-    v_var.push_back("tZ_m"); v_min_max.push_back(std::make_pair(0, 400));
-    v_var.push_back("tZ_eta"); v_min_max.push_back(std::make_pair(0, 4));
-    v_var.push_back("delRtZ"); v_min_max.push_back(std::make_pair(0, 4));
-    v_var.push_back("delRtRecoilJet"); v_min_max.push_back(std::make_pair(0, 4));
-    v_var.push_back("delRbRecoilJet"); v_min_max.push_back(std::make_pair(0, 4));
-    v_var.push_back("delRlRecoilJet"); v_min_max.push_back(std::make_pair(0, 4));
-    v_var.push_back("dEtaRecoilJetBJet"); v_min_max.push_back(std::make_pair(0, 4));
-    v_var.push_back("delRlWb"); v_min_max.push_back(std::make_pair(0, 2));
-    v_var.push_back("leptonCharge"); v_min_max.push_back(std::make_pair(-1, 1));
-    v_var.push_back("mTW"); v_min_max.push_back(std::make_pair(0, 300));
-    v_var.push_back("ptW"); v_min_max.push_back(std::make_pair(0, 400));
+    // v_var.push_back("maxDiJet_pt"); v_min_max.push_back(std::make_pair(0, 500));
+    // v_var.push_back("maxDiJet_m"); v_min_max.push_back(std::make_pair(0, 3000));
+    // v_var.push_back("minDiJet_dEta"); v_min_max.push_back(std::make_pair(0, 0.5));
+    // v_var.push_back("maxDiJet_dEta"); v_min_max.push_back(std::make_pair(2, 12));
+    // v_var.push_back("maxDiJet_dPhi"); v_min_max.push_back(std::make_pair(2.6, 3.2));
+    // v_var.push_back("minDiJet_dR"); v_min_max.push_back(std::make_pair(0, 1));
+    // v_var.push_back("maxDiJet_dR"); v_min_max.push_back(std::make_pair(2, 12));
+    // v_var.push_back("Mass_3l"); v_min_max.push_back(std::make_pair(80, 500));
+    // v_var.push_back("dR_tZ"); v_min_max.push_back(std::make_pair(-1, -1));
+    // v_var.push_back("dR_ZlW"); v_min_max.push_back(std::make_pair(-1, -1));
+    // v_var.push_back("dR_blW"); v_min_max.push_back(std::make_pair(0, 4));
+    // v_var.push_back("dR_bW"); v_min_max.push_back(std::make_pair(0, 4));
+    // v_var.push_back("dR_tClosestLep"); v_min_max.push_back(std::make_pair(0, 4));
+    // v_var.push_back("dR_jprimeClosestLep"); v_min_max.push_back(std::make_pair(-1, -1));
+    // v_var.push_back("dR_tjprime"); v_min_max.push_back(std::make_pair(-1, -1));
+    // v_var.push_back("dEta_tjprime"); v_min_max.push_back(std::make_pair(-1, -1));
+    // v_var.push_back("dR_bjprime"); v_min_max.push_back(std::make_pair(-1, -1));
+    // v_var.push_back("dEta_bjprime"); v_min_max.push_back(std::make_pair(-1, -1));
+    // v_var.push_back("dR_lWjprime"); v_min_max.push_back(std::make_pair(-1, -1));
+    // v_var.push_back("dEta_lWjprime"); v_min_max.push_back(std::make_pair(-1, -1));
+    // v_var.push_back("dR_Zjprime"); v_min_max.push_back(std::make_pair(-1, -1));
+    // v_var.push_back("dEta_Zjprime"); v_min_max.push_back(std::make_pair(-1, -1));
+    // v_var.push_back("maxEtaJet"); v_min_max.push_back(std::make_pair(0, 6));
+    // v_var.push_back("dR_ttbar"); v_min_max.push_back(std::make_pair(-1, -1));
+    // v_var.push_back("dEta_ttbar"); v_min_max.push_back(std::make_pair(-1, -1));
+    // v_var.push_back("ptLepSum"); v_min_max.push_back(std::make_pair(0, 500));
+    // v_var.push_back("ptHadSum"); v_min_max.push_back(std::make_pair(0, 2000));
+    // v_var.push_back("mHT"); v_min_max.push_back(std::make_pair(0, 600));
+    // v_var.push_back("lepAsym"); v_min_max.push_back(std::make_pair(-5, 5));
+    // v_var.push_back("njets"); v_min_max.push_back(std::make_pair(0, 10));
 
 //--------------------------------------------
 
@@ -876,11 +936,11 @@ int main()
     v_reweightNames_fromMG.push_back("rwgt_sm"); //Nominal SM weight -- ALWAYS KEEP FIRST !
     //=====
 
-    v_reweightNames_fromMG.push_back("rwgt_ctz_5.0_ctw_0.0_cpqm_0.0_cpq3_0.0_cpt_0.0");
-    v_reweightNames_fromMG.push_back("rwgt_ctz_0.0_ctw_5.0_cpqm_0.0_cpq3_0.0_cpt_0.0");
-    v_reweightNames_fromMG.push_back("rwgt_ctz_0.0_ctw_0.0_cpqm_15.0_cpq3_0.0_cpt_0.0");
-    v_reweightNames_fromMG.push_back("rwgt_ctz_0.0_ctw_0.0_cpqm_0.0_cpq3_5.0_cpt_0.0");
-    v_reweightNames_fromMG.push_back("rwgt_ctz_0.0_ctw_0.0_cpqm_0.0_cpq3_0.0_cpt_15.0");
+    // v_reweightNames_fromMG.push_back("rwgt_ctz_5.0_ctw_0.0_cpqm_0.0_cpq3_0.0_cpt_0.0");
+    // v_reweightNames_fromMG.push_back("rwgt_ctz_0.0_ctw_5.0_cpqm_0.0_cpq3_0.0_cpt_0.0");
+    // v_reweightNames_fromMG.push_back("rwgt_ctz_0.0_ctw_0.0_cpqm_15.0_cpq3_0.0_cpt_0.0");
+    // v_reweightNames_fromMG.push_back("rwgt_ctz_0.0_ctw_0.0_cpqm_0.0_cpq3_15.0_cpt_0.0");
+    // v_reweightNames_fromMG.push_back("rwgt_ctz_0.0_ctw_0.0_cpqm_0.0_cpq3_0.0_cpt_15.0");
 
     // v_reweightNames_fromMG.push_back("rwgt_ctZ_5.0_ctW_0.0_cpQM_0.0_cpQ3_0.0_cpt_0.0");
     // v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_5.0_cpQM_0.0_cpQ3_0.0_cpt_0.0");
@@ -891,17 +951,20 @@ int main()
     // v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_-3.0_cpQ3_0.0_cpt_0.0");
     // v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_0.0_cpQ3_0.0_cpt_-3.0");
 
-    //-- List of weights to plot *which will be obtained from the TH1EFT extrapolation* (+ colors)
-    //NB : 'rwgt_sm' will crash ; explicitely set all the WCs to 0 instead
+    //-- List of weights to plot which will be obtained from the TH1EFT extrapolation
+    //Examples: 'rwgt_ctZ_0' (SM), 'rwgt_ctZ_2' (EFT), 'rwgt_C1A_0.3' (AC, abs), 'rwgt_C1A_0.3' (AC, abs) ; last 2 examples correspond to anomalous couplings (C1A,C1V,C2V), which get automatically converted in terms of Wilson coeff. (in which the event weights are actually parameterized) //NB: C1V_SM = 0.2448, C1A_SM = -0.6012 ; can either choose to set a 'DeltaC1A/V' difference or an absolute 'C1A/V' value) //Default for AC: C2V=DeltaC1A=DeltaC1V=0
     vector<TString> v_reweightNames_extrapol;
     // v_reweightNames_extrapol.push_back("rwgt_ctz_0_ctw_0_cpqm_0_cpq3_0_cpt_0");
+    v_reweightNames_extrapol.push_back("rwgt_C2V_-0.25_C1A_0_C1V_0");
+    v_reweightNames_extrapol.push_back("rwgt_DeltaC1V_0.5_DeltaC1A_0.5");
+    v_reweightNames_extrapol.push_back("rwgt_DeltaC1A_1");
 
     // v_reweightNames_extrapol.push_back("rwgt_ctZ_2_ctW_2_cpQM_10_cpQ3_5_cpt_10");
     // v_reweightNames_extrapol.push_back("rwgt_ctZ_2_ctW_2_cpQM_0_cpQ3_5_cpt_0");
     // v_reweightNames_extrapol.push_back("rwgt_ctZ_0_ctW_0_cpQM_15_cpQ3_0_cpt_0");
-    v_reweightNames_extrapol.push_back("rwgt_ctz_5_ctw_0_cpqm_0_cpq3_0_cpt_0");
+    // v_reweightNames_extrapol.push_back("rwgt_ctz_5_ctw_0_cpqm_0_cpq3_0_cpt_0");
 
-    Load_Canvas_Style();
+//--------------------------------------------
 
     Compare_Distributions(v_process, v_var, v_reweightNames_fromMG, v_reweightNames_extrapol, v_min_max);
 

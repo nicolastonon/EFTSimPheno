@@ -187,14 +187,14 @@ class GenAnalyzer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
 //--------------------------------------------
 //VARIABLES
 
-        //Z variables
+        //Gen Z boson
         int Z_decayMode_;
         float Z_pt_;
         float Z_eta_;
         float Z_phi_;
         float Z_m_;
 
-        //Zreco = (l1+l2)
+        //Reco Z boson = (l1+l2)
         float Zreco_pt_;
         float Zreco_eta_;
         float Zreco_phi_;
@@ -207,23 +207,10 @@ class GenAnalyzer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
         float LepTop_phi_;
         float LepTop_m_;
 
-        //Top variables (obsolete -- only care about unique leptonic top in event)
-        // int index_top;
-        // float Top_pt_;
-        // float Top_eta_;
-        // float Top_phi_;
-        // float Top_m_;
-        //AntiTop variables (obsolete -- only care about unique leptonic top in event)
-        // int index_antitop;
-        // float AntiTop_pt_;
-        // float AntiTop_eta_;
-        // float AntiTop_phi_;
-        // float AntiTop_m_;
-        //Leading top variables (obsolete -- only care about unique leptonic top in event)
-        // float LeadingTop_pt_;
-        // float LeadingTop_eta_;
-        // float LeadingTop_phi_;
-        // float LeadingTop_m_;
+        //Lepton decay from top variables
+        float LepTopLep_pt_;
+        float LepTopLep_eta_;
+        float LepTopLep_phi_;
 
         //Top(lep)+Z system
         float TopZsystem_pt_;
@@ -236,6 +223,11 @@ class GenAnalyzer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
         float recoilQuark_eta_;
         float recoilQuark_phi_;
         float recoilQuark_id;
+
+        //b-quark from top
+        float LepTopB_pt_;
+        float LepTopB_eta_;
+        float LepTopB_phi_;
 
         //W boson from leptonic top decay
         float mTW_;
@@ -263,12 +255,16 @@ class GenAnalyzer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
         float dR_blW_;
         float dR_bW_;
         float dR_tClosestLep_;
+        float dR_tClosestJet_;
         float dR_jprimeClosestLep_;
+        float dEta_jprimeClosestLep_;
         float dR_tjprime_, dEta_tjprime_;
         float dR_bjprime_, dEta_bjprime_;
         float dR_lWjprime_, dEta_lWjprime_;
         float dR_Zjprime_, dEta_Zjprime_;
         float maxEtaJet_;
+        float maxDelPhiLL_;
+        float maxDelRbL_;
 
         //Specific to ttZ
         float dR_ttbar_, dEta_ttbar_;
@@ -362,7 +358,6 @@ GenAnalyzer::~GenAnalyzer()
 // ------------ method called for each event  ------------
 void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
-
  //  ####  ###### ##### #    # #####
  // #      #        #   #    # #    #
  //  ####  #####    #   #    # #    #
@@ -394,7 +389,7 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
 
     Handle<reco::GenParticleCollection> genParticlesHandle; //Smart pointer
     iEvent.getByToken(genParticleCollectionToken_, genParticlesHandle);
-    // cout<<"genParticlesHandle.isValid() = "<<genParticlesHandle.isValid()<<endl;
+    if(!genParticlesHandle.isValid()) {return;}
 
     Handle<reco::GenJetCollection> genJetsHandle; //Smart pointer
     iEvent.getByToken(genJetCollection_token_, genJetsHandle);
@@ -480,371 +475,380 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
 //  ######   ######## ##    ##    ########  #######   #######  ##
 
 //-- Loop on genParticles
-    //cout<<"genParticlesHandle.isValid() "<<genParticlesHandle.isValid()<<endl;
-    if(genParticlesHandle.isValid() )
+    //OLD
+    // TLorentzVector Zboson, top, antitop, TopZsystem, leadingTop, recoilQuark;
+    // TLorentzVector lepZ1, lepZ2; int lepZ1_id=-99, lepZ2_id=-99; //Leptons from Z, or from non-resonant prod.
+    // TLorentzVector lTop, neuTop, bTop;
+    // TLorentzVector RecoTop; //t = b+v+l
+    // TLorentzVector lAntiTop, neuAntiTop, bAntiTop;
+    // TLorentzVector RecoAntiTop; //t = b+v+l
+
+    // int index_top=-1, index_antitop=-1;
+    int index_Z=-1, index_lepTop=-1, index_hadTop=-1, idx_W=-1;
+    int lepZ1_id=-99, lepZ2_id=-99,lepTopl_id=-99;
+
+    //-- TLorentzVectors
+    TLorentzVector Zboson, RecoZ, lepTop, hadTop, TopZsystem;
+    TLorentzVector recoilQuark;
+    TLorentzVector lepZ1, lepZ2;
+    TLorentzVector lepTopl, lepTopnu, lepTopb, lepTopW;
+    TLorentzVector hadTopq1, hadTopq2, hadTopnu, hadTopb;
+
+    int nEleMuFinalState = 0;
+
+    // cout<<"genParticlesHandle->size() = "<<genParticlesHandle->size()<<endl;
+    // for (auto it = genParticles->begin(); it != genParticles->end(); it++) {
+    for(size_t i = 0; i < genParticlesHandle->size(); ++ i)
     {
-        //OLD
-        // TLorentzVector Zboson, top, antitop, TopZsystem, leadingTop, recoilQuark;
-        // TLorentzVector lepZ1, lepZ2; int lepZ1_id=-99, lepZ2_id=-99; //Leptons from Z, or from non-resonant prod.
-        // TLorentzVector lTop, neuTop, bTop;
-        // TLorentzVector RecoTop; //t = b+v+l
-        // TLorentzVector lAntiTop, neuAntiTop, bAntiTop;
-        // TLorentzVector RecoAntiTop; //t = b+v+l
+        const GenParticle & p = (*genParticlesHandle)[i];
+        // auto p = *it;
 
-        // int index_top=-1, index_antitop=-1;
-        int index_Z=-1, index_lepTop=-1, index_hadTop=-1, idx_W=-1;
-        int lepZ1_id=-99, lepZ2_id=-99,lepTopl_id=-99;
+        float ptGen = p.pt();
+        float etaGen = p.eta();
+        float phiGen = p.phi();
+        float EGen = p.energy();
+        int idGen = p.pdgId();
+        int statusGen = p.status();
+        int isPromptFinalStateGen = p.isPromptFinalState();
+        int isDirectPromptTauDecayProductFinalState = p.isDirectPromptTauDecayProductFinalState();
+        // float mGen = p.mass();
+        // int chargeGen = p.charge();
 
-        //-- TLorentzVectors
-        TLorentzVector Zboson, RecoZ, lepTop, hadTop, TopZsystem;
-        TLorentzVector recoilQuark;
-        TLorentzVector lepZ1, lepZ2;
-        TLorentzVector lepTopl, lepTopnu, lepTopb, lepTopW;
-        TLorentzVector hadTopq1, hadTopq2, hadTopnu, hadTopb;
+        //-- Basic cuts
+        // if(statusGen >= 71 && statusGen <= 79) {continue;} //NB : not all FS particles have statusGen==1 ! see : http://home.thep.lu.se/~torbjorn/pythia81html/ParticleProperties.html
+        if(ptGen < 5.) {continue;} //In analysis, will not reconstruct leptons below 10 GeV... //NB : this cut may remove prompt leptons, e.g. from Z->tau->X decay
 
-        int nEleMuFinalState = 0;
+        //-- Infos on *all* gen particles
+        // genParticlesPt_.push_back(ptGen);
+        // genParticlesEta_.push_back(etaGen);
+        // genParticlesPhi_.push_back(phiGen);
+        // genParticlesMass_.push_back(mGen);
 
-        // cout<<"genParticlesHandle->size() = "<<genParticlesHandle->size()<<endl;
-        // for (auto it = genParticles->begin(); it != genParticles->end(); it++) {
-        for(size_t i = 0; i < genParticlesHandle->size(); ++ i)
-        {
-            const GenParticle & p = (*genParticlesHandle)[i];
-            // auto p = *it;
+        //Get vector of daughters' indices
+        std::vector<int> daughter_indices = GetVectorDaughterIndices(genParticlesHandle, p);
 
-            float ptGen = p.pt();
-            float etaGen = p.eta();
-            float phiGen = p.phi();
-            float EGen = p.energy();
-            int idGen = p.pdgId();
-            int statusGen = p.status();
-            int isPromptFinalStateGen = p.isPromptFinalState();
-            int isDirectPromptTauDecayProductFinalState = p.isDirectPromptTauDecayProductFinalState();
-            // float mGen = p.mass();
-            // int chargeGen = p.charge();
-
-            //-- Basic cuts //FIXME -- no pt cut ?
-            // if(statusGen >= 71 && statusGen <= 79) {continue;} //NB : not all FS particles have statusGen==1 ! see : http://home.thep.lu.se/~torbjorn/pythia81html/ParticleProperties.html
-            if(ptGen < 5.) {continue;} //In analysis, will not reconstruct leptons below 10 GeV... //NB : this cut may remove prompt leptons, e.g. from Z->tau->X decay
-
-            //-- Infos on *all* gen particles
-            // genParticlesPt_.push_back(ptGen);
-            // genParticlesEta_.push_back(etaGen);
-            // genParticlesPhi_.push_back(phiGen);
-            // genParticlesMass_.push_back(mGen);
-
-            //Get vector of daughters' indices
-            std::vector<int> daughter_indices = GetVectorDaughterIndices(genParticlesHandle, p);
-
-            if(debug)
-            {
-                //Access particle's mother infos
-                // const reco::GenParticle* mom = GenAnalyzer::getTrueMother(p); //Get particle's mother genParticle
-                // int mother_index = getTrueMotherIndex(genParticlesHandle, p); //Get particle's mother index
-                // int mother_id = getTrueMotherId(genParticlesHandle, p); //Get particle's mother ID
-
-                // if(
-                // abs(idGen) != 11
-                // && abs(idGen) != 13
-                // && abs(idGen) != 15
-                // && abs(idGen) != 23
-                // && abs(idGen) != 24
-                // && abs(idGen) != 25
-                // && abs(idGen) != 6
-                // && abs(idGen) != 5
-                // ) {continue;}
-
-                if(
-                    abs(idGen) > 25
-                    || abs(idGen) == 22
-                    || abs(idGen) == 21
-                ) {continue;}
-
-                if(daughter_indices.size() > 0 && (*genParticlesHandle)[daughter_indices[0]].pdgId() == idGen) {continue;} //don't printout particle if it 'decays into itself'
-
-                cout<<endl<<"* ID "<<idGen<<" (idx "<<i<<")"<<endl;
-                cout<<"* Mother ID "<<getTrueMotherId(genParticlesHandle, p)<<endl;
-                cout<<"* statusGen "<<statusGen<<" / promptFS "<<isPromptFinalStateGen<<" / promptTauFS "<<isDirectPromptTauDecayProductFinalState<<" / pt "<<ptGen<<endl;
-
-                for(unsigned int idaughter=0; idaughter<daughter_indices.size(); idaughter++)
-                {
-                    const GenParticle & daughter = (*genParticlesHandle)[daughter_indices[idaughter]];
-
-                    // cout<<"...Daughter index = "<<daughter_indices[idaughter]<<endl;
-                    cout<<"... daughter ID = "<<daughter.pdgId()<<" (idx "<<daughter_indices[idaughter]<<")"<<endl;
-                }
-            }
-
-            isPromptFinalStateGen+= isDirectPromptTauDecayProductFinalState; //will only check value of 'isPromptFinalStateGen', but care about both cases
-
- // #####  ######  ####   ####
- // #    # #      #    # #    #
- // #    # #####  #      #    #
- // #####  #      #      #    #
- // #   #  #      #    # #    #
- // #    # ######  ####   ####
-
-           //-- Particle reconstruction
-
-           //Look for presence of Higgs bosons in sample
-           if(abs(idGen) == 25) {index_Higgs = i;}
-
-           else if(abs(idGen) == 23) //Z boson
-           {
-               if(daughter_indices.size() > 0) {Z_decayMode_ = (*genParticlesHandle)[daughter_indices[0]].pdgId();}
-           }
-
-           //Look for final-state e,mu
-           else if(isEleMu(idGen) && isPromptFinalStateGen)
-           {
-                nEleMuFinalState++;
-
-                //CHECK IF COMES FROM TOP QUARK DECAY
-                index_lepTop = isTopDecayProduct(genParticlesHandle, p);
-                if(index_lepTop >= 0) //e,mu from top decay found
-                {
-                    if(debug) {cout<<FYEL("Found leptonic top quark --> Index = "<<index_lepTop<<"")<<endl;}
-                    lepTopl.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen); //Lepton from top decay
-                    lepTopl_id = idGen;
-                    continue;
-                }
-
-               //CHECK IF COMES FROM Z BOSON DECAY (or non-resonant ll prod.)
-               if(isZDecayProduct(genParticlesHandle, p, index_Z) || isFinalStateElMu(genParticlesHandle, p)) //Z daughter or ll pair found
-               {
-                   if(debug) {cout<<FYEL("Found lepton (--> Z index = "<<index_Z<<")")<<endl;}
-
-                   if(lepZ1.Pt() == 0) //Check whether lepZ1 TLVec is already filled
-                   {
-                       // cout<<"lepZ1 pt "<<ptGen<<" eta "<<etaGen<<" phi "<<phiGen<<" E "<<EGen<<endl;
-                       lepZ1.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);
-                       lepZ1_id = idGen;
-                   }
-                   else if(lepZ2.Pt() == 0) //Check whether lepZ2 TLVec is already filled
-                   {
-                       // cout<<"lepZ2 pt "<<ptGen<<" eta "<<etaGen<<" phi "<<phiGen<<" E "<<EGen<<endl;
-                       lepZ2.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);
-                       lepZ2_id = idGen;
-                   }
-               }
-           }
-
-           // Look for neutrinos and b quarks from top decay
-           /*
-           else if(abs(idGen) == 12 || abs(idGen) == 14 || abs(idGen) == 5) //try to identify the b/l/v from t->bW
-           {
-               int isTopAntitopDaughter = isTopOrAntitopDecayProduct(genParticlesHandle, p, index_top, index_antitop);
-               if(isTopAntitopDaughter == 1) //top decay product found
-               {
-                   if(abs(idGen) == 5) {bTop.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);} //bquark from top decay
-                   else if(abs(idGen) == 12 || abs(idGen) == 14) {neuTop.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);} //neutrino from top decay
-               }
-               else if(isTopAntitopDaughter == -1) //antitop decay product found
-               {
-                   if(abs(idGen) == 5) {bAntiTop.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);} //bquark from antitop decay
-                   else if(abs(idGen) == 12 || abs(idGen) == 14) {neuAntiTop.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);} //neutrino from antitop decay
-               }
-           }
-           */
-
-           //Look for light recoil jet (--> select leading light jet not coming from top decay)
-           //Look for hadronic top decay products
-           else if(abs(idGen) <= 4) //Consider u,d,c,s flavours only
-           {
-               int idx_tmp = isTopDecayProduct(genParticlesHandle, p);
-
-               if(idx_tmp == -1)
-               {
-                    int momid = abs(getTrueMotherId(genParticlesHandle, p));
-                    if(momid!=21 && momid!=24 && momid!=0)
-                    {
-                        //Hardest light quark not from top, W, gg <-> recoil jet
-                        if(ptGen > recoilQuark.Pt())
-                        {
-                            recoilQuark.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen); recoilQuark_id = idGen; //Select hardest possible jet
-                            if(debug) {cout<<FYEL("Found recoil jet, id = "<<idGen<<"")<<endl;}
-                        }
-                    }
-               }
-               else
-               {
-                   index_hadTop = idx_tmp;
-                   if(debug) {cout<<FYEL("Found hadronic top --> index = "<<index_hadTop<<"")<<endl;}
-               }
-           }
-
-       } //end GenParticles coll. loop
-
-//--------------------------------------------
-
-       // Z_decayMode_ = abs(lepZ1_id);
-
-       //true <-> particle decays leptonically; if decays into tau, tau then decays into e,mu
-       // bool hasTopDecayEMU = false;
-       // bool hasAntitopDecayEMU = false;
-       // bool hasZDecayEMU = false;
-       // if(lepZ1.Pt() > 0 && lepZ2.Pt() > 0 && lepZ1_id == -lepZ2_id && abs((lepZ1+lepZ2).M()-91.2)<15) {hasZDecayEMU = true;} //SFOS pair within 15 GeV of Z peak
-       // if(lTop.Pt() > 0) {hasTopDecayEMU = true;}
-       // if(lAntiTop.Pt() > 0) {hasAntitopDecayEMU = true;}
-
-       bool hasLepTop = (index_lepTop != -1);
-       bool hasHadTop = (index_hadTop != -1);
-       bool hasZDecayEMU = false;
-       if(lepZ1.Pt() > 0 && lepZ2.Pt() > 0 && lepZ1_id == -lepZ2_id && abs((lepZ1+lepZ2).M()-91.2)<15) {hasZDecayEMU = true;} //SFOS pair within 15 GeV of Z peak
-
-       if(Event_Selection(nEleMuFinalState, hasLepTop, hasHadTop, hasZDecayEMU, lepZ1, lepZ2, lepZ1_id, lepZ2_id) == false) {return;}
-
-       Get_OtherDecayProducts_LepTop(genParticlesHandle, index_lepTop, lepTopnu, lepTopb, lepTopW, idx_W);
-       Get_OtherDecayProducts_HadTop(genParticlesHandle, index_hadTop, hadTopq1, hadTopq2, hadTopnu, hadTopb);
-
- // #       ####  #    #       #      ###### #    # ###### #         #    #   ##   #####   ####
- // #      #    # #    #       #      #      #    # #      #         #    #  #  #  #    # #
- // #      #    # #    # ##### #      #####  #    # #####  #         #    # #    # #    #  ####
- // #      #    # # ## #       #      #      #    # #      #         #    # ###### #####       #
- // #      #    # ##  ##       #      #       #  #  #      #          #  #  #    # #   #  #    #
- // ######  ####  #    #       ###### ######   ##   ###### ######      ##   #    # #    #  ####
-
-        //-- True Z boson variables
-        if(index_Z >= 0)
-        {
-            //True Z boson
-            Zboson = GetTLorentzVector_fromPartIndex(genParticlesHandle, index_Z);
-            Z_pt_ = Zboson.Pt();
-            Z_eta_ = Zboson.Eta();
-            Z_phi_ = Zboson.Phi();
-            Z_m_ = Zboson.M();
-        }
-
-        //Reco (ee,uu) Z boson variables
-        if(hasZDecayEMU)
-        {
-            RecoZ = lepZ1+lepZ2;
-            Zreco_pt_ = RecoZ.Pt();
-            Zreco_eta_ = RecoZ.Eta();
-            Zreco_phi_ = RecoZ.Phi();
-            Zreco_m_ = RecoZ.M();
-            // Zreco_dPhill_ = TMath::Abs(lepZ2.Phi() - lepZ1.Phi());
-            Zreco_dPhill_ = lepZ1.DeltaPhi(lepZ2);
-
-            if(debug && index_Z < 0) {cout<<"Non-resonant lepton pair found ! Mll = "<<Zreco_m_<<endl;}
-        }
-        else {if(debug) {cout<<FRED("lepZ1.Pt() "<<lepZ1.Pt()<<"")<<endl; cout<<FRED("lepZ2.Pt() "<<lepZ2.Pt()<<"")<<endl;}} //Can happen e.g. if 1 tau lepton decays hadronically
-
-        // if(index_top >= 0) //Found top
-        // {
-        //     top = GetTLorentzVector_fromPartIndex(genParticlesHandle, index_top);
-        //     Top_pt_ = top.Pt();
-        //     Top_eta_ = top.Eta();
-        //     Top_phi_ = top.Phi();
-        //     Top_m_ = top.M();
-        // }
-        // if(index_antitop >= 0) //Found antitop
-        // {
-        //     antitop = GetTLorentzVector_fromPartIndex(genParticlesHandle, index_antitop);
-        //     AntiTop_pt_ = antitop.Pt();
-        //     AntiTop_eta_ = antitop.Eta();
-        //     AntiTop_phi_ = antitop.Phi();
-        //     AntiTop_m_ = antitop.M();
-        // }
-
-        //Leptonic top
-        if(hasLepTop)
-        {
-            lepTop = GetTLorentzVector_fromPartIndex(genParticlesHandle, index_lepTop);
-            LepTop_pt_ = lepTop.Pt();
-            LepTop_eta_ = lepTop.Eta();
-            LepTop_phi_ = lepTop.Phi();
-            LepTop_m_ = lepTop.M();
-        }
-
-        //TopZsystem -- or use recoZ ?
-        if(hasLepTop)
-        {
-            TopZsystem_pt_ = (Zboson+lepTop).Pt();
-            TopZsystem_eta_ = (Zboson+lepTop).Eta();
-            TopZsystem_phi_ = (Zboson+lepTop).Phi();
-            TopZsystem_m_ = (Zboson+lepTop).M();
-        }
-        else if(hasHadTop)
-        {
-            hadTop = GetTLorentzVector_fromPartIndex(genParticlesHandle, index_hadTop);
-            TopZsystem_pt_ = (Zboson+hadTop).Pt();
-            TopZsystem_eta_ = (Zboson+hadTop).Eta();
-            TopZsystem_phi_ = (Zboson+hadTop).Phi();
-            TopZsystem_m_ = (Zboson+hadTop).M();
-        }
-
-        if(recoilQuark.Pt() > 0)
-        {
-            recoilQuark_pt_ = recoilQuark.Pt();
-            recoilQuark_eta_ = recoilQuark.Eta();
-            recoilQuark_phi_ = recoilQuark.Phi();
-        }
-
-        if(lepTopW.Pt() > 0)
-        {
-            mTW_ = lepTopW.Mt(); //Transverse mass
-            Wlep_pt_ = lepTopW.Pt();
-            Wlep_eta_ = lepTopW.Eta();
-            Wlep_phi_ = lepTopW.Phi();
-        }
-
-        //NB -- we look for tops and Z bosons via stable final state electrons/muons. So a Z->qq decay will not be found
         if(debug)
         {
-            cout<<endl<<endl<<FMAG("=== Event summary ===")<<endl;
-            if(index_Z > 0) {cout<<"LEPTONIC (e,u) Z BOSON FOUND ! ("<<index_Z<<")"<<endl;}
-            if(index_lepTop > 0) {cout<<"LEPTONIC (e,u) TOP FOUND ! ("<<index_lepTop<<")"<<endl;}
-            if(idx_W > 0) {cout<<"LEPTONIC (e,u) W BOSON FOUND ! ("<<idx_W<<")"<<endl;}
-            if(index_hadTop > 0) {cout<<"HADRONIC TOP FOUND ! ("<<index_hadTop<<")"<<endl;}
-            cout<<endl<<endl<<FMAG("========================")<<endl;
+            //Access particle's mother infos
+            // const reco::GenParticle* mom = GenAnalyzer::getTrueMother(p); //Get particle's mother genParticle
+            // int mother_index = getTrueMotherIndex(genParticlesHandle, p); //Get particle's mother index
+            // int mother_id = getTrueMotherId(genParticlesHandle, p); //Get particle's mother ID
+
+            // if(
+            // abs(idGen) != 11
+            // && abs(idGen) != 13
+            // && abs(idGen) != 15
+            // && abs(idGen) != 23
+            // && abs(idGen) != 24
+            // && abs(idGen) != 25
+            // && abs(idGen) != 6
+            // && abs(idGen) != 5
+            // ) {continue;}
+
+            if(
+                abs(idGen) > 25
+                || abs(idGen) == 22
+                || abs(idGen) == 21
+            ) {continue;}
+
+            if(daughter_indices.size() > 0 && (*genParticlesHandle)[daughter_indices[0]].pdgId() == idGen) {continue;} //don't printout particle if it 'decays into itself'
+
+            cout<<endl<<"* ID "<<idGen<<" (idx "<<i<<")"<<endl;
+            cout<<"* Mother ID "<<getTrueMotherId(genParticlesHandle, p)<<endl;
+            cout<<"* statusGen "<<statusGen<<" / promptFS "<<isPromptFinalStateGen<<" / promptTauFS "<<isDirectPromptTauDecayProductFinalState<<" / pt "<<ptGen<<endl;
+
+            for(unsigned int idaughter=0; idaughter<daughter_indices.size(); idaughter++)
+            {
+                const GenParticle & daughter = (*genParticlesHandle)[daughter_indices[idaughter]];
+
+                // cout<<"...Daughter index = "<<daughter_indices[idaughter]<<endl;
+                cout<<"... daughter ID = "<<daughter.pdgId()<<" (idx "<<daughter_indices[idaughter]<<")"<<endl;
+            }
         }
 
-        Fill_HighLevel_Variables(Zboson, RecoZ, lepTop, hadTop, TopZsystem, recoilQuark, lepZ1, lepZ2, lepTopl, lepTopnu, lepTopb, lepTopW, hadTopq1, hadTopq2, hadTopnu, hadTopb, lepZ1_id, lepZ2_id, lepTopl_id);
-//--------------------------------------------
+        isPromptFinalStateGen+= isDirectPromptTauDecayProductFinalState; //will only check value of 'isPromptFinalStateGen', but care about both cases
 
-       //--Printout daughter infos
+// #####  ######  ####   ####
+// #    # #      #    # #    #
+// #    # #####  #      #    #
+// #####  #      #      #    #
+// #   #  #      #    # #    #
+// #    # ######  ####   ####
+
+       //-- Particle reconstruction
+
+       //Look for presence of Higgs bosons in sample
+       if(abs(idGen) == 25) {index_Higgs = i;}
+
+       else if(abs(idGen) == 23) //Z boson
+       {
+           if(daughter_indices.size() > 0) {Z_decayMode_ = (*genParticlesHandle)[daughter_indices[0]].pdgId();}
+       }
+
+       //Look for final-state e,mu
+       else if(isEleMu(idGen) && isPromptFinalStateGen)
+       {
+            nEleMuFinalState++;
+
+            //CHECK IF COMES FROM TOP QUARK DECAY
+            index_lepTop = isTopDecayProduct(genParticlesHandle, p);
+            if(index_lepTop >= 0) //e,mu from top decay found
+            {
+                if(debug) {cout<<FYEL("Found leptonic top quark --> Index = "<<index_lepTop<<"")<<endl;}
+                lepTopl.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen); //Lepton from top decay
+                lepTopl_id = idGen;
+                continue;
+            }
+
+           //CHECK IF COMES FROM Z BOSON DECAY (or non-resonant ll prod.)
+           if(isZDecayProduct(genParticlesHandle, p, index_Z) || isFinalStateElMu(genParticlesHandle, p)) //Z daughter or ll pair found
+           {
+               if(debug) {cout<<FYEL("Found lepton (--> Z index = "<<index_Z<<")")<<endl;}
+
+               if(lepZ1.Pt() == 0) //Check whether lepZ1 TLVec is already filled
+               {
+                   // cout<<"lepZ1 pt "<<ptGen<<" eta "<<etaGen<<" phi "<<phiGen<<" E "<<EGen<<endl;
+                   lepZ1.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);
+                   lepZ1_id = idGen;
+               }
+               else if(lepZ2.Pt() == 0) //Check whether lepZ2 TLVec is already filled
+               {
+                   // cout<<"lepZ2 pt "<<ptGen<<" eta "<<etaGen<<" phi "<<phiGen<<" E "<<EGen<<endl;
+                   lepZ2.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);
+                   lepZ2_id = idGen;
+               }
+           }
+       }
+
+       // Look for neutrinos and b quarks from top decay
        /*
-       if(index_Z >= 0)
+       else if(abs(idGen) == 12 || abs(idGen) == 14 || abs(idGen) == 5) //try to identify the b/l/v from t->bW
        {
-           std::vector<int> v_Z_daughtersIndices = GetVectorDaughterIndices(genParticlesHandle, GetGenParticle(genParticlesHandle, index_Z) );
-           for(unsigned int idaughter=0; idaughter<v_Z_daughtersIndices.size(); idaughter++)
+           int isTopAntitopDaughter = isTopOrAntitopDecayProduct(genParticlesHandle, p, index_top, index_antitop);
+           if(isTopAntitopDaughter == 1) //top decay product found
            {
-               const GenParticle & daughter = (*genParticlesHandle)[v_Z_daughtersIndices[idaughter]];
-
-               cout<<"Z daughter index = "<<v_Z_daughtersIndices[idaughter]<<endl;
-               cout<<"Z daughter ID = "<<daughter.pdgId()<<endl;
+               if(abs(idGen) == 5) {bTop.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);} //bquark from top decay
+               else if(abs(idGen) == 12 || abs(idGen) == 14) {neuTop.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);} //neutrino from top decay
            }
-       }
-
-       if(index_top >= 0)
-       {
-           std::vector<int> v_top_daughtersIndices = GetVectorDaughterIndices(genParticlesHandle, GetGenParticle(genParticlesHandle, index_top) );
-           for(unsigned int idaughter=0; idaughter<v_top_daughtersIndices.size(); idaughter++)
+           else if(isTopAntitopDaughter == -1) //antitop decay product found
            {
-               const GenParticle & daughter = (*genParticlesHandle)[v_top_daughtersIndices[idaughter]];
-
-               cout<<"Top daughter index = "<<v_top_daughtersIndices[idaughter]<<endl;
-               cout<<"Top daughter ID = "<<daughter.pdgId()<<endl;
-               cout<<"Top daughter status = "<<daughter.status()<<endl;
-               cout<<"Top daughter isPromptFinalState = "<<daughter.isPromptFinalState()<<endl;
-           }
-       }
-       if(index_antitop >= 0)
-       {
-           std::vector<int> v_antitop_daughtersIndices = GetVectorDaughterIndices(genParticlesHandle, GetGenParticle(genParticlesHandle, index_antitop) );
-           for(unsigned int idaughter=0; idaughter<v_antitop_daughtersIndices.size(); idaughter++)
-           {
-               const GenParticle & daughter = (*genParticlesHandle)[v_antitop_daughtersIndices[idaughter]];
-
-               cout<<"AntiTop daughter index = "<<v_antitop_daughtersIndices[idaughter]<<endl;
-               cout<<"AntiTop daughter ID = "<<daughter.pdgId()<<endl;
-               cout<<"AntiTop daughter status = "<<daughter.status()<<endl;
-               cout<<"AntiTop daughter isPromptFinalState = "<<daughter.isPromptFinalState()<<endl;
+               if(abs(idGen) == 5) {bAntiTop.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);} //bquark from antitop decay
+               else if(abs(idGen) == 12 || abs(idGen) == 14) {neuAntiTop.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen);} //neutrino from antitop decay
            }
        }
        */
 
-    } //end genParticlesHandle.isValid
+       //Look for light recoil jet (--> select leading light jet not coming from top decay)
+       //Look for hadronic top decay products
+       else if(abs(idGen) <= 4) //Consider u,d,c,s flavours only
+       {
+           int idx_tmp = isTopDecayProduct(genParticlesHandle, p);
+
+           if(idx_tmp == -1)
+           {
+                int momid = abs(getTrueMotherId(genParticlesHandle, p));
+                if(momid!=21 && momid!=24 && momid!=0)
+                {
+                    //Hardest light quark not from top, W, gg <-> recoil jet
+                    if(ptGen > recoilQuark.Pt())
+                    {
+                        recoilQuark.SetPtEtaPhiE(ptGen, etaGen, phiGen, EGen); recoilQuark_id = idGen; //Select hardest possible jet
+                        if(debug) {cout<<FYEL("Found recoil jet, id = "<<idGen<<"")<<endl;}
+                    }
+                }
+           }
+           else
+           {
+               index_hadTop = idx_tmp;
+               if(debug) {cout<<FYEL("Found hadronic top --> index = "<<index_hadTop<<"")<<endl;}
+           }
+       }
+
+   } //end GenParticles coll. loop
+
+//--------------------------------------------
+
+   // Z_decayMode_ = abs(lepZ1_id);
+
+   //true <-> particle decays leptonically; if decays into tau, tau then decays into e,mu
+   // bool hasTopDecayEMU = false;
+   // bool hasAntitopDecayEMU = false;
+   // bool hasZDecayEMU = false;
+   // if(lepZ1.Pt() > 0 && lepZ2.Pt() > 0 && lepZ1_id == -lepZ2_id && abs((lepZ1+lepZ2).M()-91.2)<15) {hasZDecayEMU = true;} //SFOS pair within 15 GeV of Z peak
+   // if(lTop.Pt() > 0) {hasTopDecayEMU = true;}
+   // if(lAntiTop.Pt() > 0) {hasAntitopDecayEMU = true;}
+
+   bool hasLepTop = (index_lepTop != -1);
+   bool hasHadTop = (index_hadTop != -1);
+   bool hasZDecayEMU = false;
+   if(lepZ1.Pt() > 0 && lepZ2.Pt() > 0 && lepZ1_id == -lepZ2_id && abs((lepZ1+lepZ2).M()-91.2)<15) {hasZDecayEMU = true;} //SFOS pair within 15 GeV of Z peak
+
+   if(Event_Selection(nEleMuFinalState, hasLepTop, hasHadTop, hasZDecayEMU, lepZ1, lepZ2, lepZ1_id, lepZ2_id) == false) {return;}
+
+   Get_OtherDecayProducts_LepTop(genParticlesHandle, index_lepTop, lepTopnu, lepTopb, lepTopW, idx_W);
+   Get_OtherDecayProducts_HadTop(genParticlesHandle, index_hadTop, hadTopq1, hadTopq2, hadTopnu, hadTopb);
+
+// #       ####  #    #       #      ###### #    # ###### #         #    #   ##   #####   ####
+// #      #    # #    #       #      #      #    # #      #         #    #  #  #  #    # #
+// #      #    # #    # ##### #      #####  #    # #####  #         #    # #    # #    #  ####
+// #      #    # # ## #       #      #      #    # #      #         #    # ###### #####       #
+// #      #    # ##  ##       #      #       #  #  #      #          #  #  #    # #   #  #    #
+// ######  ####  #    #       ###### ######   ##   ###### ######      ##   #    # #    #  ####
+
+    //-- True Z boson variables
+    if(index_Z >= 0)
+    {
+        //True Z boson
+        Zboson = GetTLorentzVector_fromPartIndex(genParticlesHandle, index_Z);
+        Z_pt_ = Zboson.Pt();
+        Z_eta_ = Zboson.Eta();
+        Z_phi_ = Zboson.Phi();
+        Z_m_ = Zboson.M();
+    }
+
+    //Reco (ee,uu) Z boson variables
+    if(hasZDecayEMU)
+    {
+        RecoZ = lepZ1+lepZ2;
+        Zreco_pt_ = RecoZ.Pt();
+        Zreco_eta_ = RecoZ.Eta();
+        Zreco_phi_ = RecoZ.Phi();
+        Zreco_m_ = RecoZ.M();
+        // Zreco_dPhill_ = TMath::Abs(lepZ2.Phi() - lepZ1.Phi());
+        Zreco_dPhill_ = lepZ1.DeltaPhi(lepZ2);
+
+        if(debug && index_Z < 0) {cout<<"Non-resonant lepton pair found ! Mll = "<<Zreco_m_<<endl;}
+    }
+    else {if(debug) {cout<<FRED("lepZ1.Pt() "<<lepZ1.Pt()<<"")<<endl; cout<<FRED("lepZ2.Pt() "<<lepZ2.Pt()<<"")<<endl;}} //Can happen e.g. if 1 tau lepton decays hadronically
+
+    // if(index_top >= 0) //Found top
+    // {
+    //     top = GetTLorentzVector_fromPartIndex(genParticlesHandle, index_top);
+    //     Top_pt_ = top.Pt();
+    //     Top_eta_ = top.Eta();
+    //     Top_phi_ = top.Phi();
+    //     Top_m_ = top.M();
+    // }
+    // if(index_antitop >= 0) //Found antitop
+    // {
+    //     antitop = GetTLorentzVector_fromPartIndex(genParticlesHandle, index_antitop);
+    //     AntiTop_pt_ = antitop.Pt();
+    //     AntiTop_eta_ = antitop.Eta();
+    //     AntiTop_phi_ = antitop.Phi();
+    //     AntiTop_m_ = antitop.M();
+    // }
+
+    //Leptonic top
+    if(hasLepTop)
+    {
+        lepTop = GetTLorentzVector_fromPartIndex(genParticlesHandle, index_lepTop);
+        LepTop_pt_ = lepTop.Pt();
+        LepTop_eta_ = lepTop.Eta();
+        LepTop_phi_ = lepTop.Phi();
+        LepTop_m_ = lepTop.M();
+    }
+
+    //TopZsystem -- or use recoZ ?
+    if(hasLepTop)
+    {
+        TopZsystem_pt_ = (Zboson+lepTop).Pt();
+        TopZsystem_eta_ = (Zboson+lepTop).Eta();
+        TopZsystem_phi_ = (Zboson+lepTop).Phi();
+        TopZsystem_m_ = (Zboson+lepTop).M();
+    }
+    else if(hasHadTop)
+    {
+        hadTop = GetTLorentzVector_fromPartIndex(genParticlesHandle, index_hadTop);
+        TopZsystem_pt_ = (Zboson+hadTop).Pt();
+        TopZsystem_eta_ = (Zboson+hadTop).Eta();
+        TopZsystem_phi_ = (Zboson+hadTop).Phi();
+        TopZsystem_m_ = (Zboson+hadTop).M();
+    }
+
+    if(recoilQuark.Pt() > 0)
+    {
+        recoilQuark_pt_ = recoilQuark.Pt();
+        recoilQuark_eta_ = recoilQuark.Eta();
+        recoilQuark_phi_ = recoilQuark.Phi();
+    }
+
+    if(lepTopl.Pt() > 0)
+    {
+        LepTopLep_pt_ = lepTopl.Pt();
+        LepTopLep_eta_ = lepTopl.Eta();
+        LepTopLep_phi_ = lepTopl.Phi();
+    }
+
+    if(lepTopb.Pt() > 0)
+    {
+        LepTopB_pt_ = lepTopb.Pt();
+        LepTopB_eta_ = lepTopb.Eta();
+        LepTopB_phi_ = lepTopb.Phi();
+    }
+
+    if(lepTopW.Pt() > 0)
+    {
+        mTW_ = lepTopW.Mt(); //Transverse mass
+        Wlep_pt_ = lepTopW.Pt();
+        Wlep_eta_ = lepTopW.Eta();
+        Wlep_phi_ = lepTopW.Phi();
+    }
+
+    //NB -- we look for tops and Z bosons via stable final state electrons/muons. So a Z->qq decay will not be found
+    if(debug)
+    {
+        cout<<endl<<endl<<FMAG("=== Event summary ===")<<endl;
+        if(index_Z > 0) {cout<<"LEPTONIC (e,u) Z BOSON FOUND ! ("<<index_Z<<")"<<endl;}
+        if(index_lepTop > 0) {cout<<"LEPTONIC (e,u) TOP FOUND ! ("<<index_lepTop<<")"<<endl;}
+        if(idx_W > 0) {cout<<"LEPTONIC (e,u) W BOSON FOUND ! ("<<idx_W<<")"<<endl;}
+        if(index_hadTop > 0) {cout<<"HADRONIC TOP FOUND ! ("<<index_hadTop<<")"<<endl;}
+        cout<<endl<<endl<<FMAG("========================")<<endl;
+    }
+
+    Fill_HighLevel_Variables(Zboson, RecoZ, lepTop, hadTop, TopZsystem, recoilQuark, lepZ1, lepZ2, lepTopl, lepTopnu, lepTopb, lepTopW, hadTopq1, hadTopq2, hadTopnu, hadTopb, lepZ1_id, lepZ2_id, lepTopl_id);
+//--------------------------------------------
+
+   //--Printout daughter infos
+   /*
+   if(index_Z >= 0)
+   {
+       std::vector<int> v_Z_daughtersIndices = GetVectorDaughterIndices(genParticlesHandle, GetGenParticle(genParticlesHandle, index_Z) );
+       for(unsigned int idaughter=0; idaughter<v_Z_daughtersIndices.size(); idaughter++)
+       {
+           const GenParticle & daughter = (*genParticlesHandle)[v_Z_daughtersIndices[idaughter]];
+
+           cout<<"Z daughter index = "<<v_Z_daughtersIndices[idaughter]<<endl;
+           cout<<"Z daughter ID = "<<daughter.pdgId()<<endl;
+       }
+   }
+
+   if(index_top >= 0)
+   {
+       std::vector<int> v_top_daughtersIndices = GetVectorDaughterIndices(genParticlesHandle, GetGenParticle(genParticlesHandle, index_top) );
+       for(unsigned int idaughter=0; idaughter<v_top_daughtersIndices.size(); idaughter++)
+       {
+           const GenParticle & daughter = (*genParticlesHandle)[v_top_daughtersIndices[idaughter]];
+
+           cout<<"Top daughter index = "<<v_top_daughtersIndices[idaughter]<<endl;
+           cout<<"Top daughter ID = "<<daughter.pdgId()<<endl;
+           cout<<"Top daughter status = "<<daughter.status()<<endl;
+           cout<<"Top daughter isPromptFinalState = "<<daughter.isPromptFinalState()<<endl;
+       }
+   }
+   if(index_antitop >= 0)
+   {
+       std::vector<int> v_antitop_daughtersIndices = GetVectorDaughterIndices(genParticlesHandle, GetGenParticle(genParticlesHandle, index_antitop) );
+       for(unsigned int idaughter=0; idaughter<v_antitop_daughtersIndices.size(); idaughter++)
+       {
+           const GenParticle & daughter = (*genParticlesHandle)[v_antitop_daughtersIndices[idaughter]];
+
+           cout<<"AntiTop daughter index = "<<v_antitop_daughtersIndices[idaughter]<<endl;
+           cout<<"AntiTop daughter ID = "<<daughter.pdgId()<<endl;
+           cout<<"AntiTop daughter status = "<<daughter.status()<<endl;
+           cout<<"AntiTop daughter isPromptFinalState = "<<daughter.isPromptFinalState()<<endl;
+       }
+   }
+   */
 
 
  //  ####  ###### #    #      # ###### #####  ####
@@ -877,6 +881,8 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
             njets_++;
 
             if(abs(j1.Eta()) > maxEtaJet_) {maxEtaJet_ = abs(j1.Eta());}
+
+            if(LepTop_pt_ > 0 && lepTop.DeltaR(j1) < dR_tClosestJet_) {dR_tClosestJet_ = lepTop.DeltaR(j1);}
 
             for(int i2=i1+1;i2<nGenJet;i2++)
             {
@@ -1360,6 +1366,15 @@ void GenAnalyzer::Fill_HighLevel_Variables(TLorentzVector Zboson, TLorentzVector
     dR_Zjprime_ = Zboson.DeltaR(recoilQuark);
     dEta_Zjprime_ = GetDeltaEta(Zboson, recoilQuark);
 
+    //Max lep-X combination
+    if(lepZ1.DeltaPhi(lepZ2) > maxDelPhiLL_) {maxDelPhiLL_ = lepZ1.DeltaPhi(lepZ2);}
+    if(lepZ1.DeltaPhi(lepTopl) > maxDelPhiLL_) {maxDelPhiLL_ = lepZ1.DeltaPhi(lepTopl);}
+    if(lepZ2.DeltaPhi(lepTopl) > maxDelPhiLL_) {maxDelPhiLL_ = lepZ2.DeltaPhi(lepTopl);}
+
+    if(lepZ1.DeltaR(lepTopb) > maxDelPhiLL_) {maxDelRbL_ = lepZ1.DeltaR(lepTopb);}
+    if(lepZ2.DeltaR(lepTopb) > maxDelPhiLL_) {maxDelRbL_ = lepZ2.DeltaR(lepTopb);}
+    if(lepTopl.DeltaR(lepTopb) > maxDelPhiLL_) {maxDelRbL_ = lepTopl.DeltaR(lepTopb);}
+
     //TTbar system (for ttZ)
     if(lepTop.Pt()>0 && hadTop.Pt()>0) {dR_ttbar_ = lepTop.DeltaR(hadTop); dEta_ttbar_ = GetDeltaEta(lepTop, hadTop);}
 
@@ -1370,6 +1385,9 @@ void GenAnalyzer::Fill_HighLevel_Variables(TLorentzVector Zboson, TLorentzVector
     if(lepTop.DeltaR(recoilQuark) < dR_jprimeClosestLep_) {dR_jprimeClosestLep_ = lepTop.DeltaR(recoilQuark);}
     if(lepZ1.DeltaR(recoilQuark) < dR_jprimeClosestLep_) {dR_jprimeClosestLep_ = lepZ1.DeltaR(recoilQuark);}
     if(lepZ2.DeltaR(recoilQuark) < dR_jprimeClosestLep_) {dR_jprimeClosestLep_ = lepZ2.DeltaR(recoilQuark);}
+    if(GetDeltaEta(lepTop, recoilQuark) < dEta_jprimeClosestLep_) {dEta_jprimeClosestLep_ = GetDeltaEta(lepTop, recoilQuark);}
+    if(GetDeltaEta(lepZ1, recoilQuark) < dEta_jprimeClosestLep_) {dEta_jprimeClosestLep_ = GetDeltaEta(lepZ1, recoilQuark);}
+    if(GetDeltaEta(lepZ2, recoilQuark) < dEta_jprimeClosestLep_) {dEta_jprimeClosestLep_ = GetDeltaEta(lepZ2, recoilQuark);}
 
     //Lepton channel
     if(abs(lepTopl_id)+abs(lepZ1_id)+abs(lepZ2_id) == 39) {channel_ = 0;} //uuu
@@ -1520,36 +1538,35 @@ void GenAnalyzer::SetBranches(TTree* tree_)
     tree_->Branch("Z_phi" , &Z_phi_);
     tree_->Branch("Z_m" , &Z_m_);
     tree_->Branch("Z_decayMode" , &Z_decayMode_);
-
     tree_->Branch("Zreco_pt" , &Zreco_pt_);
     tree_->Branch("Zreco_eta" , &Zreco_eta_);
     tree_->Branch("Zreco_phi" , &Zreco_phi_);
     tree_->Branch("Zreco_m" , &Zreco_m_);
     tree_->Branch("Zreco_dPhill" , &Zreco_dPhill_);
-
     tree_->Branch("LepTop_pt" , &LepTop_pt_);
     tree_->Branch("LepTop_eta" , &LepTop_eta_);
     tree_->Branch("LepTop_phi" , &LepTop_phi_);
     tree_->Branch("LepTop_m" , &LepTop_m_);
-
     tree_->Branch("TopZsystem_pt" , &TopZsystem_pt_);
     tree_->Branch("TopZsystem_eta" , &TopZsystem_eta_);
     tree_->Branch("TopZsystem_phi" , &TopZsystem_phi_);
     tree_->Branch("TopZsystem_m" , &TopZsystem_m_);
-
+    tree_->Branch("LepTopLep_pt" , &LepTopLep_pt_);
+    tree_->Branch("LepTopLep_eta" , &LepTopLep_eta_);
+    tree_->Branch("LepTopLep_phi" , &LepTopLep_phi_);
+    tree_->Branch("LepTopB_pt" , &LepTopB_pt_);
+    tree_->Branch("LepTopB_eta" , &LepTopB_eta_);
+    tree_->Branch("LepTopB_phi" , &LepTopB_phi_);
     tree_->Branch("recoilQuark_pt" , &recoilQuark_pt_);
     tree_->Branch("recoilQuark_eta" , &recoilQuark_eta_);
     tree_->Branch("recoilQuark_phi" , &recoilQuark_phi_);
     tree_->Branch("recoilQuark_id" , &recoilQuark_id);
-
     tree_->Branch("mTW" , &mTW_);
     tree_->Branch("Wlep_pt" , &Wlep_pt_);
     tree_->Branch("Wlep_eta" , &Wlep_eta_);
     tree_->Branch("Wlep_phi" , &Wlep_phi_);
-
     tree_->Branch("cosThetaStarPol_Top" , &cosThetaStarPol_Top_);
     tree_->Branch("cosThetaStarPol_Z" , &cosThetaStarPol_Z_);
-
     tree_->Branch("maxDiJet_pt" , &maxDiJet_pt_);
     tree_->Branch("maxDiJet_m" , &maxDiJet_m_);
     tree_->Branch("minDiJet_pt" , &minDiJet_pt_);
@@ -1560,25 +1577,15 @@ void GenAnalyzer::SetBranches(TTree* tree_)
     tree_->Branch("maxDiJet_dPhi" , &maxDiJet_dPhi_);
     tree_->Branch("minDiJet_dR" , &minDiJet_dR_);
     tree_->Branch("maxDiJet_dR" , &maxDiJet_dR_);
-
-    // tree_->Branch("delRZl" , &delRZl_);
-    // tree_->Branch("Top_delRbl" , &Top_delRbl_);
-    // tree_->Branch("Top_delRbW" , &Top_delRbW_);
-    // tree_->Branch("delRtZ" , &delRtZ_);
-    // tree_->Branch("delRtRecoilJet" , &delRtRecoilJet_);
-    // tree_->Branch("delRbRecoilJet" , &delRbRecoilJet_);
-    // tree_->Branch("delRlRecoilJet" , &delRlRecoilJet_);
-    // tree_->Branch("dEtaRecoilJetBJet" , &dEtaRecoilJetBJet_);
-    // tree_->Branch("delRlWb" , &delRlWb_);
     tree_->Branch("Mass_3l" , &Mass_3l_);
     tree_->Branch("leptonCharge" , &leptonCharge_);
-
     tree_->Branch("dR_tZ" , &dR_tZ_);
     tree_->Branch("dR_ZlW" , &dR_ZlW_);
     tree_->Branch("dR_blW" , &dR_blW_);
     tree_->Branch("dR_bW" , &dR_bW_);
     tree_->Branch("dR_tClosestLep" , &dR_tClosestLep_);
     tree_->Branch("dR_jprimeClosestLep" , &dR_jprimeClosestLep_);
+    tree_->Branch("dEta_jprimeClosestLep" , &dEta_jprimeClosestLep_);
     tree_->Branch("dR_tjprime" , &dR_tjprime_);
     tree_->Branch("dEta_tjprime" , &dEta_tjprime_);
     tree_->Branch("dR_bjprime" , &dR_bjprime_);
@@ -1588,9 +1595,11 @@ void GenAnalyzer::SetBranches(TTree* tree_)
     tree_->Branch("dR_Zjprime" , &dR_Zjprime_);
     tree_->Branch("dEta_Zjprime" , &dEta_Zjprime_);
     tree_->Branch("maxEtaJet" , &maxEtaJet_);
+    tree_->Branch("maxDelPhiLL" , &maxDelPhiLL_);
+    tree_->Branch("maxDelRbL" , &maxDelRbL_);
+    tree_->Branch("dR_tClosestJet" , &dR_tClosestJet_);
     tree_->Branch("dR_ttbar" , &dR_ttbar_);
     tree_->Branch("dEta_ttbar" , &dEta_ttbar_);
-
     tree_->Branch("channel" , &channel_);
     tree_->Branch("ptLepSum" , &ptLepSum_);
     tree_->Branch("ptHadSum" , &ptHadSum_);
@@ -1629,6 +1638,14 @@ void GenAnalyzer::Init_Variables()
     LepTop_eta_ = DEFVAL;
     LepTop_phi_ = DEFVAL;
     LepTop_m_ = DEFVAL;
+
+    LepTopLep_pt_ = DEFVAL;
+    LepTopLep_eta_ = DEFVAL;
+    LepTopLep_phi_ = DEFVAL;
+
+    LepTopB_pt_ = DEFVAL;
+    LepTopB_eta_ = DEFVAL;
+    LepTopB_phi_ = DEFVAL;
 
     // index_top = -1;
     // Top_pt_ = DEFVAL;
@@ -1689,6 +1706,8 @@ void GenAnalyzer::Init_Variables()
     dR_bW_ = DEFVAL;
     dR_tClosestLep_ = -DEFVAL;
     dR_jprimeClosestLep_ = -DEFVAL;
+    dEta_jprimeClosestLep_ = -DEFVAL;
+    dR_tClosestJet_ = -DEFVAL;
     dR_tjprime_ = DEFVAL;
     dEta_tjprime_ = DEFVAL;
     dR_bjprime_ = DEFVAL;
@@ -1700,6 +1719,8 @@ void GenAnalyzer::Init_Variables()
     maxEtaJet_ = DEFVAL;
     dR_ttbar_ = DEFVAL;
     dEta_ttbar_ = DEFVAL;
+    maxDelPhiLL_ = DEFVAL;
+    maxDelRbL_ = DEFVAL;
 
     maxDiJet_pt_ = DEFVAL;
     maxDiJet_m_ = DEFVAL;

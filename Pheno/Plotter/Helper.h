@@ -112,6 +112,18 @@ bool Check_File_Existence(const TString& name)
 // template <class Container>
 // void split_string(const std::string& str, Container& cont, const std::string& delims = " ") {boost::split(cont,str,boost::is_any_of(delims));}
 
+//Convert a double into a TString
+// precision --> can choose if TString how many digits the TString should display
+TString Convert_Number_To_TString(double number, int precision=3)
+{
+    if(number == 0.) {return "0";}
+
+	stringstream ss;
+	ss << std::setprecision(precision) << number;
+	TString ts = ss.str();
+	return ts;
+}
+
 void Load_Canvas_Style()
 {
     TH1::SetDefaultSumw2();
@@ -215,8 +227,8 @@ TString Get_List_Operators(TString full_rwgt_name)
     {
         result+= Get_Operator_Name(words[iw]) + " / ";
     }
-    result = result.Strip(TString::kTrailing, ' '); //remove trailing hchar
-    result = result.Strip(TString::kTrailing, '/'); //remove trailing hchar
+    result = result.Strip(TString::kTrailing, ' '); //remove trailing char
+    result = result.Strip(TString::kTrailing, '/'); //remove trailing char
     result+= " }";
 
     return result;
@@ -228,8 +240,28 @@ TString GetReweightLegendName(TString variationname)
 {
     TString result = variationname;
 
-    if(variationname.Contains("sm", TString::kIgnoreCase) ) {result = "SM";}
-    else if(variationname.Contains("rwgt_", TString::kIgnoreCase))
+    if(variationname.Contains("sm", TString::kIgnoreCase) ) {result = "SM";} //SM
+    else if(variationname.Contains("C1V") || variationname.Contains("C1A") || variationname.Contains("C2V") || variationname.Contains("C2A")) //AC
+    {
+        TString ts = variationname.ReplaceAll("rwgt_", "");
+
+        std::vector<std::string> words_tmp; //Split string 'name_val_name_val...' into words --> return 'name=val,name=val,...'
+        split_string((string) ts, words_tmp, "_");
+        TString tmp = "";
+        for(int iw=0; iw<words_tmp.size()-1; iw+=2)
+        {
+            tmp+= words_tmp[iw] + "=" + words_tmp[iw+1] + " /";
+        }
+        tmp = tmp.Strip(TString::kTrailing, '/'); //remove trailing hchar
+        //Restyle AC names
+        tmp = tmp.ReplaceAll("Delta", "#Delta");
+        tmp = tmp.ReplaceAll("C1V", "C_{1,V}");
+        tmp = tmp.ReplaceAll("C1A", "C_{1,A}");
+        tmp = tmp.ReplaceAll("C2V", "C_{2,V}");
+        tmp = tmp.ReplaceAll("C2A", "C_{2,A}");
+        return tmp;
+    }
+    else if(variationname.Contains("rwgt_", TString::kIgnoreCase)) //EFT
     {
         result = "(";
         std::vector<std::string> words;
@@ -283,7 +315,7 @@ inline void Fill_TH1F_UnderOverflow(TH1F* h, double value, double weight)
     return;
 };
 
-inline void Fill_TH1EFT_UnderOverflow(TH1EFT* h, double value, float weight, WCFit fit)
+inline void Fill_TH1EFT_UnderOverflow(TH1EFT* h, double value, float weight, WCFit& fit)
 {
     if(value >= h->GetXaxis()->GetXmax() ) {h->Fill(h->GetXaxis()->GetXmax() - (h->GetXaxis()->GetBinWidth(1) / 2), weight, fit);} //overflow in last bin
     else if(value <= h->GetXaxis()->GetXmin() ) {h->Fill(h->GetXaxis()->GetXmin() + (h->GetXaxis()->GetBinWidth(1) / 2), weight, fit);} //underflow in first bin
@@ -352,7 +384,7 @@ int Get_Color(int index)
 // ######## ##          ##       ##        #######  ##    ##  ######   ######
 //--------------------------------------------
 
-void FillTH1EFT_SingleVar(TH1EFT*& h, const float& x,  WCFit eft_fit, float sm_wgt, bool show_overflow=false)
+void FillTH1EFT_SingleVar(TH1EFT*& h, const float& x,  WCFit& eft_fit, float sm_wgt, bool show_overflow=false)
 {
     //Fill with SM weight by default
     if(show_overflow) {Fill_TH1EFT_UnderOverflow(h, x, sm_wgt, eft_fit);}
@@ -361,7 +393,7 @@ void FillTH1EFT_SingleVar(TH1EFT*& h, const float& x,  WCFit eft_fit, float sm_w
     return;
 }
 
-void FillTH1EFT_ManyVars(vector<vector<TH1EFT*>>& v_h, int idx_proc, vector<float> v_x, WCFit eft_fit, float sm_wgt, bool show_overflow=false)
+void FillTH1EFT_ManyVars(vector<vector<TH1EFT*>>& v_h, WCFit& eft_fit, const vector<float>& v_x, int idx_proc, float sm_wgt, bool show_overflow=false)
 {
     for (size_t ivar = 0; ivar < v_x.size(); ivar++)
     {
@@ -549,7 +581,87 @@ void Draw_MG_Reference_Points(TString operator1, TGraph*& graph, vector<double>*
     return;
 }
 
+//Convert the name of an anomalous coupling point (e.g. 'rwgt_C1A_0.5') to an EFT name (e.g. 'rwgt_ctZ_0.3')
+TString Convert_ACtoEFT(TString name_AC, TString example_reweight_namingConvention)
+{
+    TString name_EFT = ""; //TString to return
 
+    if(!name_AC.BeginsWith("rwgt_C2V") && !name_AC.BeginsWith("rwgt_C1V") && !name_AC.BeginsWith("rwgt_C1A") && !name_AC.BeginsWith("rwgt_D")) {cout<<"ERROR: AC naming convention not recognized !"<<endl; return name_EFT;} //Only care about C2V, C1V, C1A anomalous couplings
+    if(name_AC.Contains("C2A")) {cout<<"ERROR: only consider C2V, C1A, C1V anomalous couplings !"<<endl; return name_EFT;}
+
+    double thetaW = 0.502; //Weinberg angle (in radians)
+    double vev = 246.2 * 0.001; //Higgs vacuum expectation value = 246.2 GeV //Convert to TeV (since WC values are expressed in TeV^-1)
+
+    //SM values for the neutral vector and axial-vector couplings
+    double C1V_SM = 0.2448, C1A_SM = -0.6012;
+
+    //dX values satisfying C1,A/V = C1A/V_SM + dX <== these are the values we need to convert (C1,A/V) <-> EFT
+    double DeltaC1V = 0, DeltaC1A = 0, C2V_value = 0; //Set to 0 (<-> SM) by default
+
+    std::vector<std::string> words_reweight; //Split the reweight name passed by arg (to be used for event reweighting) into words
+    split_string((string) name_AC, words_reweight, "_");
+    for(int iw=1; iw<words_reweight.size()-1; iw+=2) //ignore first word 'rwgt', ignore WC values
+    {
+        if(((TString) words_reweight[iw]).Contains("C1A"))
+        {
+            if((TString) words_reweight[iw] == "C1A") {DeltaC1A = std::stod(words_reweight.at(iw+1)) - C1A_SM;} //Absolute -> take difference with SM
+            if((TString) words_reweight[iw] == "DeltaC1A") {DeltaC1A = std::stod(words_reweight.at(iw+1));} //Relative -> can use this value directly
+        }
+        else if(((TString) words_reweight[iw]).Contains("C1V"))
+        {
+            if((TString) words_reweight[iw] == "C1V") {DeltaC1V = std::stod(words_reweight.at(iw+1)) - C1V_SM;} //Absolute -> take difference with SM
+            if((TString) words_reweight[iw] == "DeltaC1V") {DeltaC1V = std::stod(words_reweight.at(iw+1));} //Relative -> can use this value directly
+        }
+        else if((TString) words_reweight[iw] == "C2V")  {C2V_value = std::stod(words_reweight.at(iw+1));}
+        else {cout<<"ERROR: AC name ["<<words_reweight[iw]<<"] not recognized !"<<endl; return name_EFT;}
+    }
+    if(DeltaC1A == 0 && DeltaC1V == 0 && C2V_value == 0) {cout<<"ERROR: all AC values found to be null !"<<endl; return name_EFT;}
+
+    // cout<<"C2V_value = "<<C2V_value<<endl;
+    // cout<<"DeltaC1V = "<<DeltaC1V<<endl;
+    // cout<<"DeltaC1A = "<<DeltaC1A<<endl;
+
+    //Get corresponding EFT WC values
+    double ctZ_WC = 0.;
+    double cpQM_WC = 0.;
+    double cpt_WC = 0.;
+    if(C2V_value != 0) //Direct relation C2V <-> ctZ
+    {
+        ctZ_WC = sqrt(2) * cos(thetaW) * sin(thetaW) * C2V_value / pow(vev, 2);
+    }
+    else if(DeltaC1V != 0 || DeltaC1A != 0) //Linear relations between (cpqm,cpt) <-> (DeltaC1A,DeltaC1V)
+    {
+        //Solve system of linear equations with 2 degrees of freedom x (cpqm) and y (cpt)
+        //(x+y) = a (<-> C1,V)
+        //(x-y) = b (<-> C1,A)
+
+        double a = -4 * DeltaC1V * cos(thetaW) * sin(thetaW) / pow(vev, 2);
+        double b = 4 * DeltaC1A * cos(thetaW) * sin(thetaW) / pow(vev, 2);
+
+        // --> x = (a+b)/2 ; y = (a-b) / 2
+        cpQM_WC = (a+b) / 2.;
+        cpt_WC = (a-b) / 2.;
+    }
+
+    //Translate WC numerical values into TString
+    name_EFT = "rwgt";
+    std::vector<std::string> words_example; //Split full reweight name example (containing the list of operators needed for weight parameterization) into words
+    split_string((string) example_reweight_namingConvention, words_example, "_");
+    for(int iw=1; iw<words_example.size()-1; iw+=2) //ignore first word 'rwgt', ignore WC values
+    {
+        TString opname_tmp = words_example[iw]; //Name of operator found in sample, needed for weight parameterization
+        name_EFT+= "_" + opname_tmp + "_";
+        if(((TString) words_example[iw]).Contains("ctZ", TString::kIgnoreCase) && ctZ_WC != 0) {name_EFT+= Convert_Number_To_TString(ctZ_WC, 3);}
+        else if(((TString) words_example[iw]).Contains("cpQM", TString::kIgnoreCase) && cpQM_WC != 0) {name_EFT+= Convert_Number_To_TString(cpQM_WC, 3);}
+        else if(((TString) words_example[iw]).Contains("cpt", TString::kIgnoreCase) && cpt_WC != 0) {name_EFT+= Convert_Number_To_TString(cpt_WC, 3);}
+        else {name_EFT+= (TString) "0";}
+    }
+
+    // cout<<"name_AC = "<<name_AC<<endl;
+    // cout<<"name_EFT = "<<name_EFT<<endl;
+
+    return name_EFT;
+}
 
 
 //--------------------------------------------
