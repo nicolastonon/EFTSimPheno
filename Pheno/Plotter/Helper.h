@@ -291,13 +291,19 @@ TString GetProcessLegendName(TString proc)
     // else if(!proc.CompareTo("ttll", TString::kIgnoreCase)) {return "t#bar{t}ll";}
     // else if(!proc.CompareTo("tllq", TString::kIgnoreCase)) {return "tllq";}
 
-    //-- Substring matching
-    if(proc.Contains("ttz", TString::kIgnoreCase)) {return "t#bar{t}Z";}
-    else if(proc.Contains("tzq", TString::kIgnoreCase)) {return "tZq";}
-    else if(proc.Contains("ttll", TString::kIgnoreCase)) {return "t#bar{t}ll";}
-    else if(proc.Contains("tllq", TString::kIgnoreCase)) {return "tllq";}
+    TString name = "";
 
-    return proc;
+    if(proc.Contains("central", TString::kIgnoreCase)) {name = "Central ";}
+
+    //-- Substring matching
+    if(proc.Contains("ttz", TString::kIgnoreCase)) {name+= "t#bar{t}Z";}
+    else if(proc.Contains("tzq", TString::kIgnoreCase)) {name+= "tZq";}
+    else if(proc.Contains("ttll", TString::kIgnoreCase)) {name+= "t#bar{t}ll";}
+    else if(proc.Contains("tllq", TString::kIgnoreCase)) {name+= "tllq";}
+
+    if(name == "") {name = proc;}
+
+    return name;
 }
 
 //Round to upper 10
@@ -357,7 +363,8 @@ int Get_Color(int index)
 	vector<int> v_colors;
 
     //Try to get many colors as different as possible
-    v_colors.push_back(kBlack); //SM is black
+    // v_colors.push_back(kBlack); //SM is black
+    v_colors.push_back(kGray+3); //SM is black
 	v_colors.push_back(kRed);
 	v_colors.push_back(kBlue);
 	v_colors.push_back(kGreen+1);
@@ -483,83 +490,47 @@ Double_t EFT_Fit_Parameterization_2D(Double_t* val, Double_t* par)
     return (par[0] + x*par[1] + x*x*par[2] + y*par[3] + x*y*par[4] + y*y*par[5]) / par[0];
 }
 
-
-//XXX
+//Draw markers at xsec values obtained directly from MG reweighting module (no extrapolation)
+//Names of reweight points are hardcoded
 void Draw_MG_Reference_Points(TString operator1, TGraph*& graph, vector<double>* v_sumsReweights_afterSel, vector<string>* v_reweights_ids)
 {
-    TString weightname_SM = "rwgt_SM";
+    // bool useLowercaseReweightNames = true; //Enforce lowercase notations //Depending on samples, hardcoded MG reweight names may or may not contain uppercase caracters (e.g. 'ctz' vs 'ctz') --> Can switch between both
+
+    TString weightname_SM = "rwgt_sm"; //Keep lowercase
+
     vector<TString> v_reweightNames_fromMG; vector<double> v_Xaxis;
-    if(operator1 == "ctZ")
+    if(operator1 == "ctz")
     {
-        v_reweightNames_fromMG.push_back("rwgt_ctZ_-3.0_ctW_0.0_cpQM_0.0_cpQ3_0.0_cpt_0.0"); v_Xaxis.push_back(-3);
-        v_reweightNames_fromMG.push_back("rwgt_ctZ_5.0_ctW_0.0_cpQM_0.0_cpQ3_0.0_cpt_0.0"); v_Xaxis.push_back(5);
+        v_reweightNames_fromMG.push_back("rwgt_ctz_-7.0_ctw_0.0_cpqm_0.0_cpq3_0.0_cpt_0.0"); v_Xaxis.push_back(-7);
+        v_reweightNames_fromMG.push_back("rwgt_ctz_5.0_ctw_0.0_cpqm_0.0_cpq3_0.0_cpt_0.0"); v_Xaxis.push_back(5);
+        v_reweightNames_fromMG.push_back("rwgt_ctz_15.0_ctw_0.0_cpqm_0.0_cpq3_0.0_cpt_0.0"); v_Xaxis.push_back(15);
     }
-    else if(operator1 == "ctW")
+    else if(operator1 == "ctw")
     {
-        v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_-3.0_cpQM_0.0_cpQ3_0.0_cpt_0.0"); v_Xaxis.push_back(-3);
-        v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_5.0_cpQM_0.0_cpQ3_0.0_cpt_0.0"); v_Xaxis.push_back(5);
+        v_reweightNames_fromMG.push_back("rwgt_ctz_0.0_ctw_-7.0_cpqm_0.0_cpq3_0.0_cpt_0.0"); v_Xaxis.push_back(-7);
+        v_reweightNames_fromMG.push_back("rwgt_ctz_0.0_ctw_5.0_cpqm_0.0_cpq3_0.0_cpt_0.0"); v_Xaxis.push_back(5);
+        v_reweightNames_fromMG.push_back("rwgt_ctz_0.0_ctw_15.0_cpqm_0.0_cpq3_0.0_cpt_0.0"); v_Xaxis.push_back(15);
     }
-    else if(operator1 == "cpQM")
+    else if(operator1 == "cpqm")
     {
-        v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_-3.0_cpQ3_0.0_cpt_0.0"); v_Xaxis.push_back(-3);
-        v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_5.0_cpQ3_0.0_cpt_0.0"); v_Xaxis.push_back(5);
+        v_reweightNames_fromMG.push_back("rwgt_ctz_0.0_ctw_0.0_cpqm_-7.0_cpq3_0.0_cpt_0.0"); v_Xaxis.push_back(-7);
+        v_reweightNames_fromMG.push_back("rwgt_ctz_0.0_ctw_0.0_cpqm_5.0_cpq3_0.0_cpt_0.0"); v_Xaxis.push_back(5);
+        v_reweightNames_fromMG.push_back("rwgt_ctz_0.0_ctw_0.0_cpqm_15.0_cpq3_0.0_cpt_0.0"); v_Xaxis.push_back(15);
     }
-    else if(operator1 == "cpQ3")
+    else if(operator1 == "cpq3")
     {
-        v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_0.0_cpQ3_-3.0_cpt_0.0"); v_Xaxis.push_back(-3);
-        v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_0.0_cpQ3_5.0_cpt_0.0"); v_Xaxis.push_back(5);
+        v_reweightNames_fromMG.push_back("rwgt_ctz_0.0_ctw_0.0_cpqm_0.0_cpq3_-7.0_cpt_0.0"); v_Xaxis.push_back(-7);
+        v_reweightNames_fromMG.push_back("rwgt_ctz_0.0_ctw_0.0_cpqm_0.0_cpq3_5.0_cpt_0.0"); v_Xaxis.push_back(5);
+        v_reweightNames_fromMG.push_back("rwgt_ctz_0.0_ctw_0.0_cpqm_0.0_cpq3_15.0_cpt_0.0"); v_Xaxis.push_back(15);
     }
     else if(operator1 == "cpt")
     {
-        v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_0.0_cpQ3_0.0_cpt_-3.0"); v_Xaxis.push_back(-3);
-        v_reweightNames_fromMG.push_back("rwgt_ctZ_0.0_ctW_0.0_cpQM_0.0_cpQ3_0.0_cpt_5.0"); v_Xaxis.push_back(5);
+        v_reweightNames_fromMG.push_back("rwgt_ctz_0.0_ctw_0.0_cpqm_0.0_cpq3_0.0_cpt_-7.0"); v_Xaxis.push_back(-7);
+        v_reweightNames_fromMG.push_back("rwgt_ctz_0.0_ctw_0.0_cpqm_0.0_cpq3_0.0_cpt_5.0"); v_Xaxis.push_back(5);
+        v_reweightNames_fromMG.push_back("rwgt_ctz_0.0_ctw_0.0_cpqm_0.0_cpq3_0.0_cpt_15.0"); v_Xaxis.push_back(15);
     }
 
-/*
-    TH1F* h_SM = NULL;
-
-    //Define root interactive command to draw desired histogram
-    TString variable = weightname_SM + " >> h_SM(1, 0, 1)";
-
-    //Produce histogram (interactively)
-    t->Draw(variable);
-
-    //Retrieve generated histogram
-    h_SM = (TH1F*) gDirectory->Get("h_SM")->Clone();
-
-    float int_SM = h_SM->Integral();
-    cout<<"int_SM "<<int_SM<<endl;
-
-    delete h_SM;
-
-    for(int ipoint=0; ipoint<v_reweightNames_fromMG.size(); ipoint++)
-    {
-        for(int id=0; id<v_reweights_ids->size(); id++)
-        {
-            if((TString) v_reweights_ids->at(id) != v_reweightNames_fromMG[ipoint]) {continue;}
-
-            TH1F* h = NULL;
-
-            //Define root interactive command to draw desired histogram
-        	TString variable = v_weightIds + "["+id+"]" + " >> h(" + Convert_Number_To_TString(nbins) + "," + Convert_Number_To_TString(xmin) + "," + Convert_Number_To_TString(xmax) + ")";
-
-        	//Produce histogram (interactively)
-        	t->Draw(variable);
-
-            //Retrieve generated histogram
-            h = (TH1F*) gDirectory->Get("h")->Clone();
-            h->SetDirectory(0); //NECESSARY so that histo is not associated with TFile, and doesn't get deleted when file closed !
-            if(!h || h->GetEntries() == 0) {cout<<BOLD(FRED("Null or void histogram (made from TMVA TTree) ! Abort !"))<<endl; return 0;}
-
-            double int_EFT = h->Integral();
-            cout<<"int_EFT "<<int_EFT<<endl;
-
-            // c->cd();
-
-            delete h;
-        }
-    }
-*/
+//--------------------------------------------
 
     // cout<<"v_reweights_ids->size() "<<v_reweights_ids->size()<<endl;
     for(int ipoint=0; ipoint<v_reweightNames_fromMG.size(); ipoint++)
@@ -568,8 +539,9 @@ void Draw_MG_Reference_Points(TString operator1, TGraph*& graph, vector<double>*
         double int_EFT = 0;
         for(int id=0; id<v_reweights_ids->size(); id++)
         {
-            if((TString) v_reweights_ids->at(id) == "rwgt_sm" || (TString) v_reweights_ids->at(id) == "rwgt_SM") {int_SM = v_sumsReweights_afterSel->at(id);}
-            else if((TString) v_reweights_ids->at(id) == v_reweightNames_fromMG[ipoint]) {int_EFT = v_sumsReweights_afterSel->at(id);}
+            TString tmp = v_reweights_ids->at(id); tmp.ToLower();
+            if(tmp == weightname_SM) {int_SM = v_sumsReweights_afterSel->at(id);}
+            else if(tmp == v_reweightNames_fromMG[ipoint]) {int_EFT = v_sumsReweights_afterSel->at(id);}
         }
 
         // cout<<"int_SM "<<int_SM<<endl;
@@ -623,7 +595,7 @@ TString Convert_ACtoEFT(TString name_AC, TString example_reweight_namingConventi
 
     //Get corresponding EFT WC values
     double ctZ_WC = 0.;
-    double cpQM_WC = 0.;
+    double cpqm_WC = 0.;
     double cpt_WC = 0.;
     if(C2V_value != 0) //Direct relation C2V <-> ctZ
     {
@@ -639,7 +611,7 @@ TString Convert_ACtoEFT(TString name_AC, TString example_reweight_namingConventi
         double b = 4 * DeltaC1A * cos(thetaW) * sin(thetaW) / pow(vev, 2);
 
         // --> x = (a+b)/2 ; y = (a-b) / 2
-        cpQM_WC = (a+b) / 2.;
+        cpqm_WC = (a+b) / 2.;
         cpt_WC = (a-b) / 2.;
     }
 
@@ -652,7 +624,7 @@ TString Convert_ACtoEFT(TString name_AC, TString example_reweight_namingConventi
         TString opname_tmp = words_example[iw]; //Name of operator found in sample, needed for weight parameterization
         name_EFT+= "_" + opname_tmp + "_";
         if(((TString) words_example[iw]).Contains("ctZ", TString::kIgnoreCase) && ctZ_WC != 0) {name_EFT+= Convert_Number_To_TString(ctZ_WC, 3);}
-        else if(((TString) words_example[iw]).Contains("cpQM", TString::kIgnoreCase) && cpQM_WC != 0) {name_EFT+= Convert_Number_To_TString(cpQM_WC, 3);}
+        else if(((TString) words_example[iw]).Contains("cpqm", TString::kIgnoreCase) && cpqm_WC != 0) {name_EFT+= Convert_Number_To_TString(cpqm_WC, 3);}
         else if(((TString) words_example[iw]).Contains("cpt", TString::kIgnoreCase) && cpt_WC != 0) {name_EFT+= Convert_Number_To_TString(cpt_WC, 3);}
         else {name_EFT+= (TString) "0";}
     }

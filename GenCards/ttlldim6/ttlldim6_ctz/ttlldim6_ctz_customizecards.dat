@@ -1,6 +1,3 @@
 set param_card mass 6 172.5
 set param_card yukawa 6 172.5
-set param_card decay 6 auto
-set param_card MB 0.0
-set param_card ymb 0.0
-set param_card ctZ 7.0
+set param_card ctZ 3.0

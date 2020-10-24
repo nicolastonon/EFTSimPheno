@@ -127,9 +127,9 @@ void Get_TH1EFT_ForXsecPlot(TH1EFT*& h, TString process, vector<double>*& v_sums
     t->SetBranchAddress("originalXWGTUP", &originalXWGTUP);
 
     //We just need to fill the TH1EFT to later parameterize the TF2 fit ; no need to use full statistics, few Ks events are enough for approx.
-    // int nentries = 1000;
-    // int nentries = 10000;
-    int nentries = t->GetEntries();
+    int nentries = 10000;
+    // int nentries = 20000;
+    // int nentries = t->GetEntries();
     cout<<FMAG("Processing "<<nentries<<" entries...")<<endl;
 
     //Draw progress bar
@@ -210,10 +210,8 @@ void Plot_CrossSection_VS_WilsonCoeff(TString process, TString operator1, TStrin
     string kSMstr = "SM"; //Must be exact same name as 'kSMstr' in WCFit
 
     cout<<endl<<BOLD(UNDL(FYEL("=== Plot XSEC .vs. WCs ===")))<<endl<<endl;
-
     if(operator1 == "") {cout<<FRED("Error ! Wrong operator name ! Abort ! ")<<endl; return;}
     if(type != "1D" && type != "2D") {cout<<FRED("Error ! Wrong type name ! Abort ! ")<<endl; return;}
-
     cout<<ITAL("Creating "<<type<<" plot...")<<endl;
 
     //1D vectors of WC values to cover for each operator
@@ -225,7 +223,7 @@ void Plot_CrossSection_VS_WilsonCoeff(TString process, TString operator1, TStrin
     //To parameterize the xsec as a function of 2 operators, 6 independent coefficients are required
     //Extract these parameters, and use them to parameterize smoothly the xsec as a function of the 2 operators -> plot
     WCFit fit = h->GetSumFit(); //Get summed fit (over all bins)
-    Double_t c0, c1, c2, c3, c4, c5; //Get all necessary fit coeffs ; 1D -> 3 params ; 2D -> 5 params
+    Double_t c0, c1, c2, c3, c4, c5; //Get all necessary fit coeffs (2D -> 5 params)
     c0 = fit.getCoefficient(kSMstr, kSMstr);
     c1 = fit.getCoefficient(kSMstr, (string) operator1);
     c2 = fit.getCoefficient((string) operator1, (string) operator1);
@@ -260,50 +258,11 @@ void Plot_CrossSection_VS_WilsonCoeff(TString process, TString operator1, TStrin
 
     //2D plot -> Create a TF2 object using the proper xsec parameterization
     TF2 *tf2 = 0;
-    if(type == "1D")
+    if(type == "2D")
     {
         tf2 = new TF2("f2", EFT_Fit_Parameterization_2D, min_op1, max_op1, min_op2, max_op2, 6);
         tf2->SetParameters(c0,c1,c2,c3,c4,c5);
     }
-
-/*
-    //Final TH2F to plot -- store sums of weights at each point of the 2D scan
-    // TH2F* h2 = new TH2F("test1", "test2", (max_op1-min_op1)/step, min_op1, max_op1, (max_op2-min_op2)/step, min_op2, max_op2);
-
-    //Get SM integral, for rescaling
-    TString rwgt_name_SM = "rwgt_"+operator1+"_0_"+operator2+"_0";
-    WCPoint wcp_SM = WCPoint((string) rwgt_name_SM, 1.);
-    h->Scale(wcp_SM);
-    float SM_integral = h->Integral();
-
-    for(float x1=min_op1; x1<=max_op1; x1+=step)
-    {
-        for(float x2=min_op2; x2<=max_op2; x2+=step)
-        {
-            //Get reweight ID corresponding to current scanning point
-            TString rwgt_name_tmp = "rwgt_"+operator1+"_"+std::to_string(x1)+"_"+operator2+"_"+std::to_string(x2);
-            if(debug) cout<<"rwgt_name_tmp "<<rwgt_name_tmp<<endl;
-
-            //Rescale TH1EFT accordingly to current reweight
-            //NB : no need to rescale each bin separately ! Only care about total integral, so can rescale global fit manually instead...
-            WCPoint wcp = WCPoint((string) rwgt_name_tmp, 1.);
-            // h->Scale(wcp);
-            // float value = h->Integral();
-            WCFit fit = h->GetSumFit();
-            float value = fit.evalPoint(&wcp);
-
-            Int_t binx = h2->GetXaxis()->FindBin(x1);
-            Int_t biny = h2->GetYaxis()->FindBin(x2);
-            Int_t bin = h2->GetBin(binx, biny, 0);
-
-            if(relative_to_SM) {value/= SM_integral;}
-
-            if(debug) cout<<"value "<<value<<endl;
-
-            h2->SetBinContent(bin, value);
-        }
-    }
-*/
 
     TCanvas* c = new TCanvas("c","c", 1000, 800);
     if(type == "2D")
@@ -406,7 +365,6 @@ void Plot_CrossSection_VS_WilsonCoeff(TString process, TString operator1, TStrin
         tf2->GetHistogram()->GetYaxis()->SetTitle(Get_Operator_Name(operator2));
         tf2->GetHistogram()->GetZaxis()->SetLabelSize(0.03);
         // tf2->GetHistogram()->GetZaxis()->SetTitle("a.u.");
-
         tf2->GetHistogram()->SetMaximum(tf2->GetHistogram()->GetMaximum()*0.8);
 
         //2D plot
@@ -541,29 +499,24 @@ void Plot_CrossSection_VS_WilsonCoeff_PairOperators(TString process, vector<TStr
 
 int main()
 {
-    bool lowercase_operators = false; //true <-> operator names are forced to lowercase (if needed to match reweight names)
+    bool lowercase_operators = true; //true <-> operator names are forced to lowercase (if needed to match reweight names)
 
     TString process;
-    // process = "ttz";
-    // process = "tzq";
-    // process = "tllq";
-    // process = "ttll";
-    // process = "tllq_fullsim";
-    // process = "ttll_top19001";
-    process = "ttll_v3";
+    // process = "tllq_training";
+    process = "ttll_training";
 
     vector<TString> v_operators;
-    v_operators.push_back("ctZ");
-    v_operators.push_back("ctW");
-    v_operators.push_back("cpQM");
-    v_operators.push_back("cpQ3");
+    v_operators.push_back("ctz");
+    v_operators.push_back("ctw");
+    v_operators.push_back("cpqm");
+    v_operators.push_back("cpq3");
     v_operators.push_back("cpt");
 
     if(lowercase_operators) {for(int i=0; i<v_operators.size(); i++) {v_operators[i].ToLower();} }
     Load_Canvas_Style();
 
-    // Plot_CrossSection_VS_WilsonCoeff_SingleOperator(process, v_operators, "cpq3");
-    Plot_CrossSection_VS_WilsonCoeff_SingleOperator(process, v_operators); //Plot all
+    Plot_CrossSection_VS_WilsonCoeff_SingleOperator(process, v_operators, "ctz");
+    // Plot_CrossSection_VS_WilsonCoeff_SingleOperator(process, v_operators); //Plot all
 
     // Plot_CrossSection_VS_WilsonCoeff_PairOperators(process, v_operators, "ctw", "ctw");
     // Plot_CrossSection_VS_WilsonCoeff_PairOperators(process, v_operators); //Plot all

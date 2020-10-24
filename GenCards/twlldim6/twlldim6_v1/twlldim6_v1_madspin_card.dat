@@ -1,0 +1,37 @@
+#************************************************************
+#*                        MadSpin                           *
+#*                                                          *
+#*    P. Artoisenet, R. Frederix, R. Rietkerk, O. Mattelaer *
+#*                                                          *
+#*    Part of the MadGraph5_aMC@NLO Framework:              *
+#*    The MadGraph5_aMC@NLO Development Team - Find us at   *
+#*    https://server06.fynu.ucl.ac.be/projects/madgraph     *
+#*                                                          *
+#*    Manual:                                               *
+#*    cp3.irmp.ucl.ac.be/projects/madgraph/wiki/MadSpin     *
+#*                                                          *
+#************************************************************
+#Some options (uncomment to apply)
+#
+# set seed 1
+# set BW_cut 15                 # cut on how far the particle can be off-shell
+# set spinmode onshell          # Use one of the madspin special mode
+#set max_running_process 1      #limit the number of concurrent processes for grid running
+set Nevents_for_max_weigth 250  # number of events for the estimate of the max. weight
+set max_weight_ps_point 400     # number of PS to estimate the maximum for each event
+
+set ms_dir ./MadspinDir
+
+define l+ = e+ mu+ ta+
+define l- = e- mu- ta-
+define vl = ve vm vt
+define vl~ = ve~ vm~ vt~
+
+decay t > w+ b DIM6=0 FCNC=0, w+ > all all DIM6=0 FCNC=0
+decay t~ > w- b~ DIM6=0 FCNC=0, w- > all all DIM6=0 FCNC=0
+decay w+ > all all DIM6=0 FCNC=0
+decay w- > all all DIM6=0 FCNC=0
+decay z > all all DIM6=0 FCNC=0
+
+# running the actual code
+launch

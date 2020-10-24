@@ -6,7 +6,6 @@ from Configuration.Generator.MCTunes2017.PythiaCP5Settings_cfi import *
 
 #Block to first produce LHE events from gridpack
 externalLHEProducer = cms.EDProducer("ExternalLHEProducer",
-    # args = cms.vstring('/cvmfs/cms.cern.ch/phys_generator/gridpacks/slc6_amd64_gcc481/13TeV/powheg/V2/test_gg_H190_quark-mass-effects_NNPDF3.0/test_gg_H190_quark-mass-effects_NNPDF30_13TeV_tarball.tar.gz'),
     args = cms.vstring('../mygridpack.tar.gz'),
     nEvents = cms.untracked.uint32(5000),
     numberOfParameters = cms.uint32(1),
