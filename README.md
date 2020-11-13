@@ -46,8 +46,8 @@ CODE EXAMPLE
 _____________________________________________________________________________
 
 > Files and instructions to :
-> * generate private MC samples including EFT reweighting ;
-> * perform basic phenomenology studies.
+> * generate private MC samples, including EFT reweighting
+> * perform basic phenomenology studies
 
 #### Table Of Contents
 
@@ -58,8 +58,8 @@ _____________________________________________________________________________
     * [Generate LHE events interactively](https://github.com/nicolastonon/EFT-Simu-Pheno#Generate-LHE-events-interactively)
     * [Generate particle-level events](https://github.com/nicolastonon/EFT-Simu-Pheno#Generate-particle-level-events)
       * [GEN-only](https://github.com/nicolastonon/EFT-Simu-Pheno#GEN-only)
-      * [miniAOD (Fast simulation)](https://github.com/nicolastonon/EFT-Simu-Pheno#miniaod-fast-simulation)
-      * [miniAOD (Full simulation)](https://github.com/nicolastonon/EFT-Simu-Pheno#miniaod-full-simulation)
+      * [miniAOD (FASTSIM)](https://github.com/nicolastonon/EFT-Simu-Pheno#miniaod-fastsim)
+      * [miniAOD (FULLSIM)](https://github.com/nicolastonon/EFT-Simu-Pheno#miniaod-fullsim)
       * [Final ntuples](https://github.com/nicolastonon/EFT-Simu-Pheno#Final-ntuples)
 
 * [Pheno studies](https://github.com/nicolastonon/EFT-Simu-Pheno#Pheno-studies)
@@ -87,29 +87,42 @@ _____________________________________________________________________________
 
 ## Setup
 
-Depending on the production step, and the data-taking year you are considering, different CMSSW releases may be used.
+Depending on the production step, and the data-taking year you are considering, different CMSSW releases must be used:
 
-The example commands below are valid for 2017 MC production.
+<details>
+<summary>CMSSW releases</summary>
+```
+#-- 2016
+RELEASE=7_1_46 #LHE-GEN-SIM
+RELEASE=8_0_21 #DIGI RECO Step1/2
+RELEASE=9_4_9 #MINIAOD
 
-<!-- :construction: *Add commands for each year.* -->
+#-- 2017
+RELEASE=9_3_6 #LHE-GEN-SIM
+RELEASE=9_4_4 #DIGI RECO Step1/2 + MINIAOD
+
+#-- 2018
+RELEASE=10_2_3 #LHE-GEN-SIM
+RELEASE=10_2_5 #DIGI RECO Step1/2 + MINIAOD
+```
+</details>
+
+Then, setup your workind directory:
 
 ```
 mkdir myDir
 cd myDir
 
-# Or other release, as specific below
-RELEASE=9_3_6
-
-# Setup release
+#-- Setup release
 cmsrel CMSSW_$RELEASE
 cd CMSSW_X_Y_Z/src
 cmsenv
 
-# Useful for GEN step only
+#-- Needed for GEN step only
 mkdir -p Configuration/GenProduction/
 git clone https://github.com/cms-sw/genproductions.git Configuration/GenProduction/
 
-# You can then copy the custom fragment [Configuration/GenProduction/python/PrivProd.py](https://github.com/nicolastonon/EFT-Simu-Pheno/ProductionScripts/Fragments/PrivProd.py)
+#-- You can then copy there the custom fragment [Configuration/GenProduction/python/PrivProd.py](https://github.com/nicolastonon/EFT-Simu-Pheno/ProductionScripts/Fragments/PrivProd.py) (or use some other fragment found online -- download with `wget`).
 ```
 
 ## Madgraph cards
@@ -122,7 +135,7 @@ Gridpacks may be generated in several ways (e.g. interactively, using screen, vi
 
 - First time : [General instructions](https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookCMSConnect) to create an account and use the CMSConnect service.
 
-- Log in to the service, setup the datacards properly, and launch the gridpack production :
+- Login, setup the datacards properly, and launch the gridpack production :
 
 ```
 #Log in
@@ -170,23 +183,27 @@ This makes it quite  easy to run large-scale production from a gridpack to the f
 
 Once you have generated your gridpack, you may either want to :
 1) simply generate events in LHE format and shower them (for phenomenology studies) ;
-2) generate events in LHE format, shower them, run the detector simulation, digitize the signals in the detector, emulate the trigger response, and reconstruct events in the miniAOD format (for final anlysis).
+2) generate events in LHE format, shower them, run the detector simulation, digitize the signals in the detector, emulate the trigger response, and reconstruct events in the miniAOD format (for final analysis).
 
 Moreover, you may run these steps either interactively or e.g. via CRAB (HTCondor not tested yet). For more than ~1K events, running on the grid is necessary.
 
 _____________________________________________________________________________
 
-Below you can find example `cmsDriver` commands to create python configuration files for each production step.
-Template for CRAB and python configuration files for each production step can be found in the [ProductionScripts](https://github.com/nicolastonon/EFT-Simu-Pheno/ProductionScripts) directory.
+Below you can find example `cmsDriver` commands to create python configuration files for each production step and each year separately.
+
+:information_source: *After you have created a config file, you can run it interactively (testing) with: `cmsRun myCfgfile.py`.*
 
 :information_source: *Type 'cmsDriver --help' to get infos on arguments.*
 
-:information_source: *When running CRAB, it is most practical to set `config.Data.publication = True`. This way, a user-dataset is produced at each step and can be passed to the next step, with options `config.Data.inputDataset = '/DSname'` and `config.Data.inputDBS = 'phys03'`.
-Alternatively, you can use the [GenerateInputPathFile.py](https://github.com/nicolastonon/EFT-Simu-Pheno/ProductionScripts/ConfigFiles/FullSim/GenerateInputPathFile.py) script to generate the filelist to be read (pass it via `config.Data.userInputFiles = open('fullpath.txt').readlines()`).*
+:information_source: *Template for the python configuration files for 2017 and each production step can be found in the [ProductionScripts](https://github.com/nicolastonon/EFT-Simu-Pheno/ProductionScripts) directory. Can take them as examples, but make sure to reproduce your config files by yourself to ensure consistency.*
 
 ### GEN-only
 
-- Create the config file 'GEN_cfg.py', read a LHE input file, shower events with a custom fragment :
+These instructions are for running the GEN step alone (i.e. for pheno-level studies, not for a reco-level analysis). For the latter, use the LHE to miniAOD steps described in [miniAOD (Full simulation)](https://github.com/nicolastonon/EFT-Simu-Pheno#miniaod-full-simulation).
+
+:arrow_right_hook: *The output file can be passed to my [GenAnalyzer](https://github.com/nicolastonon/EFT-Simu-Pheno/Pheno/Analyzer) code for generator-level studies.*
+
+- Create the config file 'GEN_cfg.py', read a LHE input file, shower events with a custom fragment. Example for 2017:
 ```
 cmsDriver.py Configuration/GenProduction/python/PrivProd.py \
 --filein file:cmsgrid_final_tzq.lhe --fileout file:GEN.root \
@@ -194,17 +211,13 @@ cmsDriver.py Configuration/GenProduction/python/PrivProd.py \
 --mc --conditions auto:run2_mc -n 100 --era Run2_25ns \
 --eventcontent RAWSIM --step GEN --datatier GEN-SIM \
 --beamspot Realistic25ns13TeVEarly2017Collision --no_exec
-
-cmsRun GEN_cfg.py
 ```
-
-:arrow_right_hook: The output file can be passed to my [GenAnalyzer](https://github.com/nicolastonon/EFT-Simu-Pheno/Pheno/Analyzer) code for generator-level studies.
 
 <!-- :clock430: *NB : for 10K events interactively, this step takes ~1h.* -->
 
-### miniAOD [Fast simulation]
+### miniAOD [FASTSIM]
 
-*[VALIDATED UNDER CMSSW_9_4_12]*
+*[VALIDATED UNDER CMSSW_9_4_12] for 2017 only*
 
 With FastSim, several production steps can be chained together, and a simplified detector simulation is used.
 
@@ -226,8 +239,6 @@ cmsDriver.py Configuration/GenProduction/python/PrivProdFromGridpack.py \
 --beamspot Realistic25ns13TeVEarly2017Collision \
 --no_exec -n 10 --customise Configuration/DataProcessing/Utils.addMonitoring \
 --pileup_input "dbs:/Neutrino_E-10_gun/RunIIFall17FSPrePremix-PUMoriond17_94X_mc2017_realistic_v15-v1/GEN-SIM-DIGI-RAW"
-
-cmsRun FASTSIM1_cfg.py
 ```
 
 * Step 2 [miniAOD]
@@ -242,20 +253,20 @@ cmsDriver.py --filein file:FASTSIM1.root --fileout file:miniAOD.root \
 --step PAT --scenario pp \
 --era Run2_2017_FastSim,run2_miniAOD_94XFall17 \
 --no_exec --customise Configuration/DataProcessing/Utils.addMonitoring
-
-cmsRun FASTSIM2_cfg.py
 ```
 
 
-### miniAOD [Full simulation]
+### miniAOD [FULLSIM]
 
 Here are the main production steps when using the full GEANT4 detector simulation.
 
 #### GEN-SIM
 
-*[VALIDATED UNDER CMSSW_9_3_6]*
+:heavy_exclamation_mark: **The path to the gridpack is taken from the fragment when a fragment is provided. My example fragment contains a dummy path. If using it, you must then update the gridpack path directly in the LHE-GEN-SIM config file produced with this step !**
 
-Use this command if you want to read an existing LHE file (if you want to create events from a gridpack, see below) :
+Use this command if you want to read an existing LHE file (if you want to create events directly from a gridpack, use LHE-GEN-SIM instead, see below).
+
+- Example for 2017:
 
 ```
 cmsDriver.py Configuration/GenProduction/python/PrivProd.py \
@@ -268,16 +279,33 @@ cmsDriver.py Configuration/GenProduction/python/PrivProd.py \
 --geometry DB:Extended --era Run2_2017 \
 --customise Configuration/DataProcessing/Utils.addMonitoring \
 --no_exec -n 10
-
-cmsRun GEN-SIM_cfg.py
 ```
+
+:information_source: *NB: this example reads an existing LHE file as input. If you want to generate events from a gridpack, use a consistent fragment and remove `filein`.*
+
 
 #### LHE-GEN-SIM
 
-*[VALIDATED UNDER CMSSW_9_3_6]*
+:heavy_exclamation_mark: **The path to the gridpack is taken from the fragment when a fragment is provided. My example fragment contains a dummy path. If using it, you must then update the gridpack path directly in the LHE-GEN-SIM config file produced with this step !**
 
 Use this command if you want to create events from a gridpack (+ shower them and apply detector simulation) :
 
+<details>
+<summary>2016</summary>
+```
+cmsDriver.py Configuration/GenProduction/python/PrivProdFromGridpack.py \
+--fileout file:LHE-GEN-SIM.root \
+--python_filename LHE-GEN-SIM_cfg.py \
+--mc --eventcontent RAWSIM,LHE --datatier GEN-SIM,LHE --step LHE,GEN,SIM \
+--conditions MCRUN2_71_V1::All \
+--beamspot Realistic50ns13TeVCollision --magField 38T_PostLS1 \
+--customise SLHCUpgradeSimulations/Configuration/postLS1Customs.customisePostLS1,Configuration/DataProcessing/Utils.addMonitoring \
+--no_exec -n 10
+```
+</details>
+
+<details>
+<summary>2017</summary>
 ```
 cmsDriver.py Configuration/GenProduction/python/PrivProdFromGridpack.py \
 --fileout file:LHE-GEN-SIM.root \
@@ -289,16 +317,60 @@ cmsDriver.py Configuration/GenProduction/python/PrivProdFromGridpack.py \
 --geometry DB:Extended --era Run2_2017 \
 --customise Configuration/DataProcessing/Utils.addMonitoring \
 --no_exec -n 10
-
-cmsRun LHE-GEN-SIM_cfg.py
 ```
+</details>
 
-:information_source: *Note that a different custom fragment [PrivProdFromGridpack.py](https://github.com/nicolastonon/EFT-Simu-Pheno/ProductionScripts/Fragments/PrivProdFromGridpack.py) is used, which includes a block to read the gridpack.*
+<details>
+<summary>2018</summary>
+```
+cmsDriver.py Configuration/GenProduction/python/PrivProdFromGridpack.py \
+--fileout file:LHE-GEN-SIM.root \
+--python_filename LHE-GEN-SIM_cfg.py \
+--mc --eventcontent RAWSIM,LHE --datatier GEN-SIM,LHE --step LHE,GEN,SIM \
+--conditions 102X_upgrade2018_realistic_v11 \
+--beamspot Realistic25ns13TeVEarly2018Collision \
+--geometry DB:Extended --era Run2_2018 \
+--customise Configuration/DataProcessing/Utils.addMonitoring \
+--no_exec -n 10
+```
+</details>
+
+<!-- :information_source: *Note that a different custom fragment [PrivProdFromGridpack.py](https://github.com/nicolastonon/EFT-Simu-Pheno/ProductionScripts/Fragments/PrivProdFromGridpack.py) is used, which includes a block to read the gridpack. Need to be updated manually.* -->
 
 #### DIGI-RECO
 
-*[VALIDATED UNDER CMSSW_9_4_4]*
+:information_source: *NB: step 1 is probably the longest of all, and the config file is slow to produce, because it reads a lot of PU input files. Hence the number of jobs is increased in the corresponding crab prod file.*
 
+<details>
+<summary>2016</summary>
+* Step 1 [L1, HLT, Pileup, DIGI] :
+```
+cmsDriver.py step1 --filein file:GEN-SIM.root --fileout file:DIGI1.root \
+--python_filename DIGI1_cfg.py \
+--mc --eventcontent PREMIXRAW \
+--datatier GEN-SIM-RAW \
+--step DIGIPREMIX_S2,DATAMIX,L1,DIGI2RAW,HLT:@frozen2016 \
+--datamix PreMix --era Run2_2016 \
+--conditions 80X_mcRun2_asymptotic_2016_TrancheIV_v6 \
+--customise Configuration/DataProcessing/Utils.addMonitoring --no_exec \
+--pileup_input "dbs:/Neutrino_E-10_gun/RunIISpring15PrePremix-PUMoriond17_80X_mcRun2_asymptotic_2016_TrancheIV_v2-v2/GEN-SIM-DIGI-RAW"
+```
+
+* Step 2 [RECO] :
+```
+cmsDriver.py step2 --filein file:DIGI1.root --fileout file:DIGI2.root \
+--python_filename DIGI2_cfg.py \
+--mc --eventcontent AODSIM \
+--runUnscheduled --datatier AODSIM \
+--conditions 80X_mcRun2_asymptotic_2016_TrancheIV_v6 \
+--step RAW2DIGI,RECO,EI \
+--era Run2_2016 \
+--no_exec
+```
+</details>
+
+<details>
+<summary>2017</summary>
 * Step 1 [L1, HLT, Pileup, DIGI] :
 ```
 cmsDriver.py step1 --filein file:GEN-SIM.root --fileout file:DIGI1.root \
@@ -311,8 +383,6 @@ cmsDriver.py step1 --filein file:GEN-SIM.root --fileout file:DIGI1.root \
 --customise Configuration/DataProcessing/Utils.addMonitoring \
 --no_exec \
 --pileup_input "dbs:/Neutrino_E-10_gun/RunIISummer17PrePremix-MCv2_correctPU_94X_mc2017_realistic_v9-v1/GEN-SIM-DIGI-RAW"
-
-cmsRun DIGI1_cfg.py
 ```
 
 * Step 2 [RECO] :
@@ -325,14 +395,58 @@ cmsDriver.py step2 --filein file:DIGI1.root --fileout file:DIGI2.root \
 --step RAW2DIGI,RECO,RECOSIM,EI \
 --era Run2_2017 \
 --no_exec
-
-cmsRun DIGI2_cfg.py
 ```
+</details>
+
+<details>
+<summary>2018</summary>
+* Step 1 [L1, HLT, Pileup, DIGI] :
+```
+cmsDriver.py step1 --filein file:GEN-SIM.root --fileout file:DIGI1.root \
+--python_filename DIGI1_cfg.py \
+--mc --eventcontent PREMIXRAW \
+--datatier GEN-SIM-RAW \
+--step DIGI,DATAMIX,L1,DIGI2RAW,HLT:@relval2018 \
+--datamix PreMix --era Run2_2018 --procModifiers premix_stage2 \
+--conditions 102X_upgrade2018_realistic_v15 \
+--geometry DB:Extended \
+--customise Configuration/DataProcessing/Utils.addMonitoring --no_exec \
+--pileup_input "dbs:/Neutrino_E-10_gun/RunIISummer17PrePremix-PUAutumn18_102X_upgrade2018_realistic_v15-v1/GEN-SIM-DIGI-RAW"
+```
+
+* Step 2 [RECO] :
+```
+cmsDriver.py step2 --filein file:DIGI1.root --fileout file:DIGI2.root \
+--python_filename DIGI2_cfg.py \
+--mc --eventcontent AODSIM \
+--runUnscheduled --datatier AODSIM \
+--conditions 102X_upgrade2018_realistic_v15 \
+--step RAW2DIGI,L1Reco,RECO,RECOSIM,EI \
+--procModifiers premix_stage2 \
+--era Run2_2018 \
+--no_exec
+```
+</details>
+
 
 #### MINIAOD
 
-*[VALIDATED UNDER CMSSW_9_4_4]*
+<details>
+<summary>2016</summary>
+```
+cmsDriver.py --filein file:DIGI2.root --fileout file:miniAOD.root \
+--python_filename miniAOD_cfg.py \
+--eventcontent MINIAODSIM \
+--datatier MINIAODSIM \
+--conditions 94X_mcRun2_asymptotic_v3 \
+--step PAT \
+--mc --runUnscheduled --scenario pp \
+--era Run2_2016,run2_miniAOD_80XLegacy --no_exec
+```
+</details>
 
+<details>
+<summary>2017</summary>
 ```
 cmsDriver.py --filein file:DIGI2.root --fileout file:miniAOD.root \
 --python_filename miniAOD_cfg.py \
@@ -341,11 +455,35 @@ cmsDriver.py --filein file:DIGI2.root --fileout file:miniAOD.root \
 --step PAT \
 --mc --runUnscheduled --scenario pp \
 --era Run2_2017 --no_exec
-
-cmsRun miniAOD_cfg.py
 ```
+</details>
+
+<details>
+<summary>2018</summary>
+```
+cmsDriver.py step1 --filein file:DIGI2.root --fileout file:miniAOD.root \
+--python_filename miniAOD_cfg.py \
+--eventcontent MINIAODSIM \
+--datatier MINIAODSIM \
+--conditions 102X_upgrade2018_realistic_v15 \
+--step PAT --geometry DB:Extended \
+--mc --runUnscheduled \
+--era Run2_2018 --no_exec
+```
+</details>
+
+#### Production with CRAB
+
+Template for CRAB configuration files for each production step can be found in the [ProductionScripts](https://github.com/nicolastonon/EFT-Simu-Pheno/ProductionScripts) directory.
+These templates depend on the production step (some instructions differ, e.g. job splitting, etc.) but not on years.
+Hence you can directly copy these templates and adapt them to your needs (make sure to link the proper gridpack path, refer to the proper config file names, etc.).
+
+:information_source: *When running CRAB, it is most practical to set `config.Data.publication = True`. This way, a user-dataset is produced at each step and can be passed to the next step, with options `config.Data.inputDataset = '/DSname'` and `config.Data.inputDBS = 'phys03'`.
+Alternatively, you can use the [GenerateInputPathFile.py](https://github.com/nicolastonon/EFT-Simu-Pheno/ProductionScripts/ConfigFiles/FullSim/GenerateInputPathFile.py) script to generate the filelist to be read (pass it via `config.Data.userInputFiles = open('fullpath.txt').readlines()`).*
 
 ### Final ntuples
+
+:heavy_exclamation_mark: **These instructions are slightly outdated ! In particular, some more options should be included to process private SMEFT samples (include PDF, etc.).**
 
 The instructions below are relevant for use within the DESY Top-Z group only, and are kept to a minimum.
 

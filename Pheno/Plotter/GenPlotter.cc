@@ -304,7 +304,7 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
 
                             // cout<<v_reweights_ids->at(iweightid)<<" --> "<<v_reweights_floats->at(iweightid)<<endl;
 
-                            float w = v_reweights_floats->at(iweightid);
+                            float w = v_reweights_floats->at(iweightid); //FIXME
                             // float w = weight_SF * v_reweights_floats->at(iweightid)/ v_SWE[iweightid];
 
                             if(v_process[iproc].Contains("tllq") && w>70) {cout<<"w = "<<w<<endl; continue;} //FIXME -- got a spurious weight in 1 sample... !
@@ -327,9 +327,10 @@ void Compare_Distributions(vector<TString> v_process, vector<TString> v_var, vec
             if(!v_reweightNames_extrapol.size()) {continue;} //Don't need to fill TH1EFT (long) if not extrapolating weights
 
             float sm_wgt = 0;
-            WCFit eftfit = Get_EFT_Fit(v_reweights_ids, v_reweights_floats, sm_wgt);
-
-            FillTH1EFT_ManyVars(v2_TH1EFT_var_proc, eftfit, v_var_floats, iproc, sm_wgt, show_overflow);
+            WCFit* eftfit = new WCFit("myfit");
+            Get_EFT_Fit(eftfit, v_reweights_ids, v_reweights_floats, sm_wgt);
+            FillTH1EFT_ManyVars(v2_TH1EFT_var_proc, *eftfit, v_var_floats, iproc, sm_wgt, show_overflow);
+            delete eftfit; eftfit = NULL;
         } //Loop on entries
 
         //-- Debug printout

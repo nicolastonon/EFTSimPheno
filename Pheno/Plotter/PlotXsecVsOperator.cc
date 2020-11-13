@@ -144,10 +144,11 @@ void Get_TH1EFT_ForXsecPlot(TH1EFT*& h, TString process, vector<double>*& v_sums
 
         t->GetEntry(ientry);
 
-        // FillTH1EFT(h, 0.5, v_reweights_ids, v_reweights_floats, originalXWGTUP, v_SWE, 0, false);
         float sm_wgt;
-        WCFit eftfit = Get_EFT_Fit(v_reweights_ids, v_reweights_floats, sm_wgt);
-        FillTH1EFT_SingleVar(h, 0.5, eftfit, sm_wgt, true);
+        WCFit* eftfit = new WCFit("myfit");
+        Get_EFT_Fit(eftfit, v_reweights_ids, v_reweights_floats, sm_wgt);
+        FillTH1EFT_SingleVar(h, 0.5, *eftfit, sm_wgt, true);
+        delete eftfit; eftfit = NULL;
 
         // if(debug)
         {
@@ -502,8 +503,9 @@ int main()
     bool lowercase_operators = true; //true <-> operator names are forced to lowercase (if needed to match reweight names)
 
     TString process;
-    // process = "tllq_training";
-    process = "ttll_training";
+    // process = "tllq";
+    // process = "ttll";
+    process = "twll";
 
     vector<TString> v_operators;
     v_operators.push_back("ctz");
@@ -515,8 +517,8 @@ int main()
     if(lowercase_operators) {for(int i=0; i<v_operators.size(); i++) {v_operators[i].ToLower();} }
     Load_Canvas_Style();
 
-    Plot_CrossSection_VS_WilsonCoeff_SingleOperator(process, v_operators, "ctz");
-    // Plot_CrossSection_VS_WilsonCoeff_SingleOperator(process, v_operators); //Plot all
+    // Plot_CrossSection_VS_WilsonCoeff_SingleOperator(process, v_operators, "ctz");
+    Plot_CrossSection_VS_WilsonCoeff_SingleOperator(process, v_operators); //Plot all
 
     // Plot_CrossSection_VS_WilsonCoeff_PairOperators(process, v_operators, "ctw", "ctw");
     // Plot_CrossSection_VS_WilsonCoeff_PairOperators(process, v_operators); //Plot all

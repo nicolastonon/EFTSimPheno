@@ -412,64 +412,55 @@ void FillTH1EFT_ManyVars(vector<vector<TH1EFT*>>& v_h, WCFit& eft_fit, const vec
     return;
 }
 
-WCFit Get_EFT_Fit(vector<string>* v_reweights_ids, vector<float>* v_reweights_floats, float& sm_wgt)
+void Get_EFT_Fit(WCFit*& eft_fit, vector<string>* v_reweights_ids, vector<float>* v_reweights_floats, float& sm_wgt)
 {
     bool debug = false;
 
 //--------------------------------------------
 
-    WCFit eft_fit("myfit");
+    vector<WCPoint> v_wcpts; //Vector storing the WCPoint objects, to be passed to the WCFit object
+    int idx_sm = -1; //Index of SM reweight
 
-    //May only loop on minimal required number of points for WCFit (depends on n.of WCs) -- will get fit warning otherwise
-    for(int iwgt=0; iwgt<25; iwgt++) //just the necessary nof weights to overconstrain fit with 5 WCs
-    // for(int iwgt=0; iwgt<v_reweights_ids->size(); iwgt++)
+    for(int iwgt=0; iwgt<25; iwgt++) //Only loop on the minimal nof weights required in my case to overconstrain fit //Skip first point, expected to correspond to SM in my private samples (treated separately)
     {
-        // cout<<"v_reweights_ids->at(iwgt) "<<v_reweights_ids->at(iwgt)<<" / w = "<<v_reweights_floats->at(iwgt)<<" / v_SWE[iwgt] "<<v_SWE[iwgt]<<endl;
+        if(ToLower(v_reweights_ids->at(iwgt)).Contains("_sm")) {idx_sm = iwgt; sm_wgt = v_reweights_floats->at(iwgt);; continue;} //SM point added manually afterwards
 
-        TString ts = (TString) v_reweights_ids->at(iwgt);
-        if(ts == "rwgt_1") {continue;} //obsolete
-
-        if(!ts.Contains("_sm", TString::kIgnoreCase))
-        {
-            float w = v_reweights_floats->at(iwgt);
-            // float w = v_reweights_floats->at(iwgt)*1000;
-            // float w = v_reweights_floats->at(iwgt) / v_SWE[iwgt]; //Should divide all reweights by SWE(SM)
-
-            WCPoint wc_pt(v_reweights_ids->at(iwgt), w);
-
-            eft_fit.points.push_back(wc_pt);
-        }
-        else
-        {
-            sm_wgt = v_reweights_floats->at(iwgt);
-            // sm_wgt = v_reweights_floats->at(iwgt)*1000;
-        }
-    } //weights loop
+        float w = v_reweights_floats->at(iwgt);
+        v_wcpts.push_back(WCPoint(v_reweights_ids->at(iwgt), w));
+    }
 
     //-- Include 'manually' the SM point as first element (not included automatically because named 'SM' and not via its operator values)
-    //-- Return the value of sm_wgt by reference
-    eft_fit.points.insert(eft_fit.points.begin(), eft_fit.points[0]); //Duplicate the first element
-    eft_fit.points[0].setSMPoint(); //Set (new) first element to SM coeffs (all null)
-    eft_fit.points[0].wgt = sm_wgt; //Set (new) first element to SM weight
+    if(idx_sm >= 0)
+    {
+        // eft_fit->points.insert(eft_fit->points.begin(), eft_fit->points[0]); //Duplicate the first element
+        // eft_fit->points[0].setSMPoint(); //Set (new) first element to SM coeffs (all null)
+        // eft_fit->points[0].wgt = w_SMpoint; //Set (new) first element to SM weight
 
-    eft_fit.fitPoints();
+        v_wcpts.insert(v_wcpts.begin(), v_wcpts[0]); //Duplicate the first element
+        v_wcpts[0].setSMPoint(); //Set (new) first element to SM coeffs (all null)
+        v_wcpts[0].wgt = sm_wgt; //Set (new) first element to SM weight
+    }
+
+    // cout<<"v_wcpts.size() "<<v_wcpts.size()<<endl;
+    // cout<<"eft_fit->points.size() "<<eft_fit->points.size()<<endl;
+    eft_fit->fitPoints(v_wcpts); //Fit the WCPoint objects
 
     if(debug) //Printout WC values, compare true weight to corresponding fit result
     {
         cout<<"//-------------------------------------------- "<<endl;
 
-        eft_fit.dump(); //Printout all names and coefficients of WC pairs
+        eft_fit->dump(); //Printout all names and coefficients of WC pairs
 
-        for (uint i=0; i < eft_fit.points.size(); i++)
+        for (uint i=0; i < eft_fit->points.size(); i++)
         {
-            WCPoint wc_pt = eft_fit.points.at(i);
-            double fit_val = eft_fit.evalPoint(&wc_pt);
+            WCPoint wc_pt = eft_fit->points.at(i);
+            double fit_val = eft_fit->evalPoint(&wc_pt);
             wc_pt.dump(); //Printout names and values of all WCs for this point
             std::cout << "===> " << std::setw(3) << i << ": " << std::setw(12) << wc_pt.wgt << " | " << std::setw(12) << fit_val << " | " << std::setw(12) << (wc_pt.wgt-fit_val) << std::endl; //Printout : i / true weight / evaluated weight / diff
         }
     }
 
-    return eft_fit;
+    return;
 }
 
 /**
