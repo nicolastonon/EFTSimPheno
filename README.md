@@ -91,6 +91,7 @@ Depending on the production step, and the data-taking year you are considering, 
 
 <details>
 <summary>CMSSW releases</summary>
+
 ```
 #-- 2016
 RELEASE=7_1_46 #LHE-GEN-SIM
@@ -105,6 +106,7 @@ RELEASE=9_4_4 #DIGI RECO Step1/2 + MINIAOD
 RELEASE=10_2_3 #LHE-GEN-SIM
 RELEASE=10_2_5 #DIGI RECO Step1/2 + MINIAOD
 ```
+
 </details>
 
 Then, setup your workind directory:
@@ -204,6 +206,7 @@ These instructions are for running the GEN step alone (i.e. for pheno-level stud
 :arrow_right_hook: *The output file can be passed to my [GenAnalyzer](https://github.com/nicolastonon/EFT-Simu-Pheno/Pheno/Analyzer) code for generator-level studies.*
 
 - Create the config file 'GEN_cfg.py', read a LHE input file, shower events with a custom fragment. Example for 2017:
+
 ```
 cmsDriver.py Configuration/GenProduction/python/PrivProd.py \
 --filein file:cmsgrid_final_tzq.lhe --fileout file:GEN.root \
@@ -226,6 +229,7 @@ With FastSim, several production steps can be chained together, and a simplified
 * Step 1 [GEN,SIM,DIGI]
 
 If you read and existing LHE file, remove the `LHE` keyword and add `--filein file:yourfile.lhe` :
+
 ```
 cmsDriver.py Configuration/GenProduction/python/PrivProdFromGridpack.py \
 --fileout file:FASTSIM1.root \
@@ -292,6 +296,7 @@ Use this command if you want to create events from a gridpack (+ shower them and
 
 <details>
 <summary>2016</summary>
+
 ```
 cmsDriver.py Configuration/GenProduction/python/PrivProdFromGridpack.py \
 --fileout file:LHE-GEN-SIM.root \
@@ -302,10 +307,12 @@ cmsDriver.py Configuration/GenProduction/python/PrivProdFromGridpack.py \
 --customise SLHCUpgradeSimulations/Configuration/postLS1Customs.customisePostLS1,Configuration/DataProcessing/Utils.addMonitoring \
 --no_exec -n 10
 ```
+
 </details>
 
 <details>
 <summary>2017</summary>
+
 ```
 cmsDriver.py Configuration/GenProduction/python/PrivProdFromGridpack.py \
 --fileout file:LHE-GEN-SIM.root \
@@ -318,10 +325,12 @@ cmsDriver.py Configuration/GenProduction/python/PrivProdFromGridpack.py \
 --customise Configuration/DataProcessing/Utils.addMonitoring \
 --no_exec -n 10
 ```
+
 </details>
 
 <details>
 <summary>2018</summary>
+
 ```
 cmsDriver.py Configuration/GenProduction/python/PrivProdFromGridpack.py \
 --fileout file:LHE-GEN-SIM.root \
@@ -333,6 +342,7 @@ cmsDriver.py Configuration/GenProduction/python/PrivProdFromGridpack.py \
 --customise Configuration/DataProcessing/Utils.addMonitoring \
 --no_exec -n 10
 ```
+
 </details>
 
 <!-- :information_source: *Note that a different custom fragment [PrivProdFromGridpack.py](https://github.com/nicolastonon/EFT-Simu-Pheno/ProductionScripts/Fragments/PrivProdFromGridpack.py) is used, which includes a block to read the gridpack. Need to be updated manually.* -->
@@ -344,6 +354,7 @@ cmsDriver.py Configuration/GenProduction/python/PrivProdFromGridpack.py \
 <details>
 <summary>2016</summary>
 * Step 1 [L1, HLT, Pileup, DIGI] :
+
 ```
 cmsDriver.py step1 --filein file:GEN-SIM.root --fileout file:DIGI1.root \
 --python_filename DIGI1_cfg.py \
@@ -357,6 +368,7 @@ cmsDriver.py step1 --filein file:GEN-SIM.root --fileout file:DIGI1.root \
 ```
 
 * Step 2 [RECO] :
+
 ```
 cmsDriver.py step2 --filein file:DIGI1.root --fileout file:DIGI2.root \
 --python_filename DIGI2_cfg.py \
@@ -367,11 +379,13 @@ cmsDriver.py step2 --filein file:DIGI1.root --fileout file:DIGI2.root \
 --era Run2_2016 \
 --no_exec
 ```
+
 </details>
 
 <details>
 <summary>2017</summary>
 * Step 1 [L1, HLT, Pileup, DIGI] :
+
 ```
 cmsDriver.py step1 --filein file:GEN-SIM.root --fileout file:DIGI1.root \
 --python_filename DIGI1_cfg.py \
@@ -386,6 +400,7 @@ cmsDriver.py step1 --filein file:GEN-SIM.root --fileout file:DIGI1.root \
 ```
 
 * Step 2 [RECO] :
+
 ```
 cmsDriver.py step2 --filein file:DIGI1.root --fileout file:DIGI2.root \
 --python_filename DIGI2_cfg.py \
@@ -396,11 +411,13 @@ cmsDriver.py step2 --filein file:DIGI1.root --fileout file:DIGI2.root \
 --era Run2_2017 \
 --no_exec
 ```
+
 </details>
 
 <details>
 <summary>2018</summary>
 * Step 1 [L1, HLT, Pileup, DIGI] :
+
 ```
 cmsDriver.py step1 --filein file:GEN-SIM.root --fileout file:DIGI1.root \
 --python_filename DIGI1_cfg.py \
@@ -415,6 +432,7 @@ cmsDriver.py step1 --filein file:GEN-SIM.root --fileout file:DIGI1.root \
 ```
 
 * Step 2 [RECO] :
+
 ```
 cmsDriver.py step2 --filein file:DIGI1.root --fileout file:DIGI2.root \
 --python_filename DIGI2_cfg.py \
@@ -426,6 +444,7 @@ cmsDriver.py step2 --filein file:DIGI1.root --fileout file:DIGI2.root \
 --era Run2_2018 \
 --no_exec
 ```
+
 </details>
 
 
@@ -433,6 +452,7 @@ cmsDriver.py step2 --filein file:DIGI1.root --fileout file:DIGI2.root \
 
 <details>
 <summary>2016</summary>
+
 ```
 cmsDriver.py --filein file:DIGI2.root --fileout file:miniAOD.root \
 --python_filename miniAOD_cfg.py \
@@ -443,10 +463,12 @@ cmsDriver.py --filein file:DIGI2.root --fileout file:miniAOD.root \
 --mc --runUnscheduled --scenario pp \
 --era Run2_2016,run2_miniAOD_80XLegacy --no_exec
 ```
+
 </details>
 
 <details>
 <summary>2017</summary>
+
 ```
 cmsDriver.py --filein file:DIGI2.root --fileout file:miniAOD.root \
 --python_filename miniAOD_cfg.py \
@@ -456,10 +478,12 @@ cmsDriver.py --filein file:DIGI2.root --fileout file:miniAOD.root \
 --mc --runUnscheduled --scenario pp \
 --era Run2_2017 --no_exec
 ```
+
 </details>
 
 <details>
 <summary>2018</summary>
+
 ```
 cmsDriver.py step1 --filein file:DIGI2.root --fileout file:miniAOD.root \
 --python_filename miniAOD_cfg.py \
@@ -470,6 +494,7 @@ cmsDriver.py step1 --filein file:DIGI2.root --fileout file:miniAOD.root \
 --mc --runUnscheduled \
 --era Run2_2018 --no_exec
 ```
+
 </details>
 
 #### Production with CRAB
@@ -496,6 +521,7 @@ Once produced, the private miniAOD samples should then be processed :
 - Main code : `TopAnalysis/plugins/NTupleWriter.cc` (compile with `scram b`).
 
 - Define the list of private input files e.g. in this way :
+
 ```
 [Configuration/python/MC/TEST/test_cff.py]
 
@@ -515,6 +541,7 @@ where the list of private input files `inputs.txt` has been e.g. generated with 
 
 
 - You can modify options in `Configuration/analysis/common/ntuple_cfg.py`. Also reference the list of input files e.g. in this way :
+
 ```
 [Configuration/analysis/common/files_tllqdim6.txt]
 
@@ -532,11 +559,13 @@ where the list of private input files `inputs.txt` has been e.g. generated with 
 ```
 
 - Run the HTCondor jobs :
+
 ```
 ./scripts/runall-condor.pl -d outputdir -f files_tllqdim6.txt -c ntuple_cfg.py -s
 ```
 
 - Once the jobs are done, run the following script to check resubmit failed jobs or merge all the outputs :
+
 ```
 nafJobSplitter-condor.pl -j check outputdir/naf_*/
 ```
@@ -544,6 +573,7 @@ nafJobSplitter-condor.pl -j check outputdir/naf_*/
 #### PoTATo
 
 - Define the list of input files, e.g. in this way :
+
 ```
 [nicolas/python/test.py]
 
@@ -554,6 +584,7 @@ mytest = InputFiles('/afs/desy.de/user/n/ntonon/tzq.root', mode=Mode.ttHToNonbb_
 ```
 
 - From the top directory, you can run the code interactively :
+
 ```
 //Here : use 'nicolas' sub-dir, call 'Analyzer3l' analyzer, run on input files listed in 'nicolas/python/test.py', run with 2017 config, consider ttH process (naming, xsec, ...)
 
@@ -561,6 +592,7 @@ mytest = InputFiles('/afs/desy.de/user/n/ntonon/tzq.root', mode=Mode.ttHToNonbb_
 ```
 
 - For large-scale production, run jobs on HTCondor. E.g. to process all the ntuples from the Ntuple_V05 campaign, do :
+
 ```
 ./submit analyze -m nicolas -a Analyzer3l -f AllSamples -v V05_X
 
@@ -578,6 +610,7 @@ The [GenPlotter](https://github.com/nicolastonon/EFT-Simu-Pheno/Pheno/Plotter) i
 - The directory [Pheno/Analyzer](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/Pheno/Analyzer) contains examples of cfg/code files necessary to analyze the showered events, and extract some relevant features (top/Z kinematics, ...).
 
 - After making the necessary modifications in the config file, run the code :
+
 ```
 cd src/
 scram b
