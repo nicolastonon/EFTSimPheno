@@ -60,6 +60,7 @@ _____________________________________________________________________________
       * [GEN-only](https://github.com/nicolastonon/EFT-Simu-Pheno#GEN-only)
       * [miniAOD (FASTSIM)](https://github.com/nicolastonon/EFT-Simu-Pheno#miniaod-fastsim)
       * [miniAOD (FULLSIM)](https://github.com/nicolastonon/EFT-Simu-Pheno#miniaod-fullsim)
+      * [Production with CRAB](https://github.com/nicolastonon/EFT-Simu-Pheno#Production-with-CRAB)
       * [Final ntuples](https://github.com/nicolastonon/EFT-Simu-Pheno#Final-ntuples)
 
 * [Pheno studies](https://github.com/nicolastonon/EFT-Simu-Pheno#Pheno-studies)
@@ -270,7 +271,8 @@ Here are the main production steps when using the full GEANT4 detector simulatio
 
 Use this command if you want to read an existing LHE file (if you want to create events directly from a gridpack, use LHE-GEN-SIM instead, see below).
 
-- Example for 2017:
+<details>
+<summary>Example for 2017</summary>
 
 ```
 cmsDriver.py Configuration/GenProduction/python/PrivProd.py \
@@ -284,6 +286,8 @@ cmsDriver.py Configuration/GenProduction/python/PrivProd.py \
 --customise Configuration/DataProcessing/Utils.addMonitoring \
 --no_exec -n 10
 ```
+
+</details>
 
 :information_source: *NB: this example reads an existing LHE file as input. If you want to generate events from a gridpack, use a consistent fragment and remove `filein`.*
 
@@ -497,7 +501,7 @@ cmsDriver.py step1 --filein file:DIGI2.root --fileout file:miniAOD.root \
 
 </details>
 
-#### Production with CRAB
+### Production with CRAB
 
 Template for CRAB configuration files for each production step can be found in the [ProductionScripts](https://github.com/nicolastonon/EFT-Simu-Pheno/ProductionScripts) directory.
 These templates depend on the production step (some instructions differ, e.g. job splitting, etc.) but not on years.
