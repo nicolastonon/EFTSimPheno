@@ -71,3 +71,4 @@ $(XSECPLOTTER): PlotXsecVsOperator.cc Helper.h $(LIB)
 #Erase all objects and executable
 clean:
 	@-rm $(GENPLOTTER) $(XSECPLOTTER)
+	@-rm -f *.o *.exe Utils/*.o $(LIB) $(DICT) myDict* myLib*
