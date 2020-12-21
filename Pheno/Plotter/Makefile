@@ -23,14 +23,26 @@ SRCS = $(wildcard *.cxx) #Source files are all files with .cxx extension
 HDRS = $(wildcard *.h) #Header files are all files with .h extension
 OBJS = $(SRCS:.cxx=.o) #Object files are all files with .o extension, which have same names as source files
 
-LIB = /home/ntonon/Postdoc/TopEFT/Analysis/myLib.so #Re-use same library generated for main analysis code (to import custom classes)
+# LIB = /home/ntonon/Postdoc/TopEFT/Analysis/myLib.so #Re-use same library generated for main analysis code (to import custom classes)
+DICT = myDict.cxx
+LIB = myLib.so
 
 GENPLOTTER = GenPlotter.exe
 XSECPLOTTER = PlotXsecVsOperator.exe
 
 # //--------------------------------------------
 #Instructions
-all: $(GENPLOTTER) $(XSECPLOTTER)
+# all: $(GENPLOTTER) $(XSECPLOTTER)
+all: $(DICT) $(LIB) $(GENPLOTTER) $(XSECPLOTTER)
+
+$(DICT): Utils/WCPoint.h Utils/WCFit.h Utils/TH1EFT.h
+	@echo "-- Creating dictionnary $(DICT) --"
+	@rootcling -f $(DICT) -rml $(LIB) -rmf myLib.rootmap -c -p Utils/WCPoint.h Utils/WCFit.h Utils/TH1EFT.h Utils/LinkDef.h
+
+$(LIB): Utils/TH1EFT.cxx $(DICT)
+	@echo "-- Creating shared library $(LIB) --"
+	@$(CC) $(INCFLAGS) $(ROOTFLAGS) $(DICT) Utils/TH1EFT.cxx -shared -o $(LIB)
+	@echo ""
 
 #Obtain executables from object files
 $(GENPLOTTER): GenPlotter.cc Helper.h $(LIB)
