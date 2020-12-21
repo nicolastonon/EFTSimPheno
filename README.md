@@ -615,12 +615,36 @@ The [GenPlotter](https://github.com/nicolastonon/EFT-Simu-Pheno/Pheno/Plotter) i
 
 - The directory [Pheno/Analyzer](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/Pheno/Analyzer) contains examples of cfg/code files necessary to analyze the showered events, and extract some relevant features (top/Z kinematics, ...).
 
-- After making the necessary modifications in the config file, run the code :
+### Installation
+
+You may install only the Analyzer code with a sparse checkout:
+
+```
+voms-proxy-init --rfc --voms cms --hours 192
+export SCRAM_ARCH=slc7_amd64_gcc700
+mkdir myDir
+cd myDir
+cmsrel CMSSW_10_2_24
+cd CMSSW_10_2_24/src
+cmsenv
+git init .
+git remote add -f origin https://github.com/nicolastonon/EFTSimPheno.git
+git config core.sparseCheckout true
+echo "Pheno/Analyzer" >> .git/info/sparse-checkout
+git pull origin master
+
+cd myDir
+scram b
+```
+
+### Run
+
+After making the necessary modifications in the config file (in `test`), run the code :
 
 ```
 cd src/
 scram b
-cmsRun Pheno/Analyzer/test/GenAnalyzer/ConfFile_cfg.py
+cmsRun Pheno/Analyzer/test/ConfFile_cfg.py
 ```
 
 ## GenPlotter

@@ -52,9 +52,12 @@
 #include <boost/algorithm/string.hpp>
 
 //Custom classes for EFT (see https://github.com/Andrew42/EFTGenReader/blob/maste)
-#include "/home/ntonon/Postdoc/TopEFT/Analysis/Utils/TH1EFT.h"
-#include "/home/ntonon/Postdoc/TopEFT/Analysis/Utils/WCPoint.h"
-#include "/home/ntonon/Postdoc/TopEFT/Analysis/Utils/WCFit.h"
+// #include "/home/ntonon/Postdoc/TopEFT/Analysis/Utils/TH1EFT.h"
+// #include "/home/ntonon/Postdoc/TopEFT/Analysis/Utils/WCPoint.h"
+// #include "/home/ntonon/Postdoc/TopEFT/Analysis/Utils/WCFit.h"
+#include "./TH1EFT.h"
+#include "./WCPoint.h"
+#include "./WCFit.h"
 
 #include "./Helper.h"
 
@@ -915,8 +918,8 @@ int main()
 
     //-- List of processes to superimpose
     vector<TString> v_process;
-    // v_process.push_back("tllq");
-    v_process.push_back("ttll");
+    v_process.push_back("tllq");
+    // v_process.push_back("ttll");
     // v_process.push_back("twll");
 
 //--------------------------------------------
