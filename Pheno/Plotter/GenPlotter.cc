@@ -51,14 +51,6 @@
 #include <fstream>
 #include <boost/algorithm/string.hpp>
 
-//Custom classes for EFT (see https://github.com/Andrew42/EFTGenReader/blob/maste)
-// #include "/home/ntonon/Postdoc/TopEFT/Analysis/Utils/TH1EFT.h"
-// #include "/home/ntonon/Postdoc/TopEFT/Analysis/Utils/WCPoint.h"
-// #include "/home/ntonon/Postdoc/TopEFT/Analysis/Utils/WCFit.h"
-#include "./Utils/TH1EFT.h"
-#include "./Utils/WCPoint.h"
-#include "./Utils/WCFit.h"
-
 #include "./Helper.h"
 
 #include <cassert>     //Can be used to terminate program if argument is not true.
@@ -71,7 +63,7 @@
 #define xsec_twll 13.487
 //tWZ: 11.23
 
-#define lumi 41.5
+#define lumi 41.5 //2017
 
 #define DEFVAL -9
 

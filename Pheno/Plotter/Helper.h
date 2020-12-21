@@ -79,9 +79,12 @@
 #include <boost/algorithm/string.hpp>
 
 //Custom classes for EFT (see https://github.com/Andrew42/EFTGenReader/blob/maste)
-#include "/home/ntonon/Postdoc/TopEFT/Analysis/Utils/TH1EFT.h"
-#include "/home/ntonon/Postdoc/TopEFT/Analysis/Utils/WCPoint.h"
-#include "/home/ntonon/Postdoc/TopEFT/Analysis/Utils/WCFit.h"
+// #include "/home/ntonon/Postdoc/TopEFT/Analysis/Utils/TH1EFT.h"
+// #include "/home/ntonon/Postdoc/TopEFT/Analysis/Utils/WCPoint.h"
+// #include "/home/ntonon/Postdoc/TopEFT/Analysis/Utils/WCFit.h"
+#include "./Utils/TH1EFT.h"
+#include "./Utils/WCPoint.h"
+#include "./Utils/WCFit.h"
 
 #include <cassert>     //Can be used to terminate program if argument is not true.
 //Ex : assert(test > 0 && "Error message");
