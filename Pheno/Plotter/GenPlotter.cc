@@ -55,9 +55,9 @@
 // #include "/home/ntonon/Postdoc/TopEFT/Analysis/Utils/TH1EFT.h"
 // #include "/home/ntonon/Postdoc/TopEFT/Analysis/Utils/WCPoint.h"
 // #include "/home/ntonon/Postdoc/TopEFT/Analysis/Utils/WCFit.h"
-#include "./TH1EFT.h"
-#include "./WCPoint.h"
-#include "./WCFit.h"
+#include "./Utils/TH1EFT.h"
+#include "./Utils/WCPoint.h"
+#include "./Utils/WCFit.h"
 
 #include "./Helper.h"
 
