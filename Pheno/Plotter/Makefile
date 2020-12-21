@@ -15,7 +15,7 @@ ROOTFLAGS = `root-config --glibs --cflags`
 
 # LFLAGS = $(DEBUG) -L/home/ntonon/myroot/lib -lTMVA
 LFLAGS = $(DEBUG) -lTMVA
-LFLAGS+= -L/home/ntonon/Postdoc/TopEFT/SimPheno/Pheno/Plotter/Makefile
+# LFLAGS+= -L/home/ntonon/Postdoc/TopEFT/SimPheno/Pheno/Plotter/Makefile #Remove ?
 
 INCFLAGS = -I.
 
