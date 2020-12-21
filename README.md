@@ -108,9 +108,11 @@ RELEASE=10_2_3 #LHE-GEN-SIM
 RELEASE=10_2_5 #DIGI RECO Step1/2 + MINIAOD
 ```
 
+*NB: make sure to run under the same ARCH with which you built the CMSSW dir (independent of gridpack's ARCH).*
+
 </details>
 
-Then, setup your workind directory:
+Then, setup your working directory:
 
 ```
 mkdir myDir
@@ -118,7 +120,7 @@ cd myDir
 
 #-- Setup release
 cmsrel CMSSW_$RELEASE
-cd CMSSW_X_Y_Z/src
+cd CMSSW_$RELEASE/src
 cmsenv
 
 #-- Needed for GEN step only

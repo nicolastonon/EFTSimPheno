@@ -215,11 +215,14 @@ void Plot_CrossSection_VS_WilsonCoeff(TString process, TString operator1, TStrin
     if(type != "1D" && type != "2D") {cout<<FRED("Error ! Wrong type name ! Abort ! ")<<endl; return;}
     cout<<ITAL("Creating "<<type<<" plot...")<<endl;
 
+    //X-axis bounds
+    float bound = 15;
+
     //1D vectors of WC values to cover for each operator
     vector<float> v_grid_op1;
     vector<float> v_grid_op2;
-    int min_op1 = -25., max_op1=25; //min max operator1
-    int min_op2 = -25., max_op2=25; //min max operator2
+    int min_op1 = -bound, max_op1=bound; //min max operator1
+    int min_op2 = -bound, max_op2=bound; //min max operator2
 
     //To parameterize the xsec as a function of 2 operators, 6 independent coefficients are required
     //Extract these parameters, and use them to parameterize smoothly the xsec as a function of the 2 operators -> plot
@@ -310,7 +313,8 @@ void Plot_CrossSection_VS_WilsonCoeff(TString process, TString operator1, TStrin
         tf1->GetHistogram()->SetTitle("");
         tf1->GetHistogram()->GetXaxis()->SetTitle(Get_Operator_Name(operator1));
         tf1->GetHistogram()->GetYaxis()->SetTitle(Get_Operator_Name(plot_title));
-        // if(tf1->GetMinimum() > 0.95) {tf1->SetMinimum(1.);}
+        cout<<"tf1->GetMinimum() "<<tf1->GetMinimum()<<endl;
+        if(tf1->GetMinimum() >= 0.98) {tf1->SetMinimum(1.);} //Fit may be imperfect, still want to start y-axis at 1
         tf1->SetLineWidth(3.);
         tf1->SetLineColor(kAzure-2);
 
@@ -503,9 +507,9 @@ int main()
     bool lowercase_operators = true; //true <-> operator names are forced to lowercase (if needed to match reweight names)
 
     TString process;
-    // process = "tllq";
+    process = "tllq";
     // process = "ttll";
-    process = "twll";
+    // process = "twll";
 
     vector<TString> v_operators;
     v_operators.push_back("ctz");

@@ -20,11 +20,11 @@ void setcanvas(TCanvas *c1, TPad **pad)
     c1->SetRightMargin(0.00);
     c1->SetTopMargin(0.0);
 
-    pad[0]  =new TPad("pad0","pad",0,0.67,0.5,1.0);
-    pad[1]  =new TPad("pad1","pad",0.5,0.67,1.0,1.0);
-    pad[2]  =new TPad("pad2","pad",0,0.33,0.5,0.67);
-    pad[3]  =new TPad("pad3","pad",0.5,0.33,1.0,0.67);
-    pad[4]  =new TPad("pad4","pad",0.,0.,0.5,0.33);
+    pad[0] = new TPad("pad0","pad",0,0.67,0.5,1.0);
+    pad[1] = new TPad("pad1","pad",0.5,0.67,1.0,1.0);
+    pad[2] = new TPad("pad2","pad",0,0.33,0.5,0.67);
+    pad[3] = new TPad("pad3","pad",0.5,0.33,1.0,0.67);
+    pad[4] = new TPad("pad4","pad",0.,0.,0.5,0.33);
     for(int k=0;k<5;k++) {pad[k]->Draw();}
 
     return;
@@ -153,13 +153,13 @@ void plotdjr(const TString& infile, const TString& outfile="plot_DJR.png")
     TChain *tree = new TChain("Events");
     tree->Add(infile);
 
-    //tree->SetAlias("GenEvent","GenEventInfoProduct_generator__GEN.obj"); //For GEN-level files
-    //tree->SetAlias("GenEvent","GenEventInfoProduct_generator__SIM.obj"); //For SIM-level files
-    tree->SetAlias("GenEvent","GenEventInfoProduct_generator__RECO.obj"); //For RECO-level files, e.g. miniAOD
+    // tree->SetAlias("GenEvent","GenEventInfoProduct_generator__GEN.obj"); //For GEN-level files
+    // tree->SetAlias("GenEvent","GenEventInfoProduct_generator__RECO.obj"); //For RECO-level files (FASTSIM output)
+    tree->SetAlias("GenEvent","GenEventInfoProduct_generator__SIM.obj"); //For SIM-level files (miniAOD)
 
-    //tree->SetAlias("LHEEvent","LHEEventProduct_externalLHEProducer__LHE.obj"); //For GEN-level files
-    //tree->SetAlias("LHEEvent","LHEEventProduct_externalLHEProducer__SIM.obj"); //For SIM-level files
-    tree->SetAlias("LHEEvent","LHEEventProduct_externalLHEProducer__RECO.obj"); //For RECO-level files, e.g. miniAOD
+    // tree->SetAlias("LHEEvent","LHEEventProduct_externalLHEProducer__LHE.obj"); //For GEN-level files
+    // tree->SetAlias("LHEEvent","LHEEventProduct_externalLHEProducer__RECO.obj"); //For RECO-level files (FASTSIM output)
+    tree->SetAlias("LHEEvent","LHEEventProduct_externalLHEProducer__SIM.obj"); //For SIM-level files (miniAOD)
 
     TCut weight = "GenEvent.weight()";
     int nbins = 50.;

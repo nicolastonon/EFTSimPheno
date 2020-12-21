@@ -9,10 +9,10 @@ import FWCore.Utilities.FileUtils as FileUtils
 myProcess = "tllq" #e.g. ttll
 
 #--- Params needed if running on crab outputs
-suffix = "test" #e.g. dim6v1
+suffix = "dim6_v3" #e.g. dim6v1
 dir_suffix = "LHEGENSIM" #Suffix added to dir. only
-crabProdDate = "200923_135421" #e.g. "191217_220027"
-nofFiles = 100 #Number of files to read (reads xxx_1.root to xxx_N.root ; will ignore missing files)
+crabProdDate = "200925_163338" #e.g. "191217_220027"
+nofFiles = 1 #Number of files to read (reads xxx_1.root to xxx_N.root ; will ignore missing files)
 
 datatiername = "LHE-GEN-SIM"
 #datatiername = "FASTSIM1_inAODSIM"
@@ -23,7 +23,8 @@ process = cms.Process("GenAnalyzer")
 process.GenAnalyzer = cms.EDAnalyzer("GenAnalyzer")
 
 process.load("FWCore.MessageService.MessageLogger_cfi")
-process.load("myAnalyzer.GenAnalyzer.CfiFile_cfi")
+process.load("Pheno.Analyzer.CfiFile_cfi")
+#process.load("myAnalyzer.GenAnalyzer.CfiFile_cfi")
 
 process.MessageLogger.cerr.FwkReport.reportEvery = 10
 
@@ -45,7 +46,7 @@ process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(-1))
 
 fileNamesList = ["/store/user/ntonon/"+myProcess+suffix+"_"+dir_suffix+"/"+myProcess+suffix+"_"+dir_suffix+"/"+crabProdDate+"/0000/"+datatiername+"_"+str(i)+".root" for i in range(1, nofFiles+1)]
 
-mylist = FileUtils.loadListFromFile('~/files_tZq_central.txt')
+#mylist = FileUtils.loadListFromFile('~/files_tZq_central.txt')
 
 # //--------------------------------------------
 # //--------------------------------------------
@@ -54,8 +55,8 @@ mylist = FileUtils.loadListFromFile('~/files_tZq_central.txt')
 # //--------------------------------------------
 #NB : 'file:' indicates a physical file path (i.e. no need to look in a catalog)
 process.source = cms.Source("PoolSource",
-    #fileNames = cms.untracked.vstring(fileNamesList) #List defined above
-    fileNames = cms.untracked.vstring(*mylist) #List defined in external txt file
+    fileNames = cms.untracked.vstring(fileNamesList) #List defined above
+    #fileNames = cms.untracked.vstring(*mylist) #List defined in external txt file
 )
 process.source.skipBadFiles = cms.untracked.bool(True) #Ignore missing files
 # process.dump = cms.EDAnalyzer("EventContentAnalyzer")
@@ -77,7 +78,7 @@ print "---------------------------\n"
 if datatiername is "miniAOD": #Use RECO collections ?
 	process.GenAnalyzer.genParticlesInput = cms.InputTag("prunedGenParticles")
 	process.GenAnalyzer.genJetsInput      = cms.InputTag("slimmedGenJets")
-else: 
+else:
 	process.GenAnalyzer.genParticlesInput = cms.InputTag("genParticles")
 	process.GenAnalyzer.genJetsInput      = cms.InputTag("ak4GenJets")
 
