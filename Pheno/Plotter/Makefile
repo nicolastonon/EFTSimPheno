@@ -15,7 +15,7 @@ ROOTFLAGS = `root-config --glibs --cflags`
 
 # LFLAGS = $(DEBUG) -L/home/ntonon/myroot/lib -lTMVA
 LFLAGS = $(DEBUG) -lTMVA
-# LFLAGS+= -L/home/ntonon/Postdoc/TopEFT/SimPheno/Pheno/Plotter/Makefile #Remove ?
+# LFLAGS+= -L$(PWD) #On lxplus, make sure local dir. is included in LD_LIBRARY_PATH
 
 INCFLAGS = -I.
 
@@ -23,7 +23,6 @@ SRCS = $(wildcard *.cxx) #Source files are all files with .cxx extension
 HDRS = $(wildcard *.h) #Header files are all files with .h extension
 OBJS = $(SRCS:.cxx=.o) #Object files are all files with .o extension, which have same names as source files
 
-# LIB = /home/ntonon/Postdoc/TopEFT/Analysis/myLib.so #Re-use same library generated for main analysis code (to import custom classes)
 DICT = myDict.cxx
 LIB = myLib.so
 

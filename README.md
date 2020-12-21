@@ -651,10 +651,26 @@ cmsRun Pheno/Analyzer/test/ConfFile_cfg.py
 
 - The directory [Pheno/Plotter](https://github.com/nicolastonon/EFT-Simu-Pheno/tree/master/Pheno/Plotter) contains codes to produce plots from ROOT files created with the GenAnalyzer code, for any available variable / EFT weight / process.
 
-- Compiling and running the code 'GenPlotter.cc' :
+### Installation
+
+For a sparse checkout, do as above for the Analyzer and add:
 
 ```
-g++ GenPlotter.cc -o GenPlotter.exe `root-config --cflags --glibs`
+cd myDir
+echo "Pheno/Analyzer" >> .git/info/sparse-checkout
+git pull origin master
+```
+
+Make sure your local directory is included in `LD_LIBRARY_PATH`, then compile:
+```
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PWD
+make
+```
+
+### Run
+
+Run the plotter code:
+```
 ./GenPlotter.exe
 ```
 _____________________________________________________________________________
