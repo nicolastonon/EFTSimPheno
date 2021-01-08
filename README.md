@@ -657,7 +657,7 @@ For a sparse checkout, do as above for the Analyzer and add:
 
 ```
 cd myDir
-echo "Pheno/Analyzer" >> .git/info/sparse-checkout
+echo "Pheno/Plotter" >> .git/info/sparse-checkout
 git pull origin master
 ```
 
