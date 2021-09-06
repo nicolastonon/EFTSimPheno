@@ -213,6 +213,8 @@ void Plot_CrossSection_VS_WilsonCoeff(TString process, TString operator1, TStrin
     //X-axis bounds
     float bound = 15;
 
+    if(process == "tllqdim6_v3") {bound=12;}
+
     //1D vectors of WC values to cover for each operator
     vector<float> v_grid_op1;
     vector<float> v_grid_op2;
@@ -308,7 +310,7 @@ void Plot_CrossSection_VS_WilsonCoeff(TString process, TString operator1, TStrin
         tf1->GetHistogram()->SetTitle("");
         tf1->GetHistogram()->GetXaxis()->SetTitle(Get_Operator_Name(operator1));
         tf1->GetHistogram()->GetYaxis()->SetTitle(Get_Operator_Name(plot_title));
-        cout<<"tf1->GetMinimum() "<<tf1->GetMinimum()<<endl;
+        // cout<<"tf1->GetMinimum() "<<tf1->GetMinimum()<<endl;
         if(tf1->GetMinimum() >= 0.98) {tf1->SetMinimum(1.);} //Fit may be imperfect, still want to start y-axis at 1
         tf1->SetLineWidth(3.);
         tf1->SetLineColor(kAzure-2);
@@ -319,16 +321,34 @@ void Plot_CrossSection_VS_WilsonCoeff(TString process, TString operator1, TStrin
 
         latex.DrawLatex(0.18, 0.95, text);
 
-        Draw_MG_Reference_Points(operator1, graph, v_sumsReweights_afterSel, v_reweights_ids);
-        graph->Draw("P same");
-        graph->SetMarkerStyle(8);
-        graph->SetMarkerSize(1.5);
-        graph->SetMarkerColor(kViolet);
+        if(process == "tllqdim6_v3") //Special case for illustration: use hard-coded xsec values obtained manually by regenerating samples at specific points
+        {
+            graph->SetPoint(0, -7, 2.4488);
+            graph->SetPoint(1, 5, 1.7056);
+            graph->SetPoint(2, -12, 5.1886);
+            graph->SetPoint(3, 8, 2.7733);
+            // graph->SetPoint(2, 10, 3.7580);
 
-        TLegend* leg = new TLegend(0.46, 0.75, 0.68, 0.9);
+
+            graph->SetMarkerStyle(29);
+            graph->SetMarkerColor(kRed);
+            graph->SetMarkerSize(3.);
+        }
+        else //Default: compare with xsecs from MG reweighting
+        {
+            Draw_MG_Reference_Points(operator1, graph, v_sumsReweights_afterSel, v_reweights_ids);
+            graph->SetMarkerStyle(8);
+            graph->SetMarkerColor(kViolet);
+            graph->SetMarkerSize(1.5);
+        }
+
+        graph->Draw("P same");
+
+        TLegend* leg = new TLegend(0.46, 0.75, 0.70, 0.9);
         leg->SetTextSize(0.03);
         leg->AddEntry(tf1, "Extrapolation", "L");
-        leg->AddEntry(graph, "MG reweighting", "P");
+        if(process == "tllqdim6_v3")  {leg->AddEntry(graph, "Dedicated sample", "P");}
+        else {leg->AddEntry(graph, "MG reweighting", "P");}
         leg->AddEntry(SM_marker, "SM", "P");
         leg->Draw("same");
 
@@ -502,16 +522,17 @@ int main()
     bool lowercase_operators = true; //true <-> operator names are forced to lowercase (if needed to match reweight names)
 
     TString process;
-    process = "tllq";
+    process = "tllqdim6_v3";
+    // process = "tllq";
     // process = "ttll";
     // process = "twll";
 
     vector<TString> v_operators;
     v_operators.push_back("ctz");
-    v_operators.push_back("ctw");
-    v_operators.push_back("cpqm");
-    v_operators.push_back("cpq3");
-    v_operators.push_back("cpt");
+    // v_operators.push_back("ctw");
+    // v_operators.push_back("cpqm");
+    // v_operators.push_back("cpq3");
+    // v_operators.push_back("cpt");
 
     if(lowercase_operators) {for(int i=0; i<v_operators.size(); i++) {v_operators[i].ToLower();} }
     Load_Canvas_Style();

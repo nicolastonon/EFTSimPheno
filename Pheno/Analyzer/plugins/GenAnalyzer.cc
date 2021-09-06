@@ -21,6 +21,7 @@
 //
 
 bool debug = false; //Global debug variable
+bool apply_selection_cuts = false; //true <-> apply some selection cuts (3l, Zcand, etc.) to make pheno studies in SR-like region
 float DEFVAL = -9; //Default value
 int count_events = 0; //Global event counter
 
@@ -232,7 +233,7 @@ class GenAnalyzer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
         float LepTopB_pt_;
         float LepTopB_eta_;
         float LepTopB_phi_;
-        
+
         //Neutrino from top
     	float lepTopnu_pt_;
 
@@ -391,7 +392,7 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
 
     Handle<reco::GenJetCollection> genJetsHandle; //Smart pointer
     iEvent.getByToken(genJetCollection_token_, genJetsHandle);
-    
+
     if(debug)
     {
         if(count_events > 50) {return;} //Only debug first few events
@@ -691,10 +692,10 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
    bool hasZDecayEMU = false;
    if(lepZ1.Pt() > 0 && lepZ2.Pt() > 0 && lepZ1_id == -lepZ2_id && abs((lepZ1+lepZ2).M()-91.2)<15) {hasZDecayEMU = true;} //SFOS pair within 15 GeV of Z peak
 
-   if(Event_Selection(nEleMuFinalState, hasLepTop, hasHadTop, hasZDecayEMU, lepZ1, lepZ2, lepZ1_id, lepZ2_id) == false) {return;}
+   if(apply_selection_cuts && Event_Selection(nEleMuFinalState, hasLepTop, hasHadTop, hasZDecayEMU, lepZ1, lepZ2, lepZ1_id, lepZ2_id) == false) {return;}
 
-   Get_OtherDecayProducts_LepTop(genParticlesHandle, index_lepTop, lepTopnu, lepTopb, lepTopW, idx_W);
-   Get_OtherDecayProducts_HadTop(genParticlesHandle, index_hadTop, hadTopq1, hadTopq2, hadTopb);
+    if(hasLepTop) {Get_OtherDecayProducts_LepTop(genParticlesHandle, index_lepTop, lepTopnu, lepTopb, lepTopW, idx_W);}
+    if(hasHadTop) {Get_OtherDecayProducts_HadTop(genParticlesHandle, index_hadTop, hadTopq1, hadTopq2, hadTopb);}
 
 
 // #       ####  #    #       #      ###### #    # ###### #         #    #   ##   #####   ####
@@ -725,7 +726,7 @@ void GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
         Zreco_m_ = RecoZ.M();
         // Zreco_dPhill_ = TMath::Abs(lepZ2.Phi() - lepZ1.Phi());
         Zreco_dPhill_ = abs(lepZ1.DeltaPhi(lepZ2));
-        lepZ1_pt_ = lepZ1.Pt(); lepZ2_pt_ = lepZ2.Pt(); 
+        lepZ1_pt_ = lepZ1.Pt(); lepZ2_pt_ = lepZ2.Pt();
 
         if(debug && index_Z < 0) {cout<<"Non-resonant lepton pair found ! Mll = "<<Zreco_m_<<endl;}
     }
@@ -1413,7 +1414,7 @@ void GenAnalyzer::Fill_HighLevel_Variables(TLorentzVector Zboson, TLorentzVector
     if(lepZ1_id < 0) {cosThetaStarPol_Z_ = Compute_cosThetaStarPol_Z(RecoZ, lepZ1);}
     else if(lepZ2_id < 0) {cosThetaStarPol_Z_ = Compute_cosThetaStarPol_Z(RecoZ, lepZ2);}
     cosThetaStarPol_Top_ = Compute_cosThetaStarPol_Top(lepTop, lepTopl, recoilQuark);
-    
+
     lepTopnu_pt_ = lepTopnu.Pt();
 
     return;
@@ -1478,7 +1479,7 @@ void GenAnalyzer::Get_OtherDecayProducts_LepTop(Handle<reco::GenParticleCollecti
         // cout<<"...Daughter index = "<<daughter_indices[idaughter]<<endl;
         // cout<<"... daughter ID = "<<daughter.pdgId()<<" (idx "<<daughter_indices[idaughter]<<")"<<endl;
     }
-    
+
     if(debug)
     {
 		cout<<"LepTop b pt = "<<tlv_b.Pt()<<endl;
@@ -1627,12 +1628,12 @@ void GenAnalyzer::SetBranches(TTree* tree_)
     tree_->Branch("ptHadSum" , &ptHadSum_);
     tree_->Branch("mHT" , &mHT_);
     tree_->Branch("lepAsym" , &lepAsym_);
-    
+
     //NEW
     tree_->Branch("lepZ1_pt" , &lepZ1_pt_);
     tree_->Branch("lepZ2_pt" , &lepZ2_pt_);
     tree_->Branch("lepTopnu_pt" , &lepTopnu_pt_);
-        
+
     return;
 }
 
@@ -1725,7 +1726,7 @@ void GenAnalyzer::Init_Variables()
     mHT_ = DEFVAL;
     lepAsym_ = DEFVAL;
     njets_ = 0;
-    
+
     lepTopnu_pt_ = 0;
     lepZ1_pt_ = 0;
 	lepZ2_pt_ = 0;

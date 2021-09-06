@@ -1,0 +1,19 @@
+#                       Reweight Module                           *
+#******************************************************************
+
+change rwgt_dir rwgt
+
+launch --rwgt_name=rwgt_sm
+set ctp 0.000000
+
+launch --rwgt_name=rwgt_ctp_-3
+set ctp -3
+
+launch --rwgt_name=rwgt_ctp_-10
+set ctp -10
+
+launch --rwgt_name=rwgt_ctp_3
+set ctp 3
+
+launch --rwgt_name=rwgt_ctp_10
+set ctp 10
